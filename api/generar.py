@@ -19,7 +19,15 @@ def generar_docx(data):
     with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zout:
         for name, b64 in TEMPLATE.items():
             raw = base64.b64decode(b64)
-            if name == "word/document.xml":
+            if name == "[Content_Types].xml":
+                xml = raw.decode("utf-8")
+                # Fix: convert from template to document content type
+                xml = xml.replace(
+                    "application/vnd.ms-word.template.macroEnabledTemplate.main+xml",
+                    "application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"
+                )
+                raw = xml.encode("utf-8")
+            elif name == "word/document.xml":
                 xml = raw.decode("utf-8")
                 xml = xml.replace("__FECHA__",          fecha)
                 xml = xml.replace("__NRO_RES__",        nro_res)
