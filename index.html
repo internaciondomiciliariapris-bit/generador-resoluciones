@@ -44,6 +44,8 @@ hr{border:none;border-top:1.5px solid #e2e8f0;margin:20px 0 16px}
       <div class="field"><label>Nº Resolución <span>*</span></label>
         <input id="nroRes" placeholder="2987"></div>
     </div>
+    <div class="field"><label>Nº Expediente <span>*</span></label>
+      <input id="nroExp" placeholder="2464/410/M/2026"></div>
     <div class="field"><label>Paciente — Apellido, Nombre <span>*</span></label>
       <input id="paciente" placeholder="GARCIA, JUAN CARLOS">
       <div class="hint">En MAYÚSCULAS</div></div>
@@ -75,13 +77,14 @@ function actualizarLetras(){
 async function generar(){
   const fecha=document.getElementById("fecha").value.trim();
   const nroRes=document.getElementById("nroRes").value.trim();
+  const nroExp=document.getElementById("nroExp").value.trim();
   const paciente=document.getElementById("paciente").value.trim();
   const insumo=document.getElementById("insumo").value.trim();
   const precio=document.getElementById("precio").value.replace(/[^0-9]/g,"");
   const importeLetras=document.getElementById("letras").value.trim();
   const msg=document.getElementById("msg");
   msg.className="msg";
-  if(!fecha||!nroRes||!paciente||!insumo||!precio||!importeLetras){
+  if(!fecha||!nroRes||!nroExp||!paciente||!insumo||!precio||!importeLetras){
     msg.className="msg er";msg.textContent="Completa todos los campos.";return;}
   const btn=document.getElementById("btn");
   btn.disabled=true;btn.textContent="Generando...";
@@ -89,7 +92,7 @@ async function generar(){
     const resp=await fetch("/api/generar",{
       method:"POST",
       headers:{"Content-Type":"application/json"},
-      body:JSON.stringify({fecha,nroRes,paciente,insumo,precio,importeLetras})
+      body:JSON.stringify({fecha,nroRes,nroExp,paciente,insumo,precio,importeLetras})
     });
     if(!resp.ok){const e=await resp.json();throw new Error(e.error);}
     const blob=await resp.blob();
@@ -98,9 +101,9 @@ async function generar(){
     const url=URL.createObjectURL(blob);
     const a=document.createElement("a");a.href=url;a.download=nombre;a.click();
     URL.revokeObjectURL(url);
-    msg.className="msg ok";msg.textContent="Descargado: "+nombre;
+    msg.className="msg ok";msg.textContent="✅ Descargado: "+nombre;
   }catch(e){msg.className="msg er";msg.textContent="Error: "+e.message;}
-  btn.disabled=false;btn.textContent="Generar y descargar Resolucion";
+  btn.disabled=false;btn.textContent="⬇️ Generar y descargar Resolución";
 }
 </script>
 </body>
