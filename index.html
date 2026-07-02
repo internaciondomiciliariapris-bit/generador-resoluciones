@@ -7,25 +7,30 @@
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:"Segoe UI",Arial,sans-serif;background:#f0f4f8;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px}
-.card{background:white;border-radius:12px;box-shadow:0 4px 24px rgba(0,0,0,.10);width:100%;max-width:560px;overflow:hidden}
-.header{background:#1a56a0;padding:22px 32px}
-.header h1{font-size:19px;color:white;font-weight:700}
+.card{background:white;border-radius:12px;box-shadow:0 4px 24px rgba(0,0,0,.10);width:100%;max-width:580px;overflow:hidden}
+.header{background:#1a56a0;padding:20px 32px}
+.header h1{font-size:18px;color:white;font-weight:700}
 .header p{font-size:12px;color:#cce0f5;margin-top:2px}
-.body{padding:28px 32px}
+.tabs{display:flex;border-bottom:2px solid #e2e8f0}
+.tab{flex:1;padding:13px;text-align:center;font-size:14px;font-weight:600;cursor:pointer;color:#64748b;background:#f8fafc;transition:all .15s}
+.tab.active{color:#1a56a0;background:white;border-bottom:2px solid #1a56a0;margin-bottom:-2px}
+.tab:hover:not(.active){background:#f0f4f8}
+.body{padding:24px 32px}
+.panel{display:none}.panel.active{display:block}
 .stitle{font-size:10px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:1px;margin-bottom:12px}
-.field{margin-bottom:14px}
+.field{margin-bottom:13px}
 label{display:block;font-size:12px;font-weight:600;color:#374151;margin-bottom:5px}
 label span{color:#dc2626}
-input{width:100%;padding:9px 13px;border:1.5px solid #d1d5db;border-radius:7px;font-size:15px;color:#1a2b4a;outline:none}
+input{width:100%;padding:9px 13px;border:1.5px solid #d1d5db;border-radius:7px;font-size:14px;color:#1a2b4a;outline:none}
 input:focus{border-color:#1a56a0;box-shadow:0 0 0 3px rgba(26,86,160,.1)}
 input.ro{background:#f8fafc;color:#374151}
 .hint{font-size:11px;color:#94a3b8;margin-top:3px}
-.row{display:grid;grid-template-columns:1fr 1fr;gap:14px}
-hr{border:none;border-top:1.5px solid #e2e8f0;margin:20px 0 16px}
-.btn{width:100%;padding:14px;background:#1a56a0;color:white;border:none;border-radius:8px;font-size:16px;font-weight:700;cursor:pointer;margin-top:6px}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+hr{border:none;border-top:1.5px solid #e2e8f0;margin:16px 0 14px}
+.btn{width:100%;padding:13px;background:#1a56a0;color:white;border:none;border-radius:8px;font-size:15px;font-weight:700;cursor:pointer;margin-top:6px}
 .btn:hover{background:#154482}
 .btn:disabled{background:#94a3b8;cursor:not-allowed}
-.msg{margin-top:12px;padding:11px 15px;border-radius:7px;font-size:14px;display:none}
+.msg{margin-top:11px;padding:10px 14px;border-radius:7px;font-size:13px;display:none}
 .ok{background:#f0fdf4;color:#166534;border:1px solid #bbf7d0;display:block}
 .er{background:#fef2f2;color:#991b1b;border:1px solid #fecaca;display:block}
 </style>
@@ -36,73 +41,155 @@ hr{border:none;border-top:1.5px solid #e2e8f0;margin:20px 0 16px}
     <h1>📋 Generador de Resoluciones</h1>
     <p>Programa Integrado de Salud — Ministerio de Salud Pública de Tucumán</p>
   </div>
+  <div class="tabs">
+    <div class="tab active" onclick="cambiarTab('anteojos')">👓 Anteojos</div>
+    <div class="tab" onclick="cambiarTab('audio')">🎧 Audífonos</div>
+  </div>
+
+  <!-- ANTEOJOS -->
   <div class="body">
+  <div id="panel-anteojos" class="panel active">
     <div class="stitle">Datos del encabezado</div>
     <div class="row">
       <div class="field"><label>Fecha <span>*</span></label>
-        <input id="fecha" placeholder="1 de Julio de 2026"></div>
+        <input id="a-fecha" placeholder="1 de Julio de 2026"></div>
       <div class="field"><label>Nº Resolución <span>*</span></label>
-        <input id="nroRes" placeholder="2987"></div>
+        <input id="a-nroRes" placeholder="2987"></div>
     </div>
     <div class="field"><label>Nº Expediente <span>*</span></label>
-      <input id="nroExp" placeholder="2464/410/M/2026"></div>
+      <input id="a-nroExp" placeholder="2464/410/M/2026"></div>
     <div class="field"><label>Paciente — Apellido, Nombre <span>*</span></label>
-      <input id="paciente" placeholder="GARCIA, JUAN CARLOS">
+      <input id="a-paciente" placeholder="GARCIA, JUAN CARLOS">
       <div class="hint">En MAYÚSCULAS</div></div>
     <div class="field"><label>Insumo <span>*</span></label>
-      <input id="insumo" placeholder="1-ANTEOJOS">
-      <div class="hint">Ej: 1-ANTEOJOS / 2-ANTEOJOS / 1-SILLA DE RUEDAS</div></div>
+      <input id="a-insumo" placeholder="1-ANTEOJOS">
+      <div class="hint">Ej: 1-ANTEOJOS / 2-ANTEOJOS</div></div>
     <hr>
     <div class="stitle">Valores económicos</div>
     <div class="field"><label>Precio <span>*</span></label>
-      <input id="precio" placeholder="38000" oninput="actualizarLetras()">
-      <div class="hint">Solo el número — Ej: 38000</div></div>
+      <input id="a-precio" placeholder="38000" oninput="calcLetras('a')">
+      <div class="hint">Solo el número entero — Ej: 38000</div></div>
     <div class="field"><label>Importe en letras (automático)</label>
-      <input id="letras" class="ro" readonly></div>
-    <button class="btn" id="btn" onclick="generar()">⬇️ Generar y descargar Resolución</button>
-    <div class="msg" id="msg"></div>
+      <input id="a-letras" class="ro" readonly></div>
+    <button class="btn" onclick="generar('anteojos')">⬇️ Generar y descargar Resolución</button>
+    <div class="msg" id="a-msg"></div>
+  </div>
+
+  <!-- AUDIFONOS -->
+  <div id="panel-audio" class="panel">
+    <div class="stitle">Datos del encabezado</div>
+    <div class="row">
+      <div class="field"><label>Fecha <span>*</span></label>
+        <input id="b-fecha" placeholder="1 de Julio de 2026"></div>
+      <div class="field"><label>Nº Resolución <span>*</span></label>
+        <input id="b-nroRes" placeholder="2918"></div>
+    </div>
+    <div class="field"><label>Nº Expediente <span>*</span></label>
+      <input id="b-nroExp" placeholder="1936/412/I/26"></div>
+    <div class="field"><label>Paciente — Apellido, Nombre <span>*</span></label>
+      <input id="b-paciente" placeholder="IBAÑEZ, FABIANA LUCILA">
+      <div class="hint">En MAYÚSCULAS</div></div>
+    <hr>
+    <div class="stitle">Firmas comerciales</div>
+    <div class="field"><label>Firmas que cotizaron (sin la ganadora) <span>*</span></label>
+      <input id="b-firmasPrev" placeholder="IAR Argentina; SOLMAR;">
+      <div class="hint">Separadas por punto y coma</div></div>
+    <div class="field"><label>Firma ganadora <span>*</span></label>
+      <input id="b-firmaGanadora" placeholder="GRUPO VISTALLI. S.R.L (Óptica Giorlent)">
+      <div class="hint">Se replica en toda la resolución</div></div>
+    <hr>
+    <div class="stitle">Valores económicos</div>
+    <div class="row">
+      <div class="field"><label>Cantidad <span>*</span></label>
+        <input id="b-cantidad" placeholder="2" oninput="calcTotal()"></div>
+      <div class="field"><label>Precio unitario <span>*</span></label>
+        <input id="b-precioUnit" placeholder="690000" oninput="calcTotal()">
+        <div class="hint">Sin puntos ni comas</div></div>
+    </div>
+    <div class="field"><label>Precio total (automático)</label>
+      <input id="b-precioTotal" class="ro" readonly></div>
+    <div class="field"><label>Importe en letras (automático)</label>
+      <input id="b-letras" class="ro" readonly></div>
+    <button class="btn" onclick="generar('audio')">⬇️ Generar y descargar Resolución</button>
+    <div class="msg" id="b-msg"></div>
+  </div>
   </div>
 </div>
+
 <script>
+// Número a letras
 const _u=["","Un","Dos","Tres","Cuatro","Cinco","Seis","Siete","Ocho","Nueve","Diez","Once","Doce","Trece","Catorce","Quince","Dieciseis","Diecisiete","Dieciocho","Diecinueve","Veinte","Veintiun","Veintidos","Veintitres","Veinticuatro","Veinticinco","Veintiseis","Veintisiete","Veintiocho","Veintinueve"];
 const _d=["","Diez","Veinte","Treinta","Cuarenta","Cincuenta","Sesenta","Setenta","Ochenta","Noventa"];
 const _c=["","Ciento","Doscientos","Trescientos","Cuatrocientos","Quinientos","Seiscientos","Setecientos","Ochocientos","Novecientos"];
 function m100(n){if(n===0)return"";if(n===100)return"Cien";if(n<30)return _u[n];if(n<100){const d=Math.floor(n/10),u=n%10;return u===0?_d[d]:_d[d]+" y "+_u[u].toLowerCase();}const c=Math.floor(n/100),r=n%100;return _c[c]+(r>0?" "+m100(r):"");}
 function numLetras(n){if(n===0)return"Cero";let r="";const M=Math.floor(n/1000000),K=Math.floor((n%1000000)/1000),R=n%1000;if(M>0)r+=(M===1?"Un Millon":m100(M)+" Millones")+" ";if(K>0)r+=(K===1?"Mil":m100(K)+" Mil")+" ";if(R>0)r+=m100(R);return r.trim();}
-function actualizarLetras(){
-  const raw=document.getElementById("precio").value.replace(/[^0-9]/g,"");
+
+function calcLetras(pre){
+  const raw=document.getElementById(pre+"-precio").value.replace(/[^0-9]/g,"");
   const n=parseInt(raw);
-  document.getElementById("letras").value=(!isNaN(n)&&n>0)?numLetras(n)+" pesos con 00/100":"";
+  document.getElementById(pre+"-letras").value=(!isNaN(n)&&n>0)?numLetras(n)+" pesos con 00/100":"";
 }
-async function generar(){
-  const fecha=document.getElementById("fecha").value.trim();
-  const nroRes=document.getElementById("nroRes").value.trim();
-  const nroExp=document.getElementById("nroExp").value.trim();
-  const paciente=document.getElementById("paciente").value.trim();
-  const insumo=document.getElementById("insumo").value.trim();
-  const precio=document.getElementById("precio").value.replace(/[^0-9]/g,"");
-  const importeLetras=document.getElementById("letras").value.trim();
-  const msg=document.getElementById("msg");
-  msg.className="msg";
-  if(!fecha||!nroRes||!nroExp||!paciente||!insumo||!precio||!importeLetras){
-    msg.className="msg er";msg.textContent="Completa todos los campos.";return;}
-  const btn=document.getElementById("btn");
+
+function calcTotal(){
+  const cant=parseInt(document.getElementById("b-cantidad").value)||0;
+  const unit=parseInt(document.getElementById("b-precioUnit").value.replace(/[^0-9]/g,""))||0;
+  const tot=cant*unit;
+  document.getElementById("b-precioTotal").value=tot>0?tot.toLocaleString("es-AR"):"";
+  document.getElementById("b-letras").value=tot>0?numLetras(tot)+" pesos con 00/100":"";
+}
+
+function cambiarTab(tab){
+  document.querySelectorAll(".tab").forEach((t,i)=>{
+    t.classList.toggle("active", (i===0&&tab==="anteojos")||(i===1&&tab==="audio"));
+  });
+  document.getElementById("panel-anteojos").classList.toggle("active", tab==="anteojos");
+  document.getElementById("panel-audio").classList.toggle("active", tab==="audio");
+}
+
+async function generar(tipo){
+  const pre = tipo==="anteojos"?"a":"b";
+  const msgEl = document.getElementById(pre+"-msg");
+  msgEl.className="msg";
+  let payload = {tipo};
+
+  if(tipo==="anteojos"){
+    payload.fecha=document.getElementById("a-fecha").value.trim();
+    payload.nroRes=document.getElementById("a-nroRes").value.trim();
+    payload.nroExp=document.getElementById("a-nroExp").value.trim();
+    payload.paciente=document.getElementById("a-paciente").value.trim();
+    payload.insumo=document.getElementById("a-insumo").value.trim();
+    payload.precio=document.getElementById("a-precio").value.replace(/[^0-9]/g,"");
+    payload.importeLetras=document.getElementById("a-letras").value.trim();
+    if(!payload.fecha||!payload.nroRes||!payload.nroExp||!payload.paciente||!payload.insumo||!payload.precio||!payload.importeLetras){
+      msgEl.className="msg er";msgEl.textContent="Completá todos los campos.";return;}
+  } else {
+    payload.fecha=document.getElementById("b-fecha").value.trim();
+    payload.nroRes=document.getElementById("b-nroRes").value.trim();
+    payload.nroExp=document.getElementById("b-nroExp").value.trim();
+    payload.paciente=document.getElementById("b-paciente").value.trim();
+    payload.firmasPrev=document.getElementById("b-firmasPrev").value.trim();
+    payload.firmaGanadora=document.getElementById("b-firmaGanadora").value.trim();
+    payload.cantidad=document.getElementById("b-cantidad").value.trim();
+    payload.precioUnit=document.getElementById("b-precioUnit").value.replace(/[^0-9]/g,"");
+    payload.precioTotal=(parseInt(payload.cantidad||0)*parseInt(payload.precioUnit||0)).toString();
+    payload.importeLetras=document.getElementById("b-letras").value.trim();
+    if(!payload.fecha||!payload.nroRes||!payload.nroExp||!payload.paciente||!payload.firmaGanadora||!payload.cantidad||!payload.precioUnit){
+      msgEl.className="msg er";msgEl.textContent="Completá todos los campos.";return;}
+  }
+
+  const btn=msgEl.previousElementSibling;
   btn.disabled=true;btn.textContent="Generando...";
   try{
-    const resp=await fetch("/api/generar",{
-      method:"POST",
-      headers:{"Content-Type":"application/json"},
-      body:JSON.stringify({fecha,nroRes,nroExp,paciente,insumo,precio,importeLetras})
-    });
+    const resp=await fetch("/api/generar",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)});
     if(!resp.ok){const e=await resp.json();throw new Error(e.error);}
     const blob=await resp.blob();
-    const apellido=paciente.split(",")[0].trim().replace(/ /g,"_");
-    const nombre="Resolucion_"+nroRes+"_"+apellido+".docx";
+    const apellido=payload.paciente.split(",")[0].trim().replace(/ /g,"_");
+    const nombre="Resolucion_"+payload.nroRes+"_"+apellido+".docx";
     const url=URL.createObjectURL(blob);
     const a=document.createElement("a");a.href=url;a.download=nombre;a.click();
     URL.revokeObjectURL(url);
-    msg.className="msg ok";msg.textContent="✅ Descargado: "+nombre;
-  }catch(e){msg.className="msg er";msg.textContent="Error: "+e.message;}
+    msgEl.className="msg ok";msgEl.textContent="✅ Descargado: "+nombre;
+  }catch(e){msgEl.className="msg er";msgEl.textContent="Error: "+e.message;}
   btn.disabled=false;btn.textContent="⬇️ Generar y descargar Resolución";
 }
 </script>
