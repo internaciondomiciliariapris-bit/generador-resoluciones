@@ -71,7 +71,7 @@ hr{border:none;border-top:1.5px solid #e2e8f0;margin:16px 0 14px}
     </div>
     <div class="field">
       <label>Nº Expediente <span>*</span></label>
-      <input type="text" id="a-nroExp" placeholder="2463/410/M/2026" maxlength="20" oninput="mascaraExp(this)">
+      <input type="text" id="a-nroExp" placeholder="2463/410/M/2026" maxlength="20" onkeydown="expKeydown(this,event)">
       <div class="hint">Escribí el número — las barras / se agregan solas</div>
     </div>
     <div class="field"><label>Paciente — Apellido, Nombre <span>*</span></label>
@@ -102,7 +102,7 @@ hr{border:none;border-top:1.5px solid #e2e8f0;margin:16px 0 14px}
     </div>
     <div class="field">
       <label>Nº Expediente <span>*</span></label>
-      <input type="text" id="b-nroExp" placeholder="1936/412/I/2026" maxlength="20" oninput="mascaraExp(this)">
+      <input type="text" id="b-nroExp" placeholder="1936/412/I/2026" maxlength="20" onkeydown="expKeydown(this,event)">
       <div class="hint">Escribí el número — las barras / se agregan solas</div>
     </div>
     <div class="field"><label>Paciente — Apellido, Nombre <span>*</span></label>
@@ -162,32 +162,30 @@ const _c=["","Ciento","Doscientos","Trescientos","Cuatrocientos","Quinientos","S
 function m100(n){if(n===0)return"";if(n===100)return"Cien";if(n<30)return _u[n];if(n<100){const d=Math.floor(n/10),u=n%10;return u===0?_d[d]:_d[d]+" y "+_u[u].toLowerCase();}const c=Math.floor(n/100),r=n%100;return _c[c]+(r>0?" "+m100(r):"");}
 function numLetras(n){if(n===0)return"Cero";let r="";const M=Math.floor(n/1000000),K=Math.floor((n%1000000)/1000),R=n%1000;if(M>0)r+=(M===1?"Un Millon":m100(M)+" Millones")+" ";if(K>0)r+=(K===1?"Mil":m100(K)+" Mil")+" ";if(R>0)r+=m100(R);return r.trim();}
 
-// Máscara expediente: NNNN/NNN/L/AAAA
+// Máscara expediente: con Tab para avanzar al siguiente segmento
 function mascaraExp(el){
-  let v = el.value.replace(/[^0-9a-zA-Z]/g,'');
-  let out = '';
-  // parte 1: hasta 4 dígitos
-  const p1 = v.substring(0,4);
-  out += p1;
-  if(v.length>4){
-    out += '/';
-    // parte 2: hasta 3 dígitos
-    const p2 = v.substring(4,7).replace(/[^0-9]/g,'');
-    out += p2;
-    if(v.length>7){
-      out += '/';
-      // parte 3: 1 letra
-      const p3 = v.substring(7,8).replace(/[^a-zA-Z]/g,'').toUpperCase();
-      out += p3;
-      if(v.length>8){
-        out += '/';
-        // parte 4: hasta 4 dígitos (año)
-        const p4 = v.substring(8,12).replace(/[^0-9]/g,'');
-        out += p4;
-      }
+  // Solo actualizar la visualización al escribir (sin barras automáticas)
+  // Las barras se agregan al presionar Tab en cada segmento
+}
+
+function expKeydown(el, e){
+  if(e.key === 'Tab'){
+    e.preventDefault();
+    const v = el.value;
+    const parts = v.split('/');
+    const seg = parts.length - 1; // segmento actual (0,1,2,3)
+    if(seg < 3){
+      // Agregar barra y enfocar el mismo campo
+      el.value = v + '/';
     }
+    // En seg 3 (año) Tab normal sale del campo
+    if(seg >= 3){
+      // dejar que Tab funcione normal
+      el.value = v;
+    }
+    return;
   }
-  el.value = out;
+  // Bloquear barra manual en posiciones incorrectas — dejar que el usuario escriba libre
 }
 
 function calcLetras(pre){
