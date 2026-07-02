@@ -21,8 +21,8 @@ body{font-family:"Segoe UI",Arial,sans-serif;background:#f0f4f8;min-height:100vh
 .field{margin-bottom:13px}
 label{display:block;font-size:12px;font-weight:600;color:#374151;margin-bottom:5px}
 label span{color:#dc2626}
-input{width:100%;padding:9px 13px;border:1.5px solid #d1d5db;border-radius:7px;font-size:14px;color:#1a2b4a;outline:none}
-input:focus{border-color:#1a56a0;box-shadow:0 0 0 3px rgba(26,86,160,.1)}
+input[type=text]{width:100%;padding:9px 13px;border:1.5px solid #d1d5db;border-radius:7px;font-size:14px;color:#1a2b4a;outline:none}
+input[type=text]:focus{border-color:#1a56a0;box-shadow:0 0 0 3px rgba(26,86,160,.1)}
 input.ro{background:#f8fafc;color:#374151}
 .hint{font-size:11px;color:#94a3b8;margin-top:3px}
 .row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
@@ -33,6 +33,19 @@ hr{border:none;border-top:1.5px solid #e2e8f0;margin:16px 0 14px}
 .msg{margin-top:11px;padding:10px 14px;border-radius:7px;font-size:13px;display:none}
 .ok{background:#f0fdf4;color:#166534;border:1px solid #bbf7d0;display:block}
 .er{background:#fef2f2;color:#991b1b;border:1px solid #fecaca;display:block}
+.empresas-grid{border:1.5px solid #e2e8f0;border-radius:8px;overflow:hidden}
+.empresa-row{display:flex;align-items:center;padding:9px 14px;border-bottom:1px solid #f0f4f8;gap:12px}
+.empresa-row:last-child{border-bottom:none}
+.empresa-row:hover{background:#f8fafc}
+.emp-check{display:flex;align-items:center;gap:8px;flex:1;cursor:pointer}
+.emp-check input[type=checkbox]{width:16px;height:16px;cursor:pointer;accent-color:#1a56a0}
+.emp-name{font-size:13px;color:#1a2b4a;font-weight:500}
+.emp-radio{display:flex;align-items:center;gap:6px;cursor:pointer}
+.emp-radio input[type=radio]{width:15px;height:15px;cursor:pointer;accent-color:#16a34a}
+.emp-radio-label{font-size:11px;color:#16a34a;font-weight:600}
+.col-headers{display:flex;padding:6px 14px;background:#f8fafc;border-bottom:1px solid #e2e8f0}
+.col-check-h{flex:1;font-size:10px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.5px}
+.col-radio-h{font-size:10px;font-weight:700;color:#16a34a;text-transform:uppercase;letter-spacing:.5px}
 </style>
 </head>
 <body>
@@ -45,32 +58,35 @@ hr{border:none;border-top:1.5px solid #e2e8f0;margin:16px 0 14px}
     <div class="tab active" onclick="cambiarTab('anteojos')">👓 Anteojos</div>
     <div class="tab" onclick="cambiarTab('audio')">🎧 Audífonos</div>
   </div>
+  <div class="body">
 
   <!-- ANTEOJOS -->
-  <div class="body">
   <div id="panel-anteojos" class="panel active">
     <div class="stitle">Datos del encabezado</div>
     <div class="row">
       <div class="field"><label>Fecha <span>*</span></label>
-        <input id="a-fecha" placeholder="1 de Julio de 2026"></div>
+        <input type="text" id="a-fecha" placeholder="1 de Julio de 2026"></div>
       <div class="field"><label>Nº Resolución <span>*</span></label>
-        <input id="a-nroRes" placeholder="2987"></div>
+        <input type="text" id="a-nroRes" placeholder="2987"></div>
     </div>
-    <div class="field"><label>Nº Expediente <span>*</span></label>
-      <input id="a-nroExp" placeholder="2464/410/M/2026"></div>
+    <div class="field">
+      <label>Nº Expediente <span>*</span></label>
+      <input type="text" id="a-nroExp" placeholder="2463/410/M/2026" maxlength="20" oninput="mascaraExp(this)">
+      <div class="hint">Escribí el número — las barras / se agregan solas</div>
+    </div>
     <div class="field"><label>Paciente — Apellido, Nombre <span>*</span></label>
-      <input id="a-paciente" placeholder="GARCIA, JUAN CARLOS">
+      <input type="text" id="a-paciente" placeholder="GARCIA, JUAN CARLOS">
       <div class="hint">En MAYÚSCULAS</div></div>
     <div class="field"><label>Insumo <span>*</span></label>
-      <input id="a-insumo" placeholder="1-ANTEOJOS">
+      <input type="text" id="a-insumo" placeholder="1-ANTEOJOS">
       <div class="hint">Ej: 1-ANTEOJOS / 2-ANTEOJOS</div></div>
     <hr>
     <div class="stitle">Valores económicos</div>
     <div class="field"><label>Precio <span>*</span></label>
-      <input id="a-precio" placeholder="38000" oninput="calcLetras('a')">
+      <input type="text" id="a-precio" placeholder="38000" oninput="calcLetras('a')">
       <div class="hint">Solo el número entero — Ej: 38000</div></div>
     <div class="field"><label>Importe en letras (automático)</label>
-      <input id="a-letras" class="ro" readonly></div>
+      <input type="text" id="a-letras" class="ro" readonly></div>
     <button class="btn" onclick="generar('anteojos')">⬇️ Generar y descargar Resolución</button>
     <div class="msg" id="a-msg"></div>
   </div>
@@ -80,56 +96,105 @@ hr{border:none;border-top:1.5px solid #e2e8f0;margin:16px 0 14px}
     <div class="stitle">Datos del encabezado</div>
     <div class="row">
       <div class="field"><label>Fecha <span>*</span></label>
-        <input id="b-fecha" placeholder="1 de Julio de 2026"></div>
+        <input type="text" id="b-fecha" placeholder="1 de Julio de 2026"></div>
       <div class="field"><label>Nº Resolución <span>*</span></label>
-        <input id="b-nroRes" placeholder="2918"></div>
+        <input type="text" id="b-nroRes" placeholder="2918"></div>
     </div>
-    <div class="field"><label>Nº Expediente <span>*</span></label>
-      <input id="b-nroExp" placeholder="1936/412/I/26"></div>
+    <div class="field">
+      <label>Nº Expediente <span>*</span></label>
+      <input type="text" id="b-nroExp" placeholder="1936/412/I/2026" maxlength="20" oninput="mascaraExp(this)">
+      <div class="hint">Escribí el número — las barras / se agregan solas</div>
+    </div>
     <div class="field"><label>Paciente — Apellido, Nombre <span>*</span></label>
-      <input id="b-paciente" placeholder="IBAÑEZ, FABIANA LUCILA">
+      <input type="text" id="b-paciente" placeholder="IBAÑEZ, FABIANA LUCILA">
       <div class="hint">En MAYÚSCULAS</div></div>
     <hr>
-    <div class="stitle">Firmas comerciales</div>
-    <div class="field"><label>Firmas que cotizaron (sin la ganadora) <span>*</span></label>
-      <input id="b-firmasPrev" placeholder="IAR Argentina; SOLMAR;">
-      <div class="hint">Separadas por punto y coma</div></div>
-    <div class="field"><label>Firma ganadora <span>*</span></label>
-      <input id="b-firmaGanadora" placeholder="GRUPO VISTALLI. S.R.L (Óptica Giorlent)">
-      <div class="hint">Se replica en toda la resolución</div></div>
+    <div class="stitle">Firmas comerciales — tildá las que cotizaron y marcá la ganadora</div>
+    <div class="empresas-grid">
+      <div class="col-headers">
+        <div class="col-check-h">✓ Cotizó</div>
+        <div class="col-radio-h">★ Ganadora</div>
+      </div>
+      <div class="empresa-row">
+        <label class="emp-check"><input type="checkbox" class="emp-cb" value="Óptica Giorlent (Grupo Vistalli S.R.L)"> <span class="emp-name">Óptica Giorlent (Grupo Vistalli)</span></label>
+        <label class="emp-radio"><input type="radio" name="ganadora" value="Óptica Giorlent (Grupo Vistalli S.R.L)"> <span class="emp-radio-label">Ganadora</span></label>
+      </div>
+      <div class="empresa-row">
+        <label class="emp-check"><input type="checkbox" class="emp-cb" value="SOLMAR"> <span class="emp-name">SOLMAR</span></label>
+        <label class="emp-radio"><input type="radio" name="ganadora" value="SOLMAR"> <span class="emp-radio-label">Ganadora</span></label>
+      </div>
+      <div class="empresa-row">
+        <label class="emp-check"><input type="checkbox" class="emp-cb" value="IAR Argentina"> <span class="emp-name">IAR Argentina</span></label>
+        <label class="emp-radio"><input type="radio" name="ganadora" value="IAR Argentina"> <span class="emp-radio-label">Ganadora</span></label>
+      </div>
+      <div class="empresa-row">
+        <label class="emp-check"><input type="checkbox" class="emp-cb" value="GAES S.A"> <span class="emp-name">GAES S.A</span></label>
+        <label class="emp-radio"><input type="radio" name="ganadora" value="GAES S.A"> <span class="emp-radio-label">Ganadora</span></label>
+      </div>
+      <div class="empresa-row">
+        <label class="emp-check"><input type="checkbox" class="emp-cb" value="OIR-T"> <span class="emp-name">OIR-T</span></label>
+        <label class="emp-radio"><input type="radio" name="ganadora" value="OIR-T"> <span class="emp-radio-label">Ganadora</span></label>
+      </div>
+    </div>
     <hr>
     <div class="stitle">Valores económicos</div>
     <div class="row">
       <div class="field"><label>Cantidad <span>*</span></label>
-        <input id="b-cantidad" placeholder="2" oninput="calcTotal()"></div>
+        <input type="text" id="b-cantidad" placeholder="2" oninput="calcTotal()"></div>
       <div class="field"><label>Precio unitario <span>*</span></label>
-        <input id="b-precioUnit" placeholder="690000" oninput="calcTotal()">
+        <input type="text" id="b-precioUnit" placeholder="690000" oninput="calcTotal()">
         <div class="hint">Sin puntos ni comas</div></div>
     </div>
     <div class="field"><label>Precio total (automático)</label>
-      <input id="b-precioTotal" class="ro" readonly></div>
+      <input type="text" id="b-precioTotal" class="ro" readonly></div>
     <div class="field"><label>Importe en letras (automático)</label>
-      <input id="b-letras" class="ro" readonly></div>
+      <input type="text" id="b-letras" class="ro" readonly></div>
     <button class="btn" onclick="generar('audio')">⬇️ Generar y descargar Resolución</button>
     <div class="msg" id="b-msg"></div>
   </div>
+
   </div>
 </div>
-
 <script>
-// Número a letras
 const _u=["","Un","Dos","Tres","Cuatro","Cinco","Seis","Siete","Ocho","Nueve","Diez","Once","Doce","Trece","Catorce","Quince","Dieciseis","Diecisiete","Dieciocho","Diecinueve","Veinte","Veintiun","Veintidos","Veintitres","Veinticuatro","Veinticinco","Veintiseis","Veintisiete","Veintiocho","Veintinueve"];
 const _d=["","Diez","Veinte","Treinta","Cuarenta","Cincuenta","Sesenta","Setenta","Ochenta","Noventa"];
 const _c=["","Ciento","Doscientos","Trescientos","Cuatrocientos","Quinientos","Seiscientos","Setecientos","Ochocientos","Novecientos"];
 function m100(n){if(n===0)return"";if(n===100)return"Cien";if(n<30)return _u[n];if(n<100){const d=Math.floor(n/10),u=n%10;return u===0?_d[d]:_d[d]+" y "+_u[u].toLowerCase();}const c=Math.floor(n/100),r=n%100;return _c[c]+(r>0?" "+m100(r):"");}
 function numLetras(n){if(n===0)return"Cero";let r="";const M=Math.floor(n/1000000),K=Math.floor((n%1000000)/1000),R=n%1000;if(M>0)r+=(M===1?"Un Millon":m100(M)+" Millones")+" ";if(K>0)r+=(K===1?"Mil":m100(K)+" Mil")+" ";if(R>0)r+=m100(R);return r.trim();}
 
+// Máscara expediente: NNNN/NNN/L/AAAA
+function mascaraExp(el){
+  let v = el.value.replace(/[^0-9a-zA-Z]/g,'');
+  let out = '';
+  // parte 1: hasta 4 dígitos
+  const p1 = v.substring(0,4);
+  out += p1;
+  if(v.length>4){
+    out += '/';
+    // parte 2: hasta 3 dígitos
+    const p2 = v.substring(4,7).replace(/[^0-9]/g,'');
+    out += p2;
+    if(v.length>7){
+      out += '/';
+      // parte 3: 1 letra
+      const p3 = v.substring(7,8).replace(/[^a-zA-Z]/g,'').toUpperCase();
+      out += p3;
+      if(v.length>8){
+        out += '/';
+        // parte 4: hasta 4 dígitos (año)
+        const p4 = v.substring(8,12).replace(/[^0-9]/g,'');
+        out += p4;
+      }
+    }
+  }
+  el.value = out;
+}
+
 function calcLetras(pre){
   const raw=document.getElementById(pre+"-precio").value.replace(/[^0-9]/g,"");
   const n=parseInt(raw);
   document.getElementById(pre+"-letras").value=(!isNaN(n)&&n>0)?numLetras(n)+" pesos con 00/100":"";
 }
-
 function calcTotal(){
   const cant=parseInt(document.getElementById("b-cantidad").value)||0;
   const unit=parseInt(document.getElementById("b-precioUnit").value.replace(/[^0-9]/g,""))||0;
@@ -138,19 +203,26 @@ function calcTotal(){
   document.getElementById("b-letras").value=tot>0?numLetras(tot)+" pesos con 00/100":"";
 }
 
+document.querySelectorAll('input[name="ganadora"]').forEach(radio=>{
+  radio.addEventListener('change',function(){
+    const cb=this.closest('.empresa-row').querySelector('.emp-cb');
+    if(!cb.checked) cb.checked=true;
+  });
+});
+
 function cambiarTab(tab){
   document.querySelectorAll(".tab").forEach((t,i)=>{
-    t.classList.toggle("active", (i===0&&tab==="anteojos")||(i===1&&tab==="audio"));
+    t.classList.toggle("active",(i===0&&tab==="anteojos")||(i===1&&tab==="audio"));
   });
-  document.getElementById("panel-anteojos").classList.toggle("active", tab==="anteojos");
-  document.getElementById("panel-audio").classList.toggle("active", tab==="audio");
+  document.getElementById("panel-anteojos").classList.toggle("active",tab==="anteojos");
+  document.getElementById("panel-audio").classList.toggle("active",tab==="audio");
 }
 
 async function generar(tipo){
-  const pre = tipo==="anteojos"?"a":"b";
-  const msgEl = document.getElementById(pre+"-msg");
+  const pre=tipo==="anteojos"?"a":"b";
+  const msgEl=document.getElementById(pre+"-msg");
   msgEl.className="msg";
-  let payload = {tipo};
+  let payload={tipo};
 
   if(tipo==="anteojos"){
     payload.fecha=document.getElementById("a-fecha").value.trim();
@@ -160,20 +232,25 @@ async function generar(tipo){
     payload.insumo=document.getElementById("a-insumo").value.trim();
     payload.precio=document.getElementById("a-precio").value.replace(/[^0-9]/g,"");
     payload.importeLetras=document.getElementById("a-letras").value.trim();
-    if(!payload.fecha||!payload.nroRes||!payload.nroExp||!payload.paciente||!payload.insumo||!payload.precio||!payload.importeLetras){
+    if(!payload.fecha||!payload.nroRes||!payload.nroExp||!payload.paciente||!payload.insumo||!payload.precio){
       msgEl.className="msg er";msgEl.textContent="Completá todos los campos.";return;}
   } else {
     payload.fecha=document.getElementById("b-fecha").value.trim();
     payload.nroRes=document.getElementById("b-nroRes").value.trim();
     payload.nroExp=document.getElementById("b-nroExp").value.trim();
     payload.paciente=document.getElementById("b-paciente").value.trim();
-    payload.firmasPrev=document.getElementById("b-firmasPrev").value.trim();
-    payload.firmaGanadora=document.getElementById("b-firmaGanadora").value.trim();
+    const cbs=[...document.querySelectorAll('.emp-cb:checked')].map(c=>c.value);
+    const ganadora=document.querySelector('input[name="ganadora"]:checked')?.value||"";
+    if(cbs.length===0||!ganadora){
+      msgEl.className="msg er";msgEl.textContent="Tildá las firmas que cotizaron y elegí la ganadora.";return;}
+    const previas=cbs.filter(c=>c!==ganadora);
+    payload.firmasPrev=previas.join("; ")+(previas.length>0?";":"");
+    payload.firmaGanadora=ganadora;
     payload.cantidad=document.getElementById("b-cantidad").value.trim();
     payload.precioUnit=document.getElementById("b-precioUnit").value.replace(/[^0-9]/g,"");
     payload.precioTotal=(parseInt(payload.cantidad||0)*parseInt(payload.precioUnit||0)).toString();
     payload.importeLetras=document.getElementById("b-letras").value.trim();
-    if(!payload.fecha||!payload.nroRes||!payload.nroExp||!payload.paciente||!payload.firmaGanadora||!payload.cantidad||!payload.precioUnit){
+    if(!payload.fecha||!payload.nroRes||!payload.nroExp||!payload.paciente||!payload.cantidad||!payload.precioUnit){
       msgEl.className="msg er";msgEl.textContent="Completá todos los campos.";return;}
   }
 
