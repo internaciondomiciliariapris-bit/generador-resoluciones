@@ -400,8 +400,24 @@ async function descargarWord(){
   btn.disabled=false;btn.textContent="📄 Descargar Word";
 }
 
-function descargarPDF(){
-  window.print();
+async function descargarPDF(){
+  const payload=getEditedPayload();
+  const msgEl=e("dl-msg");
+  msgEl.className="msg";
+  const btn=document.querySelector('.btn-pdf');
+  btn.disabled=true;btn.textContent="Generando PDF...";
+  try{
+    const resp=await fetch("/api/pdf",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)});
+    if(!resp.ok){const er=await resp.json();throw new Error(er.error);}
+    const blob=await resp.blob();
+    const apellido=payload.paciente.split(",")[0].trim().replace(/ /g,"_");
+    const nombre="Resolucion_"+payload.nroRes+"_"+apellido+".pdf";
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement("a");a.href=url;a.download=nombre;a.click();
+    URL.revokeObjectURL(url);
+    msgEl.className="msg ok";msgEl.textContent="✅ PDF descargado: "+nombre;
+  }catch(ex){msgEl.className="msg er";msgEl.textContent="Error: "+ex.message;}
+  btn.disabled=false;btn.textContent="🖨️ Descargar PDF";
 }
 
 function volverForm(){
