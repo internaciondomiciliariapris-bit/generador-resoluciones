@@ -407,95 +407,114 @@ const LOGO2_DATA = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAgwAAACDCAYAAA
 
 function construirHtmlResolucion(p) {
   const esc = (t) => String(t||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
-  const n = parseInt(p.precio||p.precioTotal||0);
-  const fmt = n.toLocaleString("es-AR");
-  const pu = p.precio ? "$ "+parseInt(p.precio).toLocaleString("es-AR") : "$ "+parseInt(p.precioUnit||0).toLocaleString("es-AR");
-  const pt = p.precio ? "$ "+parseInt(p.precio).toLocaleString("es-AR")+",00" : "$ "+parseInt(p.precioTotal||0).toLocaleString("es-AR")+",00";
-  const im_num = p.precio ? "$ "+parseInt(p.precio).toLocaleString("es-AR")+", 00" : "$ "+parseInt(p.precioTotal||0).toLocaleString("es-AR")+", 00";
 
+  // Precios formateados exactamente como en el Word original
+  const nPrecio = p.precio ? parseInt(p.precio) : parseInt(p.precioTotal||0);
+  const nUnit   = p.precioUnit ? parseInt(p.precioUnit) : nPrecio;
+  const fmt     = (n) => n.toLocaleString("es-AR");
+
+  const pu      = "$ " + fmt(nUnit);
+  const pt      = "$ " + fmt(nPrecio) + ",00";
+  const im_num  = "$ " + fmt(nPrecio) + ", 00";
+
+  // CSS calcado del Word: Century Gothic 11pt, márgenes 25mm top/bottom 30mm left/right
   const css = `
-    @page { size: A4; margin: 0; }
-    body { margin:0; padding:0; font-family:'Century Gothic','CenturyGothic','AppleGothic',Calibri,sans-serif; }
-    .pagina { padding: 20pt 56pt 20pt 57pt; min-height: 841pt; box-sizing:border-box; page-break-after: always; }
-    .pagina.ultima { page-break-after: auto; }
-    p { margin:0; font-size:11pt; line-height:1.3; color:#000; }
-    table { border-collapse:collapse; width:100%; font-size:10pt; }
-    th { background:#4a90c4; color:#fff; border:1pt solid #999; padding:4pt 5pt; text-align:center; font-size:9.5pt; }
-    td { border:1pt solid #999; padding:4pt 5pt; text-align:center; }
-    .tdneg { font-weight:bold; background:#f0f4f8; }
-    b { font-weight:bold; }
-    .ul { text-decoration:underline; }
+    @page { size: A4; margin: 25mm 30mm 25mm 30mm; }
+    body { margin:0; padding:0; font-family:'Century Gothic',CenturyGothic,Calibri,sans-serif; font-size:11pt; color:#000; }
+    p { margin:0 0 8pt 0; line-height:1.35; }
+    .right  { text-align:right; }
+    .center { text-align:center; }
+    .just   { text-align:justify; }
+    .bold   { font-weight:bold; }
+    .ul     { text-decoration:underline; }
+    .indent { text-indent:25mm; text-align:justify; }
+    table   { border-collapse:collapse; width:100%; font-size:10pt; margin:6pt 0 10pt 0; }
+    th      { background:#4a90c4; color:#fff; border:1pt solid #aaa; padding:4pt 5pt; text-align:center; }
+    td      { border:1pt solid #aaa; padding:4pt 5pt; text-align:center; }
+    .tdtot  { font-weight:bold; background:#f0f4f8; }
+    .firma  { margin-top:50pt; }
   `;
 
   const encabezado =
-    '<table style="border:none; margin-bottom:4pt;"><tr>' +
-    '<td style="border:none; padding:0; width:50%;"><img src="'+LOGO1_DATA+'" style="height:34pt;"></td>' +
-    '<td style="border:none; padding:0; text-align:right;"><img src="'+LOGO2_DATA+'" style="height:44pt;"></td>' +
+    '<table style="border:none; margin-bottom:0;"><tr>' +
+    '<td style="border:none; padding:0; width:50%;"><img src="' + LOGO1_DATA + '" style="height:34pt;"></td>' +
+    '<td style="border:none; padding:0; text-align:right;"><img src="' + LOGO2_DATA + '" style="height:44pt;"></td>' +
     '</tr></table>' +
-    '<div style="border-bottom:2.2pt solid #4a90c4; margin-bottom:6pt;"></div>';
+    '<div style="border-bottom:2pt solid #4a90c4; margin-bottom:10pt;"></div>';
 
-  let body = "";
+  let body = encabezado;
 
-  if(p.tipo === "anteojos") {
-    body = '<div class="pagina ultima">' + encabezado +
-      '<p style="text-align:right; margin-top:10pt;">San Miguel de Tucumán, '+esc(p.fecha)+'.</p>' +
-      '<p style="text-align:center; font-weight:bold; margin-top:14pt;">Resolución Interna: Nº '+esc(p.nroRes)+'/DGPRIS.</p>' +
-      '<p style="text-align:center; font-weight:bold;">PROGRAMA INTEGRADO DE SALUD</p>' +
-      '<p style="font-weight:bold; text-decoration:underline; margin-top:10pt;">VISTO:</p>' +
-      '<p style="text-align:justify; text-indent:52pt; margin-top:4pt;">El <b>Expte. Nº '+esc(p.nroExp)+'</b>, por el que se solicita la compra de <b>'+esc(p.insumo)+'</b> para el paciente; <b>'+esc(p.paciente)+'</b> y</p>' +
-      '<p style="font-weight:bold; text-decoration:underline; margin-top:12pt;">CONSIDERANDO:</p>' +
-      '<p style="text-align:justify; text-indent:80pt; margin-top:4pt;">Que se encuentra agregada la documentación correspondiente, la misma esta cumplimentada y debidamente conformada.</p>' +
-      '<p style="text-align:justify; text-indent:80pt; margin-top:4pt;">Que se adjunta presupuesto de la Firma Comercial <b>Grupo Vistalli S.R.L (Óptica Giorlent). -</b></p>' +
-      '<p style="text-align:justify; text-indent:80pt; margin-top:4pt;">Que la propuesta resulto la más conveniente para el Estado.</p>' +
-      '<p style="text-align:justify; text-indent:80pt; margin-top:4pt;">Que se adjunta Dictamen Jurídico con opinión favorable.</p>' +
-      '<p style="text-align:justify; text-indent:80pt; margin-top:4pt;">Que se aprueba todo lo actuado por encuadrarse a las disposiciones legales vigentes, que rigen sobre materia de contrataciones, conforme a lo normado en la Res. Nº 388/SPS-05.</p>' +
-      '<p style="text-align:center; font-weight:bold; margin-top:12pt;">POR ELLO:</p>' +
-      '<p style="text-align:center; font-weight:bold;">LA GERENCIA ADMINISTRATIVA DEL PROGRAMA INTEGRADO DE SALUD</p>' +
-      '<p style="text-align:center; font-weight:bold; text-decoration:underline;">RESUELVE:</p>' +
-      '<p style="text-align:justify; margin-top:10pt;"><b><u>ARTICULO 1º</u></b> : Aprobar la compra de Anteojos, a favor de la firma <b>Grupo Vistalli S.R.L (Óptica Giorlent)</b> que se detalla a continuación:</p>' +
-      '<table style="margin-top:6pt;"><tr><th>FIRMA</th><th>INSUMO</th><th>CANTIDAD</th><th>PRECIO UNITARIO</th><th>PRECIO TOTAL</th></tr>' +
-      '<tr><td>Grupo Vistalli S.R.L (Óptica Giorlent)</td><td>Par de Anteojo baja graduación estándar</td><td>1</td><td>'+esc(pu)+'</td><td>'+esc(pt)+'</td></tr>' +
-      '<tr><td colspan="4" class="tdneg">TOTAL</td><td class="tdneg">'+esc(pt)+'</td></tr></table>' +
-      '<p style="text-align:justify; margin-top:10pt;"><b><u>ARTICULO 2º</u></b> : Autorizar la compra al proveedor <b>Grupo Vistalli S.R.L (Óptica Giorlent)</b> , por el importe de <b>'+esc(im_num)+' '+esc(p.importeLetras)+'</b> , y posterior emisión de la orden de pago respectiva.</p>' +
-      '<p style="text-align:justify; margin-top:10pt;"><b><u>ARTICULO 3º:</u></b> Imputar la erogación por un importe total de <b>'+esc(im_num)+' '+esc(p.importeLetras)+'</b> , y posterior emisión de la orden de pago respectiva, a la Jurisdicción 67, Unidad de Organización 965- Recursos disponibles con los que cuenta el servicio-Finalidad/Función 314, Programa 19, Act. /Ob. 01 - Partida 200 – <b>Subpartida 299</b> – con Financiamiento del Recurso 10 Tesoro General de la Provincia, con cargo al <b>Presupuesto 2026</b>.-</p>' +
-      '<p style="text-align:justify; margin-top:10pt;"><b><u>ARTICULO 4º:</u></b> Pase a control de Ley del Honorable Tribunal de Cuentas.</p>' +
-      '<p style="text-align:justify; margin-top:10pt;"><b><u>ARTICULO 5º:</u></b> Comunicar y archivar. -</p>' +
-      '<p style="font-weight:bold; line-height:1.75; margin-top:60pt; margin-left:5pt;">Firmado digitalmente:<br>C.P.N Mariela Agustina Castillo<br>Gerente Administrativo<br>Dirección Gral. Prog. Integrado de Salud SI.PRO.SA</p>' +
-      '</div>';
+  // Fecha - derecha
+  body += '<p class="right">San Miguel de Tucumán, ' + esc(p.fecha) + '.</p>';
+
+  // Título - centrado negrita
+  body += '<p class="center bold">Resolución Interna: Nº ' + esc(p.nroRes) + '/DGPRIS.</p>';
+  body += '<p class="center bold">PROGRAMA INTEGRADO DE SALUD</p>';
+
+  // VISTO
+  body += '<p class="bold ul" style="margin-top:8pt;">VISTO:</p>';
+
+  if(p.tipo === "anteojos"){
+    body += '<p class="just" style="margin-top:4pt;">El <b>Expte. Nº ' + esc(p.nroExp) + '</b>, por el que se solicita la compra de <b>' + esc(p.insumo) + '</b> para el paciente; <b>' + esc(p.paciente) + '</b> y</p>';
   } else {
-    const puA = "$ "+parseInt(p.precioUnit||0).toLocaleString("es-AR")+",00";
-    const ptA = "$ "+parseInt(p.precioTotal||0).toLocaleString("es-AR")+",00";
-    const imA = "$ "+parseInt(p.precioTotal||0).toLocaleString("es-AR")+", 00";
-    body = '<div class="pagina ultima">' + encabezado +
-      '<p style="text-align:right; margin-top:10pt;">San Miguel de Tucumán, '+esc(p.fecha)+'.</p>' +
-      '<p style="text-align:center; font-weight:bold; margin-top:14pt;">Resolución Interna: Nº '+esc(p.nroRes)+'/DGPRIS.</p>' +
-      '<p style="text-align:center; font-weight:bold;">PROGRAMA INTEGRADO DE SALUD</p>' +
-      '<p style="font-weight:bold; text-decoration:underline; margin-top:10pt;">VISTO:</p>' +
-      '<p style="text-align:justify; text-indent:52pt; margin-top:4pt;">El <b>Expte. Nº '+esc(p.nroExp)+'</b>, por el que se solicita la compra de <b>AUDIFONOS</b> para el paciente; <b>'+esc(p.paciente)+'</b> y</p>' +
-      '<p style="font-weight:bold; text-decoration:underline; margin-top:12pt;">CONSIDERANDO:</p>' +
-      '<p style="text-align:justify; text-indent:80pt; margin-top:4pt;">Que se encuentra agregada la documentación correspondiente, la misma esta cumplimentada y debidamente conformada.</p>' +
-      '<p style="text-align:justify; text-indent:80pt; margin-top:4pt;">Que se adjunta presupuestos de la Firmas Comerciales; <b>'+esc(p.firmasPrev)+' '+esc((p.firmaGanadora||"").toUpperCase())+'.-</b></p>' +
-      '<p style="text-align:justify; text-indent:80pt; margin-top:4pt;">Que la propuesta de <b>'+esc(p.firmaGanadora)+'</b> resulto la más conveniente para el Estado.</p>' +
-      '<p style="text-align:justify; text-indent:80pt; margin-top:4pt;">Que se adjunta Dictamen Jurídico con opinión favorable.</p>' +
-      '<p style="text-align:justify; text-indent:80pt; margin-top:4pt;">Que se aprueba todo lo actuado por encuadrarse a las disposiciones legales vigentes, que rigen sobre materia de contrataciones, conforme a lo normado en la Res. Nº 388/SPS-05.</p>' +
-      '<p style="text-align:center; font-weight:bold; margin-top:12pt;">POR ELLO:</p>' +
-      '<p style="text-align:center; font-weight:bold;">LA GERENCIA ADMINISTRATIVA DEL PROGRAMA INTEGRADO DE SALUD</p>' +
-      '<p style="text-align:center; font-weight:bold; text-decoration:underline;">RESUELVE:</p>' +
-      '<p style="text-align:justify; margin-top:10pt;"><b><u>ARTICULO 1º</u></b> : Aprobar la compra de Audífonos, a favor de la firma <b>'+esc(p.firmaGanadora)+'</b> que se detalla a continuación:</p>' +
-      '<table style="margin-top:6pt;"><tr><th>FIRMA</th><th>INSUMO</th><th>CANTIDAD</th><th>PRECIO UNITARIO</th><th>PRECIO TOTAL</th></tr>' +
-      '<tr><td>'+esc(p.firmaGanadora)+'</td><td>Audifonos</td><td>'+esc(p.cantidad)+'</td><td>'+esc(puA)+'</td><td>'+esc(ptA)+'</td></tr>' +
-      '<tr><td colspan="4" class="tdneg">TOTAL</td><td class="tdneg">'+esc(ptA)+'</td></tr></table>' +
-      '<p style="text-align:justify; margin-top:10pt;"><b><u>ARTICULO 2º</u></b> : Autorizar la compra al proveedor <b>'+esc(p.firmaGanadora)+'</b> , por el importe de <b>'+esc(ptA)+' ('+esc(p.importeLetras)+')</b> , y posterior emisión de la orden de pago respectiva.</p>' +
-      '<p style="text-align:justify; margin-top:10pt;"><b><u>ARTICULO 3º:</u></b> Imputar la erogación por un importe total de <b>'+esc(ptA)+' ('+esc(p.importeLetras)+')</b>, y posterior emisión de la orden de pago respectiva, a la Jurisdicción 67, Unidad de Organización 965-Recursos disponibles con los que cuenta el servicio-Finalidad/Función 314, Programa 19, Act. /Ob. 01 - Partida 200 – <b>Subpartida 297</b> – con Financiamiento del Recurso 10 Tesoro General de la Provincia, con cargo al <b>Presupuesto 2026</b>.-</p>' +
-      '<p style="text-align:justify; margin-top:10pt;"><b><u>ARTICULO 4º:</u></b> Pase a control de Ley del Honorable Tribunal de Cuentas.</p>' +
-      '<p style="text-align:justify; margin-top:10pt;"><b><u>ARTICULO 5º:</u></b> Comunicar y archivar. -</p>' +
-      '<p style="font-weight:bold; line-height:1.75; margin-top:60pt; margin-left:5pt;">Firmado digitalmente:<br>C.P.N Mariela Agustina Castillo<br>Gerente Administrativo<br>Dirección Gral. Prog. Integrado de Salud SI.PRO.SA</p>' +
-      '</div>';
+    body += '<p class="just" style="margin-top:4pt;">El <b>Expte. Nº ' + esc(p.nroExp) + '</b>, por el que se solicita la compra de <b>AUDIFONOS</b> para el paciente; <b>' + esc(p.paciente) + '</b> y</p>';
   }
 
-  return '<!DOCTYPE html><html><head><meta charset="utf-8"><style>' + css + '</style></head><body>' +
-         '<div class="hoja">' + body + '</div></body></html>';
+  // CONSIDERANDO
+  body += '<p class="bold ul" style="margin-top:8pt;">CONSIDERANDO:</p>';
+  body += '<p class="indent">Que se encuentra agregada la documentación correspondiente, la misma esta cumplimentada y debidamente conformada.</p>';
+
+  if(p.tipo === "anteojos"){
+    body += '<p class="indent">Que se adjunta presupuesto de la Firma Comercial <b>Grupo Vistalli S.R.L (Óptica Giorlent). -</b></p>';
+  } else {
+    body += '<p class="indent">Que se adjunta presupuestos de la Firmas Comerciales; <b>' + esc(p.firmasPrev) + ' ' + esc((p.firmaGanadora||"").toUpperCase()) + '.-</b></p>';
+    body += '<p class="indent">Que la propuesta de <b>' + esc(p.firmaGanadora) + '</b> resulto la más conveniente para el Estado.</p>';
+  }
+
+  body += '<p class="indent">Que la propuesta resulto la más conveniente para el Estado.</p>';
+  body += '<p class="indent">Que se adjunta Dictamen Jurídico con opinión favorable.</p>';
+  body += '<p class="indent">Que se aprueba todo lo actuado por encuadrarse a las disposiciones legales vigentes, que rigen sobre materia de contrataciones, conforme a lo normado en la Res. Nº 388/SPS-05.</p>';
+
+  // POR ELLO
+  body += '<p class="center bold ul" style="margin-top:10pt;">POR ELLO:</p>';
+  body += '<p class="center bold">LA GERENCIA ADMINISTRATIVA DEL PROGRAMA INTEGRADO DE SALUD</p>';
+  body += '<p class="center bold ul">RESUELVE:</p>';
+
+  if(p.tipo === "anteojos"){
+    // Art 1
+    body += '<p class="just" style="margin-top:8pt;"><b><u>ARTICULO 1º</u></b> : Aprobar la compra de Anteojos, a favor de la firma <b>Grupo Vistalli S.R.L (Óptica Giorlent)</b> que se detalla a continuación:</p>';
+    body += '<table><tr><th>FIRMA</th><th>INSUMO</th><th>CANTIDAD</th><th>PRECIO UNITARIO</th><th>PRECIO TOTAL</th></tr>' +
+      '<tr><td>Grupo Vistalli S.R.L (Óptica Giorlent)</td><td>Par de Anteojo baja graduación estándar</td><td>1</td><td>' + esc(pu) + '</td><td>' + esc(pt) + '</td></tr>' +
+      '<tr><td colspan="4" class="tdtot">TOTAL</td><td class="tdtot">' + esc(pt) + '</td></tr></table>';
+    // Art 2
+    body += '<p class="just"><b><u>ARTICULO 2º</u></b> : Autorizar la compra al proveedor <b>Grupo Vistalli S.R.L (Óptica Giorlent)</b> , por el importe de <b>' + esc(im_num) + ' ' + esc(p.importeLetras) + '</b> , y posterior emisión de la orden de pago respectiva.</p>';
+    // Art 3
+    body += '<p class="just"><b><u>ARTICULO 3º:</u></b> Imputar la erogación por un importe total de <b>' + esc(im_num) + ' ' + esc(p.importeLetras) + '</b> , y posterior emisión de la orden de pago respectiva, a la Jurisdicción 67, Unidad de Organización 965- Recursos disponibles con los que cuenta el servicio-Finalidad/Función 314, Programa 19, Act. /Ob. 01 - Partida 200 – <b>Subpartida 299</b> – con Financiamiento del Recurso 10 Tesoro General de la Provincia, con cargo al <b>Presupuesto 2026</b>.-</p>';
+  } else {
+    const puA = "$ " + fmt(parseInt(p.precioUnit||0)) + ",00";
+    const ptA = "$ " + fmt(parseInt(p.precioTotal||0)) + ",00";
+    const imA = "$ " + fmt(parseInt(p.precioTotal||0)) + ", 00";
+    body += '<p class="just" style="margin-top:8pt;"><b><u>ARTICULO 1º</u></b> : Aprobar la compra de Audífonos, a favor de la firma <b>' + esc(p.firmaGanadora) + '</b> que se detalla a continuación:</p>';
+    body += '<table><tr><th>FIRMA</th><th>INSUMO</th><th>CANTIDAD</th><th>PRECIO UNITARIO</th><th>PRECIO TOTAL</th></tr>' +
+      '<tr><td>' + esc(p.firmaGanadora) + '</td><td>Audífonos</td><td>' + esc(p.cantidad) + '</td><td>' + esc(puA) + '</td><td>' + esc(ptA) + '</td></tr>' +
+      '<tr><td colspan="4" class="tdtot">TOTAL</td><td class="tdtot">' + esc(ptA) + '</td></tr></table>';
+    body += '<p class="just"><b><u>ARTICULO 2º</u></b> : Autorizar la compra al proveedor <b>' + esc(p.firmaGanadora) + '</b> , por el importe de <b>' + esc(ptA) + ' (' + esc(p.importeLetras) + ')</b> , y posterior emisión de la orden de pago respectiva.</p>';
+    body += '<p class="just"><b><u>ARTICULO 3º:</u></b> Imputar la erogación por un importe total de <b>' + esc(ptA) + ' (' + esc(p.importeLetras) + ')</b>, y posterior emisión de la orden de pago respectiva, a la Jurisdicción 67, Unidad de Organización 965-Recursos disponibles con los que cuenta el servicio-Finalidad/Función 314, Programa 19, Act. /Ob. 01 - Partida 200 – <b>Subpartida 297</b> – con Financiamiento del Recurso 10 Tesoro General de la Provincia, con cargo al <b>Presupuesto 2026</b>.-</p>';
+  }
+
+  body += '<p class="just"><b><u>ARTICULO 4º:</u></b> Pase a control de Ley del Honorable Tribunal de Cuentas.</p>';
+  body += '<p class="just"><b><u>ARTICULO 5º:</u></b> Comunicar y archivar. -</p>';
+
+  // Firma
+  body += '<p class="bold firma">Firmado digitalmente:</p>';
+  body += '<p class="bold">C.P.N Mariela Agustina Castillo</p>';
+  body += '<p class="bold">Gerente Administrativo</p>';
+  body += '<p class="bold">Dirección Gral. Prog. Integrado de Salud</p>';
+  body += '<p class="bold">SI.PRO.SA</p>';
+
+  return '<!DOCTYPE html><html><head><meta charset="utf-8"><style>' + css + '</style></head><body>' + body + '</body></html>';
 }
+
 
 async function descargarPDF(){
   const payload = getEditedPayload();
