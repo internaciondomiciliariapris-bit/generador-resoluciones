@@ -220,9 +220,11 @@ hr{border:none;border-top:1.5px solid #e2e8f0;margin:16px 0 14px}
   <div class="edit-note">✏️ <span>Hacé clic sobre cualquier texto en <strong>fondo amarillo</strong> para editarlo antes de descargar.</span></div>
   <div class="doc" id="doc-preview"></div>
   <div style="padding:20px 32px 24px">
-    <div class="btn-row">
-      <button class="btn-word" onclick="descargarWord()">📄 Descargar Word</button>
-      <button class="btn-pdf" onclick="descargarPDF()">🖨️ Descargar PDF</button>
+    <div>
+      <button class="btn-word" onclick="descargarWord()" style="width:100%">📄 Descargar Word</button>
+    </div>
+    <div style="margin-top:12px; padding:12px 14px; background:#f0f9ff; border:1px solid #bae6fd; border-radius:8px; font-size:13px; color:#0369a1;">
+      💡 <b>Para generar el PDF:</b> abrí el Word descargado → <b>Archivo → Guardar como → PDF</b>
     </div>
     <button class="btn-back" onclick="volverForm()">← Volver al formulario</button>
     <div class="msg" id="dl-msg"></div>
