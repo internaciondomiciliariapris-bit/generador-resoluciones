@@ -241,7 +241,18 @@ function m100(n){if(n===0)return"";if(n===100)return"Cien";if(n<30)return _u[n];
 function numLetras(n){if(n===0)return"Cero";let r="";const M=Math.floor(n/1000000),K=Math.floor((n%1000000)/1000),R=n%1000;if(M>0)r+=(M===1?"Un Millon":m100(M)+" Millones")+" ";if(K>0)r+=(K===1?"Mil":m100(K)+" Mil")+" ";if(R>0)r+=m100(R);return r.trim();}
 function calcLetras(pre){const raw=document.getElementById(pre+"-precio").value.replace(/[^0-9]/g,"");const n=parseInt(raw);document.getElementById(pre+"-letras").value=(!isNaN(n)&&n>0)?numLetras(n)+" pesos con 00/100":"";}
 function calcTotal(){const cant=parseInt(document.getElementById("b-cantidad").value)||0;const unit=parseInt(document.getElementById("b-precioUnit").value.replace(/[^0-9]/g,""))||0;const tot=cant*unit;document.getElementById("b-precioTotal").value=tot>0?tot.toLocaleString("es-AR"):"";document.getElementById("b-letras").value=tot>0?numLetras(tot)+" pesos con 00/100":"";}
-function expKeydown(el,e){if(e.key==='Tab'){e.preventDefault();const v=el.value;const parts=v.split('/');if(parts.length<4){el.value=v+'/';}}}
+function expKeydown(el,e){
+  if(e.key==='Tab'){
+    const v=el.value;
+    const parts=v.split('/');
+    if(parts.length<4){
+      // Todavía faltan barras — agregar barra y quedarse en el campo
+      e.preventDefault();
+      el.value=v+'/';
+    }
+    // Si ya tiene 4 partes (NNNN/NNN/L/AAAA), dejar que Tab avance normalmente al siguiente campo
+  }
+}
 document.querySelectorAll('input[name="ganadora"]').forEach(r=>{r.addEventListener('change',function(){const cb=this.closest('.empresa-row').querySelector('.emp-cb');if(!cb.checked)cb.checked=true;});});
 function cambiarTab(tab){document.querySelectorAll(".tab").forEach((t,i)=>{t.classList.toggle("active",(i===0&&tab==="anteojos")||(i===1&&tab==="audio"));});document.getElementById("panel-anteojos").classList.toggle("active",tab==="anteojos");document.getElementById("panel-audio").classList.toggle("active",tab==="audio");}
 
