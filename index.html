@@ -243,14 +243,14 @@ function calcLetras(pre){const raw=document.getElementById(pre+"-precio").value.
 function calcTotal(){const cant=parseInt(document.getElementById("b-cantidad").value)||0;const unit=parseInt(document.getElementById("b-precioUnit").value.replace(/[^0-9]/g,""))||0;const tot=cant*unit;document.getElementById("b-precioTotal").value=tot>0?tot.toLocaleString("es-AR"):"";document.getElementById("b-letras").value=tot>0?numLetras(tot)+" pesos con 00/100":"";}
 function expKeydown(el,e){
   if(e.key==='Tab'){
-    const v=el.value;
+    const v=el.value.trim();
     const parts=v.split('/');
-    if(parts.length<4){
-      // Todavía faltan barras — agregar barra y quedarse en el campo
+    if(parts.length<4 || (parts.length===4 && parts[3].length===0)){
+      // Faltan barras o falta el año — agregar barra y quedarse
       e.preventDefault();
-      el.value=v+'/';
+      if(parts.length<4) el.value=v+'/';
     }
-    // Si ya tiene 4 partes (NNNN/NNN/L/AAAA), dejar que Tab avance normalmente al siguiente campo
+    // 4 partes con año completo → Tab avanza al siguiente campo normalmente
   }
 }
 document.querySelectorAll('input[name="ganadora"]').forEach(r=>{r.addEventListener('change',function(){const cb=this.closest('.empresa-row').querySelector('.emp-cb');if(!cb.checked)cb.checked=true;});});
