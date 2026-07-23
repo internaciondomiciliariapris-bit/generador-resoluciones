@@ -2,8 +2,8 @@
    comparativo.js  —  Pestaña "Cuadro Comparativo" (audífonos)
    Generador de Resoluciones — PRIS
 
-   Archivo NUEVO y autocontenido. Se inyecta solo.
-   En index.html basta con UNA línea, justo antes de </body>:
+   Archivo autocontenido. Se inyecta solo.
+   En index.html basta con UNA línea:
 
        <script src="/comparativo.js"></script>
 
@@ -14,42 +14,41 @@
 
   var $ = function (id) { return document.getElementById(id); };
 
+  var PROVEEDORES_SUGERIDOS = [
+    "IAR Argentina",
+    "GAES. S.A",
+    "OPTICA GIORLENT (GRUPO VISTALLI S.R.L)"
+  ];
+
+  var MAX_PROV = 8;
+  var MIN_PROV = 2;
+  var contador = 0;   // ids únicos por fila
+
   /* ---------- 1. Estilos ---------- */
   var CSS = [
-    ".cot-row{display:grid;grid-template-columns:1fr 130px 96px;gap:8px;align-items:center;padding:10px 12px;border-bottom:1px solid #f0f4f8}",
+    ".cot-row{display:grid;grid-template-columns:1fr 130px 96px 34px;gap:8px;align-items:center;padding:10px 12px;border-bottom:1px solid #f0f4f8}",
     ".cot-row:last-child{border-bottom:none}",
     ".cot-row input[type=text]{padding:7px 10px;font-size:13px;width:100%;border:1.5px solid #d1d5db;border-radius:7px;color:#1a2b4a;outline:none}",
     ".cot-row input[type=text]:focus{border-color:#1a56a0;box-shadow:0 0 0 3px rgba(26,86,160,.1)}",
     ".cot-gan{display:flex;align-items:center;gap:5px;justify-content:center;cursor:pointer;font-size:11px;color:#16a34a;font-weight:600}",
     ".cot-gan input{width:15px;height:15px;accent-color:#16a34a;cursor:pointer}",
+    ".cot-del{background:none;border:none;color:#cbd5e1;font-size:17px;cursor:pointer;padding:2px 4px;border-radius:5px;line-height:1}",
+    ".cot-del:hover{color:#dc2626;background:#fef2f2}",
     ".cot-extra{grid-column:1 / -1;display:flex;flex-direction:column;gap:6px;margin-top:2px}",
     ".cot-pdf{display:flex;align-items:center;gap:8px;font-size:11px;color:#64748b;flex-wrap:wrap}",
     ".cot-pdf input[type=file]{font-size:11px}",
     ".cot-sug{display:flex;flex-wrap:wrap;gap:6px}",
     ".cot-sug button{font-size:11px;padding:3px 8px;border:1px solid #bae6fd;background:#f0f9ff;color:#0369a1;border-radius:5px;cursor:pointer}",
     ".cot-sug button:hover{background:#e0f2fe}",
+    ".btn-add{width:100%;padding:9px;background:#f1f5f9;color:#1a56a0;border:1.5px dashed #94a3b8;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;margin-top:10px}",
+    ".btn-add:hover{background:#e2e8f0}",
+    ".btn-add:disabled{color:#94a3b8;cursor:default;border-style:solid}",
     ".btn-xlsx{width:100%;padding:13px;background:#166534;color:white;border:none;border-radius:8px;font-size:15px;font-weight:700;cursor:pointer;margin-top:12px}",
     ".btn-xlsx:hover{background:#14532d}",
     ".btn-xlsx:disabled{background:#94a3b8;cursor:default}"
   ].join("\n");
 
-  /* ---------- 2. HTML del panel ---------- */
-  function filaCotizacion(i, nombre, checked) {
-    return '' +
-      '<div class="cot-row">' +
-        '<input type="text" id="c-prov' + i + '" value="' + nombre + '">' +
-        '<input type="text" id="c-precio' + i + '" placeholder="Precio $">' +
-        '<label class="cot-gan"><input type="radio" name="c-gan" value="' + (i - 1) + '"' + (checked ? ' checked' : '') + '> Ganadora</label>' +
-        '<div class="cot-extra">' +
-          '<div class="cot-pdf">📎 PDF opcional: ' +
-            '<input type="file" accept="application/pdf" id="c-file' + i + '">' +
-            '<span id="c-pdfinfo' + i + '"></span>' +
-          '</div>' +
-          '<div class="cot-sug" id="c-sug' + i + '"></div>' +
-        '</div>' +
-      '</div>';
-  }
-
+  /* ---------- 2. Panel base ---------- */
   var PANEL_HTML = '' +
     '<div class="stitle">Datos del expediente</div>' +
     '<div class="field"><label>Nº Expediente <span>*</span></label>' +
@@ -66,31 +65,94 @@
     '<div class="field"><label>Cantidad de audífonos <span>*</span></label>' +
       '<input type="text" id="c-cantidad" placeholder="1"></div>' +
     '<hr>' +
-    '<div class="stitle">Cotizaciones — 3 firmas</div>' +
+    '<div class="stitle" id="c-titulo-cot">Cotizaciones</div>' +
     '<div class="empresas-grid">' +
       '<div class="col-headers">' +
         '<div class="col-check-h">Firma / Precio (sin puntos)</div>' +
         '<div class="col-radio-h">★ Ganadora</div>' +
       '</div>' +
-      filaCotizacion(1, 'IAR Argentina', false) +
-      filaCotizacion(2, 'GAES. S.A', false) +
-      filaCotizacion(3, 'OPTICA GIORLENT (GRUPO VISTALLI S.R.L)', true) +
+      '<div id="c-filas"></div>' +
     '</div>' +
+    '<button class="btn-add" id="c-add">＋ Agregar proveedor</button>' +
     '<hr>' +
     '<div class="stitle">Constancia de convocatoria</div>' +
     '<div class="row">' +
       '<div class="field"><label>Proveedores convocados <span>*</span></label>' +
         '<input type="text" id="c-convocados" value="4"></div>' +
       '<div class="field"><label>Firmas que presentaron</label>' +
-        '<input type="text" id="c-firmas" value="IAR ARGENTINA/GAES S.A/OPTICA VISTALLI"></div>' +
+        '<input type="text" id="c-firmas" placeholder="IAR ARGENTINA/GAES S.A/OPTICA VISTALLI">' +
+        '<div class="hint">Se completa solo — podés editarlo</div></div>' +
     '</div>' +
-    '<button class="btn-xlsx" id="c-btn">📊 Generar Cuadro (Excel)</button>' +
-    '<div style="margin-top:12px;padding:12px 14px;background:#f0f9ff;border:1px solid #bae6fd;border-radius:8px;font-size:13px;color:#0369a1;">' +
-      '💡 <b>Para el PDF:</b> abrí el Excel descargado → <b>Archivo → Guardar como → PDF</b>' +
-    '</div>' +
+    '<button class="btn-xlsx" id="c-btn">📊 Generar Cuadro (Excel + PDF)</button>' +
     '<div class="msg" id="c-msg"></div>';
 
-  /* ---------- 3. Lectura opcional de PDF ---------- */
+  /* ---------- 3. Filas de cotización ---------- */
+  function agregarFila(nombre, ganadora) {
+    var cont = $("c-filas");
+    if (cont.children.length >= MAX_PROV) return;
+
+    contador++;
+    var k = contador;
+
+    var fila = document.createElement("div");
+    fila.className = "cot-row";
+    fila.innerHTML = '' +
+      '<input type="text" class="c-prov" id="c-prov' + k + '" value="' + (nombre || "") + '" placeholder="Nombre de la firma">' +
+      '<input type="text" class="c-precio" id="c-precio' + k + '" placeholder="Precio $">' +
+      '<label class="cot-gan"><input type="radio" name="c-gan" class="c-gan"' + (ganadora ? " checked" : "") + '> Ganadora</label>' +
+      '<button type="button" class="cot-del" title="Quitar proveedor">✕</button>' +
+      '<div class="cot-extra">' +
+        '<div class="cot-pdf">📎 PDF opcional: ' +
+          '<input type="file" accept="application/pdf" id="c-file' + k + '">' +
+          '<span id="c-pdfinfo' + k + '"></span>' +
+        '</div>' +
+        '<div class="cot-sug" id="c-sug' + k + '"></div>' +
+      '</div>';
+
+    cont.appendChild(fila);
+
+    fila.querySelector(".cot-del").addEventListener("click", function () {
+      if (cont.children.length <= MIN_PROV) {
+        avisar("Tienen que quedar al menos " + MIN_PROV + " proveedores.", true);
+        return;
+      }
+      var eraGanadora = fila.querySelector(".c-gan").checked;
+      cont.removeChild(fila);
+      if (eraGanadora) {
+        var primera = cont.querySelector(".c-gan");
+        if (primera) primera.checked = true;
+      }
+      refrescar();
+    });
+
+    fila.querySelector(".c-prov").addEventListener("input", autoFirmas);
+    conectarPdf(k);
+    refrescar();
+  }
+
+  function refrescar() {
+    var cont = $("c-filas");
+    var n = cont.children.length;
+    $("c-titulo-cot").textContent = "Cotizaciones — " + n + (n === 1 ? " firma" : " firmas");
+    var add = $("c-add");
+    add.disabled = (n >= MAX_PROV);
+    add.textContent = (n >= MAX_PROV) ? "Máximo " + MAX_PROV + " proveedores" : "＋ Agregar proveedor";
+    // los convocados nunca pueden ser menos que los que cotizaron
+    var conv = parseInt($("c-convocados").value, 10) || 0;
+    if (conv < n) $("c-convocados").value = n;
+    autoFirmas();
+  }
+
+  function autoFirmas() {
+    var campo = $("c-firmas");
+    if (campo.getAttribute("data-tocado") === "1") return;
+    var nombres = [].slice.call(document.querySelectorAll(".c-prov"))
+      .map(function (i) { return i.value.trim(); })
+      .filter(Boolean);
+    campo.value = nombres.join("/").toUpperCase();
+  }
+
+  /* ---------- 4. Lectura opcional de PDF ---------- */
   var _pdfjsPromise = null;
 
   function cargarPdfJs() {
@@ -113,23 +175,23 @@
   }
 
   function montosDelTexto(texto) {
-    var encontrados = {};
+    var hallados = {};
     var re = /\$?\s*([0-9]{1,3}(?:[.\s][0-9]{3})+(?:,[0-9]{2})?|[0-9]{5,9})/g;
     var m;
     while ((m = re.exec(texto)) !== null) {
       var crudo = m[1].replace(/[.\s]/g, "").replace(/,[0-9]{2}$/, "");
       var n = parseInt(crudo, 10);
-      if (n >= 10000 && n <= 99999999) encontrados[n] = true;
+      if (n >= 10000 && n <= 99999999) hallados[n] = true;
     }
-    return Object.keys(encontrados).map(Number).sort(function (a, b) { return b - a; });
+    return Object.keys(hallados).map(Number).sort(function (a, b) { return b - a; });
   }
 
-  function conectarPdf(i) {
-    var input = $("c-file" + i);
+  function conectarPdf(k) {
+    var input = $("c-file" + k);
     if (!input) return;
     input.addEventListener("change", function () {
-      var info = $("c-pdfinfo" + i);
-      var sug = $("c-sug" + i);
+      var info = $("c-pdfinfo" + k);
+      var sug = $("c-sug" + k);
       sug.innerHTML = "";
       var file = input.files && input.files[0];
       if (!file) { info.textContent = ""; return; }
@@ -145,8 +207,8 @@
         for (var p = 1; p <= paginas; p++) {
           (function (num) {
             cadena = cadena.then(function (acum) {
-              return pdf.getPage(num).then(function (page) {
-                return page.getTextContent();
+              return pdf.getPage(num).then(function (pg) {
+                return pg.getTextContent();
               }).then(function (c) {
                 return acum + " " + c.items.map(function (it) { return it.str; }).join(" ");
               });
@@ -157,7 +219,7 @@
       }).then(function (texto) {
         var montos = montosDelTexto(texto);
         info.textContent = " 📎 " + file.name;
-        if (montos.length === 0) {
+        if (!montos.length) {
           info.textContent += " — no encontré montos, cargá el precio a mano";
           return;
         }
@@ -169,7 +231,10 @@
           var b = document.createElement("button");
           b.type = "button";
           b.textContent = "$ " + n.toLocaleString("es-AR");
-          b.addEventListener("click", function () { $("c-precio" + i).value = n; });
+          b.addEventListener("click", function () {
+            var destino = $("c-precio" + k);
+            if (destino) destino.value = n;
+          });
           sug.appendChild(b);
         });
       }).catch(function () {
@@ -178,68 +243,68 @@
     });
   }
 
-  /* ---------- 4. Generar el Excel ---------- */
+  /* ---------- 5. Generación ---------- */
   function soloNumeros(txt) {
     return parseInt(String(txt || "").replace(/[^0-9]/g, ""), 10) || 0;
   }
 
-  function generarComparativo() {
-    var msgEl = $("c-msg");
-    msgEl.className = "msg";
+  function avisar(texto, esError) {
+    var m = $("c-msg");
+    m.className = "msg " + (esError ? "er" : "ok");
+    m.textContent = texto;
+  }
 
+  function armarPayload() {
     var expte = $("c-nroExp").value.trim();
     var paciente = $("c-paciente").value.trim().toUpperCase();
     var fecha = $("c-fecha").value.trim();
     var cantidad = soloNumeros($("c-cantidad").value);
 
-    var cotizaciones = [1, 2, 3].map(function (i) {
+    var filas = [].slice.call($("c-filas").children);
+    var cotizaciones = filas.map(function (f) {
       return {
-        nombre: $("c-prov" + i).value.trim(),
-        precio: soloNumeros($("c-precio" + i).value)
+        nombre: f.querySelector(".c-prov").value.trim(),
+        precio: soloNumeros(f.querySelector(".c-precio").value)
       };
     });
 
-    var sel = document.querySelector('input[name="c-gan"]:checked');
-    var idxGanadora = sel ? parseInt(sel.value, 10) : -1;
-    var convocados = soloNumeros($("c-convocados").value) || cotizaciones.length;
-    var firmas = $("c-firmas").value.trim();
+    var idxGanadora = -1;
+    filas.forEach(function (f, i) {
+      if (f.querySelector(".c-gan").checked) idxGanadora = i;
+    });
 
     if (!expte || !paciente || !fecha || !cantidad) {
-      msgEl.className = "msg er";
-      msgEl.textContent = "Completá expediente, paciente, fecha y cantidad.";
-      return;
+      avisar("Completá expediente, paciente, fecha y cantidad.", true);
+      return null;
     }
-    var incompleta = cotizaciones.some(function (c) { return !c.nombre || !c.precio; });
-    if (incompleta) {
-      msgEl.className = "msg er";
-      msgEl.textContent = "Completá nombre y precio de las 3 firmas.";
-      return;
+    if (cotizaciones.some(function (c) { return !c.nombre || !c.precio; })) {
+      avisar("Completá nombre y precio de todas las firmas.", true);
+      return null;
     }
     if (idxGanadora < 0) {
-      msgEl.className = "msg er";
-      msgEl.textContent = "Elegí la firma ganadora.";
-      return;
+      avisar("Elegí la firma ganadora.", true);
+      return null;
     }
 
-    var payload = {
+    return {
       expte: expte,
       paciente: paciente,
       fecha_adj: fecha,
       cantidad: cantidad,
       cotizaciones: cotizaciones,
       idx_ganadora: idxGanadora,
-      nro_convocados: convocados,
-      firmas_presentaron: firmas
+      nro_convocados: soloNumeros($("c-convocados").value) || cotizaciones.length,
+      firmas_presentaron: $("c-firmas").value.trim()
     };
+  }
 
-    var btn = $("c-btn");
-    btn.disabled = true;
-    btn.textContent = "Generando…";
-
-    fetch("/api/comparativo", {
+  function bajarUno(payload, formato, respaldo) {
+    var cuerpo = JSON.parse(JSON.stringify(payload));
+    cuerpo.formato = formato;
+    return fetch("/api/comparativo", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload)
+      body: JSON.stringify(cuerpo)
     }).then(function (resp) {
       if (!resp.ok) {
         return resp.json().catch(function () {
@@ -254,9 +319,7 @@
         var mm = cd.match(/filename="?([^"]+)"?/);
         if (mm) nombre = mm[1];
       }
-      if (!nombre) {
-        nombre = "CUADRO_COMPARATIVO_" + paciente.replace(/[^A-Za-z0-9]+/g, "_") + ".xlsx";
-      }
+      if (!nombre) nombre = respaldo;
       return resp.blob().then(function (blob) {
         var url = URL.createObjectURL(blob);
         var a = document.createElement("a");
@@ -265,20 +328,40 @@
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-        msgEl.className = "msg ok";
-        msgEl.textContent = "✅ Excel descargado: " + nombre;
+        setTimeout(function () { URL.revokeObjectURL(url); }, 1500);
+        return nombre;
       });
-    }).catch(function (ex) {
-      msgEl.className = "msg er";
-      msgEl.textContent = "Error: " + ex.message;
-    }).then(function () {
-      btn.disabled = false;
-      btn.textContent = "📊 Generar Cuadro (Excel)";
     });
   }
 
-  /* ---------- 5. Inyección ---------- */
+  function generar() {
+    var payload = armarPayload();
+    if (!payload) return;
+
+    var base = "CUADRO_COMPARATIVO_" + payload.paciente.replace(/[^A-Za-z0-9]+/g, "_");
+    var btn = $("c-btn");
+    btn.disabled = true;
+    btn.textContent = "Generando Excel…";
+    $("c-msg").className = "msg";
+    $("c-msg").textContent = "";
+
+    bajarUno(payload, "xlsx", base + ".xlsx").then(function () {
+      btn.textContent = "Generando PDF…";
+      // pausa corta: algunos navegadores ignoran dos descargas simultáneas
+      return new Promise(function (r) { setTimeout(r, 800); });
+    }).then(function () {
+      return bajarUno(payload, "pdf", base + ".pdf");
+    }).then(function () {
+      avisar("✅ Listo: se descargaron el Excel y el PDF.", false);
+    }).catch(function (ex) {
+      avisar("Error: " + ex.message, true);
+    }).then(function () {
+      btn.disabled = false;
+      btn.textContent = "📊 Generar Cuadro (Excel + PDF)";
+    });
+  }
+
+  /* ---------- 6. Inyección ---------- */
   function init() {
     var tabs = document.querySelector(".tabs");
     var cuerpo = document.querySelector(".body");
@@ -307,10 +390,20 @@
       });
     }
 
-    [1, 2, 3].forEach(conectarPdf);
-    $("c-btn").addEventListener("click", generarComparativo);
+    // Si se edita a mano el campo de firmas, dejamos de autocompletarlo
+    $("c-firmas").addEventListener("input", function () {
+      this.setAttribute("data-tocado", "1");
+    });
 
-    // Reemplazo de cambiarTab para que maneje las 3 pestañas
+    $("c-add").addEventListener("click", function () { agregarFila("", false); });
+    $("c-btn").addEventListener("click", generar);
+
+    // Tres filas iniciales, la tercera marcada como ganadora
+    PROVEEDORES_SUGERIDOS.forEach(function (nombre, i) {
+      agregarFila(nombre, i === 2);
+    });
+
+    // cambiarTab ampliado a las tres pestañas
     var nombres = ["anteojos", "audio", "comparativo"];
     window.cambiarTab = function (destino) {
       var solapas = document.querySelectorAll(".tab");
