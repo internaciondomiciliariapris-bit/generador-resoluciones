@@ -114,10 +114,13 @@ def build_xlsx_bytes(d):
     for c in cols_prov:
         ws.column_dimensions[c].width = 22.43
 
-    # Encabezado con logo
+    # Encabezado con logo  (ANCLADO A LA IZQUIERDA, en A1)
     ws.merge_cells("A1:%s2" % ultima)
+    ws.row_dimensions[1].height = 21
     ws.row_dimensions[2].height = 21
-    ws.add_image(XLImage(io.BytesIO(base64.b64decode(LOGO_B64))), "%s1" % ultima)
+    img = XLImage(io.BytesIO(base64.b64decode(LOGO_B64)))
+    img.anchor = "A1"
+    ws.add_image(img, "A1")
 
     # Expediente
     ws.merge_cells("A3:%s5" % ultima)
@@ -216,44 +219,63 @@ def _ajustar(cv, texto, fuente, tam_max, ancho):
     return t
 
 
+# Anchos de columna calcados del Excel (mm): A=15.14, B=8.43, proveedor=22.43
+W_DET, W_CANT, W_PROV = 29.0, 17.0, 43.0
+
+
 def build_pdf_bytes(d):
     v = _leer(d)
     cots = v["cots"]
     n = len(cots)
 
-    ancho, alto = landscape(A4)
-    ml, mr = 15 * mm, 15 * mm
+    # --- La tabla mide lo mismo que en el Excel, NO se estira a la hoja ---
+    tabla_mm = W_DET + W_CANT + W_PROV * n
+
+    # Vertical si la tabla entra; apaisada solo si hay muchos proveedores.
+    orient = str(d.get("orientacion", "auto")).lower()
+    if orient not in ("vertical", "apaisada"):
+        orient = "vertical" if tabla_mm <= 180.0 else "apaisada"
+    pagina = A4 if orient == "vertical" else landscape(A4)
+
+    ancho, alto = pagina
+    ml, mr, mt = 15 * mm, 15 * mm, 15 * mm
     util = ancho - ml - mr
 
+    # Si aun asi no entra (8 proveedores), se reduce todo proporcionalmente
+    esc = min(1.0, util / (tabla_mm * mm))
+    w_det = W_DET * mm * esc
+    w_cant = W_CANT * mm * esc
+    w_prov = W_PROV * mm * esc
+    tabla = w_det + w_cant + w_prov * n
+
     buf = io.BytesIO()
-    cv = rl_canvas.Canvas(buf, pagesize=landscape(A4))
+    cv = rl_canvas.Canvas(buf, pagesize=pagina)
 
-    y = alto - 12 * mm
+    y = alto - mt
 
-    # --- Logo arriba a la derecha ---
+    # --- Logo arriba a la IZQUIERDA ---
     logo = ImageReader(io.BytesIO(base64.b64decode(LOGO_B64)))
-    lw = 55 * mm
+    lw = min(52 * mm, tabla * 0.72)
     lh = lw * 53.0 / 367.0
-    cv.drawImage(logo, ancho - mr - lw, y - lh, lw, lh, mask="auto")
-    y -= lh + 4 * mm
+    cv.drawImage(logo, ml, y - lh, lw, lh, mask="auto")
+    y -= lh + 3 * mm
 
-    # --- Caja del expediente ---
-    h_exp = 14 * mm
+    # --- Caja del expediente (ancho = ancho de la tabla) ---
+    h_exp = 15 * mm
     cv.setLineWidth(0.6)
-    cv.rect(ml, y - h_exp, util, h_exp)
+    cv.rect(ml, y - h_exp, tabla, h_exp)
     linea1 = "EXPTE : %s - Paciente %s" % (v["expte"], v["paciente"])
     linea2 = "(Adjudicacion de Fecha %s)" % v["fecha_adj"]
-    t1 = _ajustar(cv, linea1, "Helvetica-Bold", 11, util - 8 * mm)
+    t1 = _ajustar(cv, linea1, "Helvetica-Bold", 10.5, tabla - 6 * mm)
     cv.setFont("Helvetica-Bold", t1)
-    cv.drawCentredString(ml + util / 2, y - h_exp / 2 + 1.2 * mm, linea1)
-    cv.setFont("Helvetica-Bold", 10)
-    cv.drawCentredString(ml + util / 2, y - h_exp / 2 - 3.6 * mm, linea2)
+    cv.drawCentredString(ml + tabla / 2, y - h_exp / 2 + 1.3 * mm, linea1)
+    t2 = _ajustar(cv, linea2, "Helvetica-Bold", 10.5, tabla - 6 * mm)
+    cv.setFont("Helvetica-Bold", t2)
+    cv.drawCentredString(ml + tabla / 2, y - h_exp / 2 - 3.9 * mm, linea2)
     y -= h_exp
 
     # --- Tabla ---
-    w_det, w_cant = 32 * mm, 22 * mm
-    w_prov = (util - w_det - w_cant) / n
-    h_head, h_data = 13 * mm, 9 * mm
+    h_head, h_data = 11 * mm, 9 * mm
 
     xs = [ml, ml + w_det, ml + w_det + w_cant]
     for i in range(n):
@@ -266,25 +288,25 @@ def build_pdf_bytes(d):
     cv.setFillColorRGB(0, 0, 0)
 
     # grilla
-    cv.rect(ml, y - h_head, util, h_head)
-    cv.rect(ml, y - h_head - h_data, util, h_data)
+    cv.rect(ml, y - h_head, tabla, h_head)
+    cv.rect(ml, y - h_head - h_data, tabla, h_data)
     for x in xs[1:-1]:
         cv.line(x, y, x, y - h_head - h_data)
 
     # encabezados
-    cv.setFont("Helvetica", 10)
+    cv.setFont("Helvetica", 9.5)
     cv.drawCentredString(ml + w_det / 2, y - h_head / 2 - 1 * mm, "Detalle")
     cv.drawCentredString(xs[1] + w_cant / 2, y - h_head / 2 - 1 * mm, "Cantidad")
     for i, cot in enumerate(cots):
         nombre = cot["nombre"]
         cx = xs[2] + w_prov * i + w_prov / 2
-        partes = _partir(cv, nombre, "Helvetica-Bold", 9.5, w_prov - 3 * mm)
-        ty = y - h_head / 2 + (len(partes) - 1) * 1.9 * mm - 1 * mm
+        partes = _partir(cv, nombre, "Helvetica-Bold", 8.5, w_prov - 3 * mm)
+        ty = y - h_head / 2 + (len(partes) - 1) * 1.7 * mm - 0.9 * mm
         for p in partes:
-            tam = _ajustar(cv, p, "Helvetica-Bold", 9.5, w_prov - 2 * mm)
+            tam = _ajustar(cv, p, "Helvetica-Bold", 8.5, w_prov - 2 * mm)
             cv.setFont("Helvetica-Bold", tam)
             cv.drawCentredString(cx, ty, p)
-            ty -= 3.8 * mm
+            ty -= 3.4 * mm
     y -= h_head
 
     # fila de datos
@@ -295,42 +317,41 @@ def build_pdf_bytes(d):
         cx = xs[2] + w_prov * i + w_prov / 2
         txt = pesos_ar(cot["precio"])
         if i == v["gan"]:
-            tam = _ajustar(cv, txt, "Helvetica-Bold", 11, w_prov - 4 * mm)
+            tam = _ajustar(cv, txt, "Helvetica-Bold", 10, w_prov - 4 * mm)
             cv.setFont("Helvetica-Bold", tam)
         else:
             tam = _ajustar(cv, txt, "Helvetica", 8.5, w_prov - 4 * mm)
             cv.setFont("Helvetica", tam)
         cv.drawCentredString(cx, y - h_data / 2 - 1 * mm, txt)
-    y -= h_data + 6 * mm
+    y -= h_data + 5 * mm
 
-    # --- Texto de adjudicacion, fondo gris ---
+    # --- Texto de adjudicacion, fondo gris (ancho = ancho de la tabla) ---
     texto = TEXTO_ADJUDICA + cots[v["gan"]]["nombre"]
-    partes = _partir(cv, texto, "Helvetica", 10.5, util - 6 * mm)
-    h_caja = len(partes) * 5.2 * mm + 4 * mm
+    partes = _partir(cv, texto, "Helvetica", 9.5, tabla - 6 * mm)
+    h_caja = len(partes) * 4.8 * mm + 4 * mm
     cv.setFillColorRGB(0.949, 0.949, 0.949)
-    cv.rect(ml, y - h_caja, util, h_caja, stroke=0, fill=1)
+    cv.rect(ml, y - h_caja, tabla, h_caja, stroke=0, fill=1)
     cv.setFillColorRGB(0, 0, 0)
-    cv.setFont("Helvetica", 10.5)
-    ty = y - 6 * mm
+    cv.setFont("Helvetica", 9.5)
+    ty = y - 5.6 * mm
     for p in partes:
         cv.drawString(ml + 3 * mm, ty, p)
-        ty -= 5.2 * mm
-    y -= h_caja + 7 * mm
+        ty -= 4.8 * mm
+    y -= h_caja + 6 * mm
 
     # --- Constancia ---
-    cv.setFont("Helvetica", 10)
     for linea in _lineas_constancia(v["convocados"], v["firmas"]):
-        tam = _ajustar(cv, linea, "Helvetica", 10, util)
+        tam = _ajustar(cv, linea, "Helvetica", 9.5, util)
         cv.setFont("Helvetica", tam)
         cv.drawString(ml, y, linea)
-        y -= 5.2 * mm
-    y -= 6 * mm
+        y -= 4.8 * mm
+    y -= 5 * mm
 
     # --- Firma ---
-    cv.setFont("Times-Bold", 12)
+    cv.setFont("Times-Bold", 11)
     for linea in FIRMA:
         cv.drawString(ml, y, linea)
-        y -= 5.6 * mm
+        y -= 5.2 * mm
 
     cv.showPage()
     cv.save()
