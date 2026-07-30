@@ -21,7 +21,7 @@
   ];
 
   var MAX_PROV = 8;
-  var MIN_PROV = 2;
+  var MIN_PROV = 1;
   var contador = 0;   // ids únicos por fila
 
   /* ---------- 1. Estilos ---------- */
