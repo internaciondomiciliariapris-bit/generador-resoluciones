@@ -57,8 +57,8 @@ def _lineas_constancia(nro_convocados, firmas):
 
 def _leer(d):
     cots = d["cotizaciones"]
-    if not (2 <= len(cots) <= 8):
-        raise ValueError("Se admiten entre 2 y 8 proveedores")
+    if not (1 <= len(cots) <= 8):
+        raise ValueError("Se admiten entre 1 y 8 proveedores")
     return {
         "expte": str(d["expte"]).strip(),
         "paciente": str(d["paciente"]).strip().upper(),
