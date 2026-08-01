@@ -565,6 +565,17 @@ function volverForm(){
   e("form-card").style.display="block";
   window.scrollTo(0,0);
 }
+
+// Fecha de hoy predeterminada (hora LOCAL de Tucumán, formato "31 de Julio de 2026")
+(function(){
+  const meses=["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
+  const d=new Date();
+  const hoy=d.getDate()+" de "+meses[d.getMonth()]+" de "+d.getFullYear();
+  ["a-fecha","b-fecha"].forEach(function(id){
+    const el=document.getElementById(id);
+    if(el && !el.value) el.value=hoy;   // solo si está vacío, no pisa lo que edites
+  });
+})();
 </script>
 </body>
 </html>
