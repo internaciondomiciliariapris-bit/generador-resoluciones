@@ -175,15 +175,36 @@
   }
 
   function montosDelTexto(texto) {
-    var hallados = {};
-    var re = /\$?\s*([0-9]{1,3}(?:[.\s][0-9]{3})+(?:,[0-9]{2})?|[0-9]{5,9})/g;
+    // Normalizamos y dejamos un espacio de guarda a los costados
+    var t = " " + String(texto).replace(/\u00a0/g, " ") + " ";
+    var re = /([0-9]{1,3}(?:[.\s][0-9]{3})+(?:,[0-9]{2})?|[0-9]{5,9}(?:,[0-9]{2})?)/g;
+    // Palabras que indican que el número de al lado es un precio
+    var kw = /(total|importe|precio|subtotal|valor|monto|unitario|unit\b|c\/u|p\/u|p\.?\s*unit)/i;
+
+    var fuertes = {};   // números con contexto de plata ($, centavos o palabra clave)
+    var debiles = {};   // el resto (solo se usan si no hay ninguno fuerte)
     var m;
-    while ((m = re.exec(texto)) !== null) {
-      var crudo = m[1].replace(/[.\s]/g, "").replace(/,[0-9]{2}$/, "");
-      var n = parseInt(crudo, 10);
-      if (n >= 10000 && n <= 99999999) hallados[n] = true;
+    while ((m = re.exec(t)) !== null) {
+      var crudo = m[1];
+      var limpio = crudo.replace(/[.\s]/g, "").replace(/,[0-9]{2}$/, "");
+      var n = parseInt(limpio, 10);
+      if (isNaN(n) || n < 10000 || n > 99999999) continue;
+
+      var ini = m.index;
+      var antes = t.slice(Math.max(0, ini - 24), ini);   // 24 caracteres previos
+      var tieneSigno = /\$\s*$/.test(antes);              // ...$ justo antes
+      var tieneCentavos = /,[0-9]{2}$/.test(crudo);       // termina en ,00 / ,50
+      var cercaPalabra = kw.test(antes);                  // "total", "precio", etc. cerca
+
+      if (tieneSigno || tieneCentavos || cercaPalabra) fuertes[n] = true;
+      else debiles[n] = true;
     }
-    return Object.keys(hallados).map(Number).sort(function (a, b) { return b - a; });
+
+    var listaFuertes = Object.keys(fuertes).map(Number);
+    var listaDebiles = Object.keys(debiles).map(Number);
+    // Si hay montos con contexto de precio, mostramos SOLO esos; si no, caemos al resto
+    var base = listaFuertes.length ? listaFuertes : listaDebiles;
+    return base.sort(function (a, b) { return b - a; });
   }
 
   function conectarPdf(k) {
@@ -223,9 +244,16 @@
           info.textContent += " — no encontré montos, cargá el precio a mano";
           return;
         }
+        // Un solo monto claro → lo cargamos directo (igual se puede editar/reelegir)
+        if (montos.length === 1) {
+          var unico = $("c-precio" + k);
+          if (unico && !unico.value) unico.value = montos[0];
+        }
         var etiqueta = document.createElement("span");
         etiqueta.style.cssText = "font-size:11px;color:#64748b";
-        etiqueta.textContent = "Posibles montos (clic para usar):";
+        etiqueta.textContent = montos.length === 1
+          ? "Monto cargado (clic para reconfirmar):"
+          : "Posibles montos (clic para usar):";
         sug.appendChild(etiqueta);
         montos.slice(0, 6).forEach(function (n) {
           var b = document.createElement("button");
@@ -382,6 +410,17 @@
     panel.className = "panel";
     panel.innerHTML = PANEL_HTML;
     cuerpo.appendChild(panel);
+
+    // Fecha de adjudicación predeterminada = hoy (hora LOCAL, formato dd/mm/aaaa), editable a mano
+    (function () {
+      var f = $("c-fecha");
+      if (f && !f.value) {
+        var d = new Date();
+        var dd = String(d.getDate()).padStart(2, "0");
+        var mm = String(d.getMonth() + 1).padStart(2, "0");
+        f.value = dd + "/" + mm + "/" + d.getFullYear();
+      }
+    })();
 
     // Máscara del expediente, reusando la función original si existe
     if (typeof window.expKeydown === "function") {
