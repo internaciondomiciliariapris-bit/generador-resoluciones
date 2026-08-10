@@ -406,6 +406,16 @@
     tab.addEventListener("click", function () { window.cambiarTab("comparativo"); });
     tabs.appendChild(tab);
 
+    // Pestaña "Listado" SIEMPRE al final (su panel viene en el index.html).
+    if ($("panel-listado") && !document.querySelector('.tabs .tab[data-tab="listado"]')) {
+      var tabLst = document.createElement("div");
+      tabLst.className = "tab";
+      tabLst.dataset.tab = "listado";
+      tabLst.textContent = "📋 Listado";
+      tabLst.addEventListener("click", function () { window.cambiarTab("listado"); });
+      tabs.appendChild(tabLst);
+    }
+
     var panel = document.createElement("div");
     panel.id = "panel-comparativo";
     panel.className = "panel";
