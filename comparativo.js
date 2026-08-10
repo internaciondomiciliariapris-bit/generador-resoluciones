@@ -401,6 +401,7 @@
 
     var tab = document.createElement("div");
     tab.className = "tab";
+    tab.dataset.tab = "comparativo";
     tab.textContent = "📊 Cuadro Comparativo";
     tab.addEventListener("click", function () { window.cambiarTab("comparativo"); });
     tabs.appendChild(tab);
@@ -442,17 +443,31 @@
       agregarFila(nombre, i === 2);
     });
 
-    // cambiarTab ampliado a las tres pestañas
-    var nombres = ["anteojos", "audio", "comparativo"];
+    // Etiquetar las solapas que ya venían en el HTML (Anteojos, Audífonos, Listado…)
+    // con su propio nombre, leyéndolo del onclick. Así no dependemos del orden.
+    var solapasHtml = document.querySelectorAll(".tabs .tab");
+    for (var s = 0; s < solapasHtml.length; s++) {
+      if (solapasHtml[s].dataset.tab) continue;
+      var oc = solapasHtml[s].getAttribute("onclick") || "";
+      var mm = oc.match(/cambiarTab\(['"]([^'"]+)['"]\)/);
+      if (mm) solapasHtml[s].dataset.tab = mm[1];
+    }
+
+    // cambiarTab robusto: opera por data-tab (no por posición) y contempla todas
+    // las pestañas presentes, incluida "listado" si existe.
     window.cambiarTab = function (destino) {
-      var solapas = document.querySelectorAll(".tab");
+      var solapas = document.querySelectorAll(".tabs .tab");
       for (var i = 0; i < solapas.length; i++) {
-        solapas[i].classList.toggle("active", nombres[i] === destino);
+        solapas[i].classList.toggle("active", solapas[i].dataset.tab === destino);
       }
-      nombres.forEach(function (n) {
+      ["anteojos", "audio", "listado", "comparativo"].forEach(function (n) {
         var pnl = $("panel-" + n);
         if (pnl) pnl.classList.toggle("active", n === destino);
       });
+      // Si abrimos el Listado, refrescarlo (la función vive en index.html)
+      if (destino === "listado" && typeof window.renderListado === "function") {
+        window.renderListado();
+      }
     };
   }
 
