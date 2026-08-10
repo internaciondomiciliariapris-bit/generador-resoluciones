@@ -115,6 +115,7 @@ hr{border:none;border-top:1.5px solid #e2e8f0;margin:16px 0 14px}
   <div class="tabs">
     <div class="tab active" onclick="cambiarTab('anteojos')">👓 Anteojos</div>
     <div class="tab" onclick="cambiarTab('audio')">🎧 Audífonos</div>
+    <div class="tab" onclick="cambiarTab('listado')">📋 Listado</div>
   </div>
   <div class="body">
 
@@ -206,6 +207,30 @@ hr{border:none;border-top:1.5px solid #e2e8f0;margin:16px 0 14px}
     <button class="btn-preview" onclick="mostrarPrevia('audio')">👁️ Ver Resolución</button>
     <div class="msg" id="b-msg"></div>
   </div>
+
+  <!-- LISTADO -->
+  <div id="panel-listado" class="panel">
+    <div class="stitle">Listado de expedientes</div>
+    <div class="hint" style="margin-bottom:12px">Se guarda en esta computadora al generar cada resolución (Word o PDF). Descargá el Excel cuando quieras — te sirve además de respaldo, por si se limpia el navegador.</div>
+    <div id="listado-empty" class="hint" style="font-size:13px;color:#64748b">Todavía no hay expedientes cargados. Generá una resolución y aparecerá acá.</div>
+    <div style="overflow-x:auto">
+      <table id="listado-table" style="width:100%;border-collapse:collapse;font-size:13px;display:none">
+        <thead><tr>
+          <th style="background:#1a56a0;color:#fff;padding:8px;border:1px solid #ccc;text-align:left">Nº Expediente</th>
+          <th style="background:#1a56a0;color:#fff;padding:8px;border:1px solid #ccc;text-align:left">Apellido y Nombre</th>
+          <th style="background:#1a56a0;color:#fff;padding:8px;border:1px solid #ccc;text-align:center">Cantidad</th>
+          <th style="background:#1a56a0;color:#fff;padding:8px;border:1px solid #ccc;text-align:right">Monto</th>
+          <th style="background:#1a56a0;color:#fff;padding:8px;border:1px solid #ccc;width:34px"></th>
+        </tr></thead>
+        <tbody id="listado-body"></tbody>
+      </table>
+    </div>
+    <div id="listado-total" class="hint" style="display:none;font-size:13px;color:#334155;margin-top:10px;text-align:right"></div>
+    <div style="display:flex;gap:10px;margin-top:14px;flex-wrap:wrap">
+      <button class="btn-preview" id="btn-excel" style="width:auto;flex:1;min-width:200px" onclick="descargarExcel()">⬇️ Descargar Excel</button>
+    </div>
+    <div class="msg" id="lst-msg"></div>
+  </div>
   </div>
 </div>
 
@@ -254,7 +279,7 @@ function expKeydown(el,e){
   }
 }
 document.querySelectorAll('input[name="ganadora"]').forEach(r=>{r.addEventListener('change',function(){const cb=this.closest('.empresa-row').querySelector('.emp-cb');if(!cb.checked)cb.checked=true;});});
-function cambiarTab(tab){document.querySelectorAll(".tab").forEach((t,i)=>{t.classList.toggle("active",(i===0&&tab==="anteojos")||(i===1&&tab==="audio"));});document.getElementById("panel-anteojos").classList.toggle("active",tab==="anteojos");document.getElementById("panel-audio").classList.toggle("active",tab==="audio");}
+function cambiarTab(tab){document.querySelectorAll(".tab").forEach((t,i)=>{t.classList.toggle("active",(i===0&&tab==="anteojos")||(i===1&&tab==="audio")||(i===2&&tab==="listado"));});document.getElementById("panel-anteojos").classList.toggle("active",tab==="anteojos");document.getElementById("panel-audio").classList.toggle("active",tab==="audio");document.getElementById("panel-listado").classList.toggle("active",tab==="listado");if(tab==="listado")renderListado();}
 
 // Logos
 const LOGO1="data:image/png;base64,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";
@@ -409,6 +434,7 @@ async function descargarWord(){
     const a=document.createElement("a");a.href=url;a.download=nombre;a.click();
     URL.revokeObjectURL(url);
     msgEl.className="msg ok";msgEl.textContent="✅ Word descargado: "+nombre;
+    registrarExpediente(payload);
   }catch(ex){msgEl.className="msg er";msgEl.textContent="Error: "+ex.message;}
   btn.disabled=false;btn.textContent="📄 Descargar Word";
 }
@@ -554,6 +580,7 @@ async function descargarPDF(){
     const a = document.createElement("a"); a.href=url; a.download=titulo+".pdf"; a.click();
     URL.revokeObjectURL(url);
     msgEl.className = "msg ok"; msgEl.textContent = "✅ PDF descargado: " + titulo + ".pdf";
+    registrarExpediente(payload);
   } catch(ex) {
     msgEl.className = "msg er"; msgEl.textContent = "Error: " + ex.message;
   }
@@ -564,6 +591,123 @@ function volverForm(){
   e("preview-card").style.display="none";
   e("form-card").style.display="block";
   window.scrollTo(0,0);
+}
+
+// ===== Listado local de expedientes (guardado SOLO en esta computadora) =====
+const LISTADO_KEY = "resoluciones_pris_listado";
+function _escL(t){return String(t==null?"":t).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");}
+
+function listadoLeer(){
+  try{ return JSON.parse(localStorage.getItem(LISTADO_KEY)) || []; }
+  catch(_){ return []; }
+}
+function listadoGuardar(arr){
+  try{ localStorage.setItem(LISTADO_KEY, JSON.stringify(arr)); }catch(_){}
+}
+
+// Guarda/actualiza un expediente a partir del payload ya editado.
+// Deriva cantidad y monto según el tipo (anteojos / audífonos).
+function registrarExpediente(p){
+  let cantidad, monto;
+  if(p.tipo === "anteojos"){
+    cantidad = parseInt(String(p.insumo||"").replace(/[^0-9]/g,"")) || 1;
+    monto    = parseInt(String(p.precio||"").replace(/[^0-9]/g,"")) || 0;
+  } else {
+    cantidad = parseInt(String(p.cantidad||"").replace(/[^0-9]/g,"")) || 0;
+    monto    = parseInt(String(p.precioTotal||"").replace(/[^0-9]/g,"")) || 0;
+  }
+  const reg = {
+    nroExp: (p.nroExp||"").trim(),
+    paciente: (p.paciente||"").trim(),
+    cantidad: cantidad,
+    monto: monto,
+    tipo: p.tipo
+  };
+  if(!reg.nroExp) return;
+  const arr = listadoLeer();
+  // upsert por Nº Expediente: si descargás Word y PDF del mismo, no se duplica
+  const i = arr.findIndex(x => (x.nroExp||"").trim() === reg.nroExp);
+  if(i >= 0) arr[i] = reg; else arr.push(reg);
+  listadoGuardar(arr);
+  renderListado();
+}
+
+function borrarExpediente(nroExp){
+  const arr = listadoLeer().filter(x => (x.nroExp||"").trim() !== String(nroExp).trim());
+  listadoGuardar(arr);
+  renderListado();
+}
+
+function renderListado(){
+  const arr = listadoLeer();
+  const tbody = document.getElementById("listado-body");
+  const table = document.getElementById("listado-table");
+  const empty = document.getElementById("listado-empty");
+  const totEl = document.getElementById("listado-total");
+  if(!tbody) return;
+  if(arr.length === 0){
+    table.style.display = "none";
+    if(totEl) totEl.style.display = "none";
+    empty.style.display = "block";
+    tbody.innerHTML = "";
+    return;
+  }
+  empty.style.display = "none";
+  table.style.display = "table";
+  const td = "padding:7px 8px;border:1px solid #e2e8f0;";
+  tbody.innerHTML = arr.map(r => (
+    '<tr>' +
+      '<td style="'+td+'">'+_escL(r.nroExp)+'</td>' +
+      '<td style="'+td+'">'+_escL(r.paciente)+'</td>' +
+      '<td style="'+td+'text-align:center">'+_escL(r.cantidad)+'</td>' +
+      '<td style="'+td+'text-align:right">$ '+Number(r.monto||0).toLocaleString("es-AR")+'</td>' +
+      '<td style="'+td+'text-align:center"><button title="Eliminar" onclick="borrarExpediente(\''+String(r.nroExp).replace(/\\/g,"\\\\").replace(/'/g,"\\'")+'\')" style="border:none;background:#fee2e2;color:#b91c1c;border-radius:6px;width:26px;height:26px;cursor:pointer">✕</button></td>' +
+    '</tr>'
+  )).join("");
+  if(totEl){
+    const total = arr.reduce((s,r)=>s+(Number(r.monto)||0),0);
+    totEl.style.display = "block";
+    totEl.innerHTML = "<b>"+arr.length+"</b> expediente(s) — Total: <b>$ "+total.toLocaleString("es-AR")+"</b>";
+  }
+}
+
+// ===== Exportar a Excel (.xlsx). Carga SheetJS solo cuando hace falta =====
+const XLSX_CDN = "https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js";
+function cargarXLSX(){
+  return new Promise((res,rej)=>{
+    if(window.XLSX) return res();
+    const s=document.createElement("script");
+    s.src=XLSX_CDN; s.onload=()=>res(); s.onerror=()=>rej(new Error("No se pudo cargar el generador de Excel. Revisá tu conexión."));
+    document.head.appendChild(s);
+  });
+}
+async function descargarExcel(){
+  const msgEl = document.getElementById("lst-msg");
+  msgEl.className="msg";
+  const arr = listadoLeer();
+  if(arr.length===0){ msgEl.className="msg er"; msgEl.textContent="No hay expedientes para exportar."; return; }
+  const btn = document.getElementById("btn-excel");
+  const txt = btn.textContent;
+  btn.disabled=true; btn.textContent="Generando...";
+  try{
+    await cargarXLSX();
+    const filas = arr.map(r=>({
+      "Nº Expediente": r.nroExp,
+      "Apellido y Nombre": r.paciente,
+      "Cantidad": Number(r.cantidad)||0,
+      "Monto": Number(r.monto)||0
+    }));
+    const ws = XLSX.utils.json_to_sheet(filas, {header:["Nº Expediente","Apellido y Nombre","Cantidad","Monto"]});
+    ws["!cols"]=[{wch:18},{wch:34},{wch:10},{wch:16}];
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Expedientes");
+    const hoy = new Date().toISOString().slice(0,10);
+    XLSX.writeFile(wb, "Listado_Expedientes_"+hoy+".xlsx");
+    msgEl.className="msg ok"; msgEl.textContent="✅ Excel descargado ("+arr.length+" expedientes).";
+  }catch(ex){
+    msgEl.className="msg er"; msgEl.textContent="Error: "+ex.message;
+  }
+  btn.disabled=false; btn.textContent=txt;
 }
 
 // Fecha de hoy predeterminada (hora LOCAL de Tucumán, formato "31 de Julio de 2026")
