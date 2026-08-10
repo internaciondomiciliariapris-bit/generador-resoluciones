@@ -216,21 +216,46 @@ hr{border:none;border-top:1.5px solid #e2e8f0;margin:16px 0 14px}
       <input id="lst-buscar" type="text" oninput="renderListado()" placeholder="Buscar por expediente, paciente o Nº de orden de compra" style="width:100%;padding:9px 12px 9px 36px;border:1px solid #cbd5e1;border-radius:8px;font-size:13px;outline:none">
     </div>
     <div id="listado-empty" class="hint" style="font-size:13px;color:#64748b">Todavía no hay expedientes cargados. Generá una resolución y aparecerá acá.</div>
-    <div style="overflow-x:auto">
-      <table id="listado-table" style="width:100%;border-collapse:collapse;font-size:13px;display:none">
-        <thead><tr>
-          <th style="background:#1a56a0;color:#fff;padding:8px;border:1px solid #ccc;text-align:left">Nº Expediente</th>
-          <th style="background:#1a56a0;color:#fff;padding:8px;border:1px solid #ccc;text-align:left">Apellido y Nombre</th>
-          <th style="background:#1a56a0;color:#fff;padding:8px;border:1px solid #ccc;text-align:center">Tipo</th>
-          <th style="background:#1a56a0;color:#fff;padding:8px;border:1px solid #ccc;text-align:center">Cantidad</th>
-          <th style="background:#1a56a0;color:#fff;padding:8px;border:1px solid #ccc;text-align:right">Monto</th>
-          <th style="background:#1a56a0;color:#fff;padding:8px;border:1px solid #ccc;text-align:center">Nº Orden</th>
-          <th style="background:#1a56a0;color:#fff;padding:8px;border:1px solid #ccc;width:34px"></th>
-        </tr></thead>
-        <tbody id="listado-body"></tbody>
-      </table>
+
+    <!-- ===== Bloque ANTEOJOS ===== -->
+    <div id="sec-anteojos" style="display:none;margin-bottom:22px">
+      <div style="font-size:14px;font-weight:700;color:#1a56a0;margin:4px 0 8px;display:flex;align-items:center;gap:6px">👓 Anteojos</div>
+      <div style="overflow-x:auto">
+        <table style="width:100%;border-collapse:collapse;font-size:13px">
+          <thead><tr>
+            <th style="background:#1a56a0;color:#fff;padding:8px;border:1px solid #ccc;text-align:left">Nº Expediente</th>
+            <th style="background:#1a56a0;color:#fff;padding:8px;border:1px solid #ccc;text-align:left">Apellido y Nombre</th>
+            <th style="background:#1a56a0;color:#fff;padding:8px;border:1px solid #ccc;text-align:center">Cantidad</th>
+            <th style="background:#1a56a0;color:#fff;padding:8px;border:1px solid #ccc;text-align:right">Monto</th>
+            <th style="background:#1a56a0;color:#fff;padding:8px;border:1px solid #ccc;text-align:center">Nº Orden</th>
+            <th style="background:#1a56a0;color:#fff;padding:8px;border:1px solid #ccc;width:34px"></th>
+          </tr></thead>
+          <tbody id="listado-body-anteojos"></tbody>
+        </table>
+      </div>
+      <div id="listado-sub-anteojos" class="hint" style="font-size:13px;color:#334155;margin-top:8px;text-align:right"></div>
     </div>
-    <div id="listado-total" class="hint" style="display:none;font-size:13px;color:#334155;margin-top:10px;text-align:right"></div>
+
+    <!-- ===== Bloque AUDÍFONOS ===== -->
+    <div id="sec-audio" style="display:none;margin-bottom:6px">
+      <div style="font-size:14px;font-weight:700;color:#1a56a0;margin:4px 0 8px;display:flex;align-items:center;gap:6px">🎧 Audífonos</div>
+      <div style="overflow-x:auto">
+        <table style="width:100%;border-collapse:collapse;font-size:13px">
+          <thead><tr>
+            <th style="background:#1a56a0;color:#fff;padding:8px;border:1px solid #ccc;text-align:left">Nº Expediente</th>
+            <th style="background:#1a56a0;color:#fff;padding:8px;border:1px solid #ccc;text-align:left">Apellido y Nombre</th>
+            <th style="background:#1a56a0;color:#fff;padding:8px;border:1px solid #ccc;text-align:center">Cantidad</th>
+            <th style="background:#1a56a0;color:#fff;padding:8px;border:1px solid #ccc;text-align:right">Monto</th>
+            <th style="background:#1a56a0;color:#fff;padding:8px;border:1px solid #ccc;text-align:center">Nº Orden</th>
+            <th style="background:#1a56a0;color:#fff;padding:8px;border:1px solid #ccc;width:34px"></th>
+          </tr></thead>
+          <tbody id="listado-body-audio"></tbody>
+        </table>
+      </div>
+      <div id="listado-sub-audio" class="hint" style="font-size:13px;color:#334155;margin-top:8px;text-align:right"></div>
+    </div>
+
+    <div id="listado-total" class="hint" style="display:none;font-size:14px;color:#0f172a;margin-top:14px;padding-top:12px;border-top:2px solid #1a56a0;text-align:right"></div>
     <div style="display:flex;gap:10px;margin-top:14px;flex-wrap:wrap">
       <button class="btn-preview" id="btn-excel" style="width:auto;flex:1;min-width:200px" onclick="descargarExcel()">⬇️ Descargar Excel</button>
     </div>
@@ -652,6 +677,26 @@ function setOrden(nroExp, valor){
   if(i >= 0){ arr[i].orden = String(valor||"").trim(); listadoGuardar(arr); }
 }
 
+// Dibuja las filas de un grupo en su tbody y devuelve el subtotal en $
+function _renderGrupo(grupo, tbodyId){
+  const tbody = document.getElementById(tbodyId);
+  if(!tbody) return 0;
+  const td = "padding:7px 8px;border:1px solid #e2e8f0;";
+  tbody.innerHTML = grupo.map(function(r){
+    const key = String(r.nroExp).replace(/\\/g,"\\\\").replace(/'/g,"\\'");
+    const ordVal = _escL(r.orden).replace(/"/g,"&quot;");
+    return '<tr>' +
+      '<td style="'+td+'">'+_escL(r.nroExp)+'</td>' +
+      '<td style="'+td+'">'+_escL(r.paciente)+'</td>' +
+      '<td style="'+td+'text-align:center">'+_escL(r.cantidad)+'</td>' +
+      '<td style="'+td+'text-align:right">$ '+Number(r.monto||0).toLocaleString("es-AR")+'</td>' +
+      '<td style="'+td+'text-align:center"><input type="text" value="'+ordVal+'" onchange="setOrden(\''+key+'\', this.value)" placeholder="—" style="width:100px;border:1px solid #cbd5e1;border-radius:6px;padding:5px 7px;font-size:13px;text-align:center;outline:none"></td>' +
+      '<td style="'+td+'text-align:center"><button title="Eliminar" onclick="borrarExpediente(\''+key+'\')" style="border:none;background:#fee2e2;color:#b91c1c;border-radius:6px;width:26px;height:26px;cursor:pointer">✕</button></td>' +
+    '</tr>';
+  }).join("");
+  return grupo.reduce((s,r)=>s+(Number(r.monto)||0),0);
+}
+
 function renderListado(){
   const buscador = document.getElementById("lst-buscar");
   const q = (buscador ? buscador.value : "").trim().toLowerCase();
@@ -661,41 +706,57 @@ function renderListado(){
         (r.paciente||"").toLowerCase().includes(q) ||
         (r.orden||"").toLowerCase().includes(q)
       ) : todos;
-  const tbody = document.getElementById("listado-body");
-  const table = document.getElementById("listado-table");
-  const empty = document.getElementById("listado-empty");
-  const totEl = document.getElementById("listado-total");
-  if(!tbody) return;
+
+  const empty  = document.getElementById("listado-empty");
+  const totEl  = document.getElementById("listado-total");
+  const secAnt = document.getElementById("sec-anteojos");
+  const secAud = document.getElementById("sec-audio");
+  const subAnt = document.getElementById("listado-sub-anteojos");
+  const subAud = document.getElementById("listado-sub-audio");
+  if(!secAnt || !secAud) return;
+
   if(arr.length === 0){
-    table.style.display = "none";
+    secAnt.style.display = "none";
+    secAud.style.display = "none";
     if(totEl) totEl.style.display = "none";
     empty.style.display = "block";
     empty.textContent = (todos.length === 0)
       ? "Todavía no hay expedientes cargados. Generá una resolución y aparecerá acá."
       : "No se encontraron expedientes para esa búsqueda.";
-    tbody.innerHTML = "";
+    document.getElementById("listado-body-anteojos").innerHTML = "";
+    document.getElementById("listado-body-audio").innerHTML = "";
     return;
   }
   empty.style.display = "none";
-  table.style.display = "table";
-  const td = "padding:7px 8px;border:1px solid #e2e8f0;";
-  tbody.innerHTML = arr.map(function(r){
-    const key = String(r.nroExp).replace(/\\/g,"\\\\").replace(/'/g,"\\'");
-    const ordVal = _escL(r.orden).replace(/"/g,"&quot;");
-    return '<tr>' +
-      '<td style="'+td+'">'+_escL(r.nroExp)+'</td>' +
-      '<td style="'+td+'">'+_escL(r.paciente)+'</td>' +
-      '<td style="'+td+'text-align:center">'+tipoLegible(r.tipo)+'</td>' +
-      '<td style="'+td+'text-align:center">'+_escL(r.cantidad)+'</td>' +
-      '<td style="'+td+'text-align:right">$ '+Number(r.monto||0).toLocaleString("es-AR")+'</td>' +
-      '<td style="'+td+'text-align:center"><input type="text" value="'+ordVal+'" onchange="setOrden(\''+key+'\', this.value)" placeholder="—" style="width:100px;border:1px solid #cbd5e1;border-radius:6px;padding:5px 7px;font-size:13px;text-align:center;outline:none"></td>' +
-      '<td style="'+td+'text-align:center"><button title="Eliminar" onclick="borrarExpediente(\''+key+'\')" style="border:none;background:#fee2e2;color:#b91c1c;border-radius:6px;width:26px;height:26px;cursor:pointer">✕</button></td>' +
-    '</tr>';
-  }).join("");
+
+  const anteojos = arr.filter(r => r.tipo === "anteojos");
+  const audio    = arr.filter(r => r.tipo === "audio");
+
+  // Bloque Anteojos
+  if(anteojos.length > 0){
+    const subT = _renderGrupo(anteojos, "listado-body-anteojos");
+    secAnt.style.display = "block";
+    subAnt.innerHTML = "<b>"+anteojos.length+"</b> expediente(s) — Subtotal Anteojos: <b>$ "+subT.toLocaleString("es-AR")+"</b>";
+  } else {
+    secAnt.style.display = "none";
+    document.getElementById("listado-body-anteojos").innerHTML = "";
+  }
+
+  // Bloque Audífonos
+  if(audio.length > 0){
+    const subT = _renderGrupo(audio, "listado-body-audio");
+    secAud.style.display = "block";
+    subAud.innerHTML = "<b>"+audio.length+"</b> expediente(s) — Subtotal Audífonos: <b>$ "+subT.toLocaleString("es-AR")+"</b>";
+  } else {
+    secAud.style.display = "none";
+    document.getElementById("listado-body-audio").innerHTML = "";
+  }
+
+  // Total general
   if(totEl){
     const total = arr.reduce((s,r)=>s+(Number(r.monto)||0),0);
     totEl.style.display = "block";
-    totEl.innerHTML = "<b>"+arr.length+"</b> expediente(s)" + (q ? " (filtrados)" : "") + " — Total: <b>$ "+total.toLocaleString("es-AR")+"</b>";
+    totEl.innerHTML = "<b>"+arr.length+"</b> expediente(s)" + (q ? " (filtrados)" : "") + " — TOTAL GENERAL: <b>$ "+total.toLocaleString("es-AR")+"</b>";
   }
 }
 
@@ -719,21 +780,32 @@ async function descargarExcel(){
   btn.disabled=true; btn.textContent="Generando...";
   try{
     await cargarXLSX();
-    const filas = arr.map(r=>({
+    const HEADER = ["Nº Expediente","Apellido y Nombre","Cantidad","Monto","Nº Orden"];
+    const COLS   = [{wch:18},{wch:34},{wch:10},{wch:16},{wch:14}];
+    const mapear = r => ({
       "Nº Expediente": r.nroExp,
       "Apellido y Nombre": r.paciente,
-      "Tipo": tipoLegible(r.tipo),
       "Cantidad": Number(r.cantidad)||0,
       "Monto": Number(r.monto)||0,
       "Nº Orden": r.orden || ""
-    }));
-    const ws = XLSX.utils.json_to_sheet(filas, {header:["Nº Expediente","Apellido y Nombre","Tipo","Cantidad","Monto","Nº Orden"]});
-    ws["!cols"]=[{wch:18},{wch:34},{wch:12},{wch:10},{wch:16},{wch:14}];
+    });
+    const anteojos = arr.filter(r => r.tipo === "anteojos").map(mapear);
+    const audio    = arr.filter(r => r.tipo === "audio").map(mapear);
+
     const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Expedientes");
+    if(anteojos.length > 0){
+      const wsA = XLSX.utils.json_to_sheet(anteojos, {header:HEADER});
+      wsA["!cols"]=COLS;
+      XLSX.utils.book_append_sheet(wb, wsA, "Anteojos");
+    }
+    if(audio.length > 0){
+      const wsB = XLSX.utils.json_to_sheet(audio, {header:HEADER});
+      wsB["!cols"]=COLS;
+      XLSX.utils.book_append_sheet(wb, wsB, "Audífonos");
+    }
     const hoy = new Date().toISOString().slice(0,10);
     XLSX.writeFile(wb, "Listado_Expedientes_"+hoy+".xlsx");
-    msgEl.className="msg ok"; msgEl.textContent="✅ Excel descargado ("+arr.length+" expedientes).";
+    msgEl.className="msg ok"; msgEl.textContent="✅ Excel descargado ("+anteojos.length+" anteojos + "+audio.length+" audífonos).";
   }catch(ex){
     msgEl.className="msg er"; msgEl.textContent="Error: "+ex.message;
   }
