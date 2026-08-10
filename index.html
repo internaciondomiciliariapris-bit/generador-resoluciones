@@ -211,14 +211,20 @@ hr{border:none;border-top:1.5px solid #e2e8f0;margin:16px 0 14px}
   <div id="panel-listado" class="panel">
     <div class="stitle">Listado de expedientes</div>
     <div class="hint" style="margin-bottom:12px">Se guarda en esta computadora al generar cada resolución (Word o PDF). Descargá el Excel cuando quieras — te sirve además de respaldo, por si se limpia el navegador.</div>
+    <div style="position:relative;margin-bottom:12px">
+      <span style="position:absolute;left:12px;top:50%;transform:translateY(-50%);color:#94a3b8;font-size:15px">🔍</span>
+      <input id="lst-buscar" type="text" oninput="renderListado()" placeholder="Buscar por expediente, paciente o Nº de orden de compra" style="width:100%;padding:9px 12px 9px 36px;border:1px solid #cbd5e1;border-radius:8px;font-size:13px;outline:none">
+    </div>
     <div id="listado-empty" class="hint" style="font-size:13px;color:#64748b">Todavía no hay expedientes cargados. Generá una resolución y aparecerá acá.</div>
     <div style="overflow-x:auto">
       <table id="listado-table" style="width:100%;border-collapse:collapse;font-size:13px;display:none">
         <thead><tr>
           <th style="background:#1a56a0;color:#fff;padding:8px;border:1px solid #ccc;text-align:left">Nº Expediente</th>
           <th style="background:#1a56a0;color:#fff;padding:8px;border:1px solid #ccc;text-align:left">Apellido y Nombre</th>
+          <th style="background:#1a56a0;color:#fff;padding:8px;border:1px solid #ccc;text-align:center">Tipo</th>
           <th style="background:#1a56a0;color:#fff;padding:8px;border:1px solid #ccc;text-align:center">Cantidad</th>
           <th style="background:#1a56a0;color:#fff;padding:8px;border:1px solid #ccc;text-align:right">Monto</th>
+          <th style="background:#1a56a0;color:#fff;padding:8px;border:1px solid #ccc;text-align:center">Nº Orden</th>
           <th style="background:#1a56a0;color:#fff;padding:8px;border:1px solid #ccc;width:34px"></th>
         </tr></thead>
         <tbody id="listado-body"></tbody>
@@ -595,6 +601,7 @@ function volverForm(){
 // ===== Listado local de expedientes (guardado SOLO en esta computadora) =====
 const LISTADO_KEY = "resoluciones_pris_listado";
 function _escL(t){return String(t==null?"":t).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");}
+function tipoLegible(t){ return t==="audio" ? "Audífonos" : t==="anteojos" ? "Anteojos" : "—"; }
 
 function listadoLeer(){
   try{ return JSON.parse(localStorage.getItem(LISTADO_KEY)) || []; }
@@ -620,13 +627,14 @@ function registrarExpediente(p){
     paciente: (p.paciente||"").trim(),
     cantidad: cantidad,
     monto: monto,
-    tipo: p.tipo
+    tipo: p.tipo,
+    orden: ""
   };
   if(!reg.nroExp) return;
   const arr = listadoLeer();
   // upsert por Nº Expediente: si descargás Word y PDF del mismo, no se duplica
   const i = arr.findIndex(x => (x.nroExp||"").trim() === reg.nroExp);
-  if(i >= 0) arr[i] = reg; else arr.push(reg);
+  if(i >= 0){ reg.orden = arr[i].orden || ""; arr[i] = reg; } else { arr.push(reg); }
   listadoGuardar(arr);
   renderListado();
 }
@@ -637,8 +645,22 @@ function borrarExpediente(nroExp){
   renderListado();
 }
 
-function renderListado(){
+// Guarda el Nº de Orden escrito a mano (sin re-renderizar, para no perder el foco)
+function setOrden(nroExp, valor){
   const arr = listadoLeer();
+  const i = arr.findIndex(x => (x.nroExp||"").trim() === String(nroExp).trim());
+  if(i >= 0){ arr[i].orden = String(valor||"").trim(); listadoGuardar(arr); }
+}
+
+function renderListado(){
+  const buscador = document.getElementById("lst-buscar");
+  const q = (buscador ? buscador.value : "").trim().toLowerCase();
+  const todos = listadoLeer();
+  const arr = q ? todos.filter(r =>
+        (r.nroExp||"").toLowerCase().includes(q) ||
+        (r.paciente||"").toLowerCase().includes(q) ||
+        (r.orden||"").toLowerCase().includes(q)
+      ) : todos;
   const tbody = document.getElementById("listado-body");
   const table = document.getElementById("listado-table");
   const empty = document.getElementById("listado-empty");
@@ -648,25 +670,32 @@ function renderListado(){
     table.style.display = "none";
     if(totEl) totEl.style.display = "none";
     empty.style.display = "block";
+    empty.textContent = (todos.length === 0)
+      ? "Todavía no hay expedientes cargados. Generá una resolución y aparecerá acá."
+      : "No se encontraron expedientes para esa búsqueda.";
     tbody.innerHTML = "";
     return;
   }
   empty.style.display = "none";
   table.style.display = "table";
   const td = "padding:7px 8px;border:1px solid #e2e8f0;";
-  tbody.innerHTML = arr.map(r => (
-    '<tr>' +
+  tbody.innerHTML = arr.map(function(r){
+    const key = String(r.nroExp).replace(/\\/g,"\\\\").replace(/'/g,"\\'");
+    const ordVal = _escL(r.orden).replace(/"/g,"&quot;");
+    return '<tr>' +
       '<td style="'+td+'">'+_escL(r.nroExp)+'</td>' +
       '<td style="'+td+'">'+_escL(r.paciente)+'</td>' +
+      '<td style="'+td+'text-align:center">'+tipoLegible(r.tipo)+'</td>' +
       '<td style="'+td+'text-align:center">'+_escL(r.cantidad)+'</td>' +
       '<td style="'+td+'text-align:right">$ '+Number(r.monto||0).toLocaleString("es-AR")+'</td>' +
-      '<td style="'+td+'text-align:center"><button title="Eliminar" onclick="borrarExpediente(\''+String(r.nroExp).replace(/\\/g,"\\\\").replace(/'/g,"\\'")+'\')" style="border:none;background:#fee2e2;color:#b91c1c;border-radius:6px;width:26px;height:26px;cursor:pointer">✕</button></td>' +
-    '</tr>'
-  )).join("");
+      '<td style="'+td+'text-align:center"><input type="text" value="'+ordVal+'" onchange="setOrden(\''+key+'\', this.value)" placeholder="—" style="width:100px;border:1px solid #cbd5e1;border-radius:6px;padding:5px 7px;font-size:13px;text-align:center;outline:none"></td>' +
+      '<td style="'+td+'text-align:center"><button title="Eliminar" onclick="borrarExpediente(\''+key+'\')" style="border:none;background:#fee2e2;color:#b91c1c;border-radius:6px;width:26px;height:26px;cursor:pointer">✕</button></td>' +
+    '</tr>';
+  }).join("");
   if(totEl){
     const total = arr.reduce((s,r)=>s+(Number(r.monto)||0),0);
     totEl.style.display = "block";
-    totEl.innerHTML = "<b>"+arr.length+"</b> expediente(s) — Total: <b>$ "+total.toLocaleString("es-AR")+"</b>";
+    totEl.innerHTML = "<b>"+arr.length+"</b> expediente(s)" + (q ? " (filtrados)" : "") + " — Total: <b>$ "+total.toLocaleString("es-AR")+"</b>";
   }
 }
 
@@ -693,11 +722,13 @@ async function descargarExcel(){
     const filas = arr.map(r=>({
       "Nº Expediente": r.nroExp,
       "Apellido y Nombre": r.paciente,
+      "Tipo": tipoLegible(r.tipo),
       "Cantidad": Number(r.cantidad)||0,
-      "Monto": Number(r.monto)||0
+      "Monto": Number(r.monto)||0,
+      "Nº Orden": r.orden || ""
     }));
-    const ws = XLSX.utils.json_to_sheet(filas, {header:["Nº Expediente","Apellido y Nombre","Cantidad","Monto"]});
-    ws["!cols"]=[{wch:18},{wch:34},{wch:10},{wch:16}];
+    const ws = XLSX.utils.json_to_sheet(filas, {header:["Nº Expediente","Apellido y Nombre","Tipo","Cantidad","Monto","Nº Orden"]});
+    ws["!cols"]=[{wch:18},{wch:34},{wch:12},{wch:10},{wch:16},{wch:14}];
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Expedientes");
     const hoy = new Date().toISOString().slice(0,10);
