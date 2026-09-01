@@ -14,11 +14,20 @@ def generar_anteojos(data):
     nro_exp    = data.get("nroExp","")
     paciente   = data.get("paciente","")
     insumo     = data.get("insumo","")
-    n, fmt     = fmt_precio(data.get("precio","0"))
+    cantidad   = str(data.get("cantidad","1")).strip() or "1"
+    try: q = int(str(cantidad).replace(".","").strip() or "1")
+    except: q = 1
+    _u = data.get("precioUnit")
+    n_u, fmt_u = fmt_precio(_u if _u not in (None,"") else data.get("precio","0"))
+    _t = data.get("precioTotal")
+    if _t not in (None,""):
+        n_t, fmt_t = fmt_precio(_t)
+    else:
+        n_t = n_u * q; fmt_t = "{:,}".format(n_t).replace(",",".")
     imp_letras = data.get("importeLetras","")
-    pu = "$ " + fmt
-    pt = "$ " + fmt + ",00"
-    im = "$ " + fmt + ", 00"
+    pu = "$ " + fmt_u
+    pt = "$ " + fmt_t + ",00"
+    im = "$ " + fmt_t + ", 00"
     buf = io.BytesIO()
     with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zout:
         for name, b64 in TMPL_ANTEOJOS.items():
@@ -30,6 +39,7 @@ def generar_anteojos(data):
                 raw = xml.encode("utf-8")
             elif name == "word/document.xml":
                 xml = raw.decode("utf-8")
+                xml = xml.replace("<w:t>1</w:t>", "<w:t>__CANTIDAD__</w:t>", 1).replace("__CANTIDAD__", cantidad)
                 xml = xml.replace("__FECHA__", fecha).replace("__NRO_RES__", nro_res)
                 xml = xml.replace("__NRO_EXP__", nro_exp).replace("__PACIENTE__", paciente)
                 xml = xml.replace("__INSUMO_CORTO__", insumo)
