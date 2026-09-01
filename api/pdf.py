@@ -20,10 +20,19 @@ def generar_pdf(data):
 
     if tipo == "anteojos":
         insumo    = data.get("insumo","")
-        n, fmt    = fmt_n(data.get("precio","0"))
-        pu        = "$ " + fmt
-        pt        = "$ " + fmt + ",00"
-        importe   = "$ " + fmt + ", 00"
+        cantidad  = str(data.get("cantidad","1")).strip() or "1"
+        try: _q = int(str(cantidad).replace(".","").strip() or "1")
+        except: _q = 1
+        _u = data.get("precioUnit")
+        n_u, fmt_u = fmt_n(_u if _u not in (None,"") else data.get("precio","0"))
+        _t = data.get("precioTotal")
+        if _t not in (None,""):
+            n_t, fmt_t = fmt_n(_t)
+        else:
+            n_t = n_u * _q; fmt_t = "{:,}".format(n_t).replace(",",".")
+        pu        = "$ " + fmt_u
+        pt        = "$ " + fmt_t + ",00"
+        importe   = "$ " + fmt_t + ", 00"
         firma     = "Grupo Vistalli S.R.L (Optica Giorlent)"
         firmas_prev = ""
     else:
@@ -154,7 +163,7 @@ def generar_pdf(data):
     pdf.set_text_color(0,0,0)
     pdf.set_font("Helvetica","",9)
     if tipo == "anteojos":
-        row = [firma,"Par Anteojo baja grad.","1",pu,pt]
+        row = [firma,"Par Anteojo baja grad.",cantidad,pu,pt]
     else:
         row = [firma,"Audifonos",cantidad,pu,pt]
     for i,cell in enumerate(row):
