@@ -387,6 +387,8 @@ function mostrarPrevia(tipo){
     payload.precioUnit=e("a-precio").value.replace(/[^0-9]/g,"");
     payload.precioTotal=String((parseInt(payload.cantidad)||0)*(parseInt(payload.precioUnit)||0));
     payload.precio=payload.precioTotal;
+    payload.proveedor="Grupo Vistalli S.R.L (Óptica Giorlent)";
+    payload.insumoDesc="Par de Anteojo baja graduación estándar";
     payload.importeLetras=e("a-letras").value.trim();
     if(!payload.fecha||!payload.nroRes||!payload.nroExp||!payload.paciente||!payload.insumo||!payload.precio){
       msgEl.className="msg er";msgEl.textContent="Completá todos los campos.";return;}
@@ -423,6 +425,8 @@ function renderPrevia(p){
   const pu=p.precio?"$ "+parseInt(p.precio).toLocaleString("es-AR"):(p.precioUnit?"$ "+parseInt(p.precioUnit).toLocaleString("es-AR"):"");
   const pt=p.precio?"$ "+parseInt(p.precio).toLocaleString("es-AR")+",00":"$ "+parseInt(p.precioTotal||0).toLocaleString("es-AR")+",00";
   const im=pt;
+  const prov=(p.proveedor&&p.proveedor.trim())?p.proveedor.trim():"Grupo Vistalli S.R.L (Óptica Giorlent)";
+  const insumoDesc=(p.insumoDesc&&p.insumoDesc.trim())?p.insumoDesc.trim():"Par de Anteojo baja graduación estándar";
 
   let html='';
   html+=`<div class="doc-header"><img src="${LOGO1}" alt="PRIS"><img src="${LOGO2}" alt="Gobierno"></div>`;
@@ -440,7 +444,7 @@ function renderPrevia(p){
   html+=`<div class="doc-indent">Que se encuentra agregada la documentación correspondiente, la misma esta cumplimentada y debidamente conformada.</div>`;
 
   if(p.tipo==="anteojos"){
-    html+=`<div class="doc-indent" style="margin-top:8px">Que se adjunta presupuesto de la Firma Comercial <strong>Grupo Vistalli S.R.L (Óptica Giorlent). -</strong></div>`;
+    html+=`<div class="doc-indent" style="margin-top:8px">Que se adjunta presupuesto de la Firma Comercial <strong><span class="sync-prov">${prov}</span>. -</strong></div>`;
   } else {
     html+=`<div class="doc-indent" style="margin-top:8px">Que se adjunta presupuestos de la Firmas Comerciales; <strong><span contenteditable="true" data-f="firmasPrev">${p.firmasPrev}</span> <span contenteditable="true" data-f="firmaGanadora">${p.firmaGanadora.toUpperCase()}</span>.-</strong></div>`;
     html+=`<div class="doc-indent" style="margin-top:8px">Que la propuesta de <strong><span contenteditable="true" data-f="firmaGanadora2">${p.firmaGanadora}</span></strong> resulto la más conveniente para el Estado.</div>`;
@@ -457,11 +461,11 @@ function renderPrevia(p){
     const puX="$ "+unitA.toLocaleString("es-AR");
     const ptX="$ "+totA.toLocaleString("es-AR")+",00";
     const imX=ptX;
-    html+=`<div class="doc-art"><span class="doc-art-label">ARTICULO 1º:</span> Aprobar la compra de Anteojos, a favor de la firma <strong>Grupo Vistalli S.R.L (Óptica Giorlent)</strong> que se detalla a continuación:</div>`;
+    html+=`<div class="doc-art"><span class="doc-art-label">ARTICULO 1º:</span> Aprobar la compra de Anteojos, a favor de la firma <strong><span class="sync-prov">${prov}</span></strong> que se detalla a continuación:</div>`;
     html+=`<table class="doc-table"><thead><tr><th>FIRMA</th><th>INSUMO</th><th>CANTIDAD</th><th>PRECIO UNITARIO</th><th>PRECIO TOTAL</th></tr></thead><tbody>
-      <tr><td>Grupo Vistalli S.R.L (Óptica Giorlent)</td><td>Par de Anteojo baja graduación estándar</td><td><span contenteditable="true" data-f="cantidad">${cantA}</span></td><td><span contenteditable="true" data-f="precioUnit">${puX}</span></td><td><span contenteditable="true" data-f="precioTotal">${ptX}</span></td></tr>
+      <tr><td><span contenteditable="true" data-f="proveedor">${prov}</span></td><td><span contenteditable="true" data-f="insumoDesc">${insumoDesc}</span></td><td><span contenteditable="true" data-f="cantidad">${cantA}</span></td><td><span contenteditable="true" data-f="precioUnit">${puX}</span></td><td><span contenteditable="true" data-f="precioTotal">${ptX}</span></td></tr>
       <tr><td colspan="4">TOTAL</td><td>${ptX}</td></tr></tbody></table>`;
-    html+=`<div class="doc-art"><span class="doc-art-label">ARTICULO 2º:</span> Autorizar la compra al proveedor <strong>Grupo Vistalli S.R.L (Óptica Giorlent)</strong>, por el importe de <strong><span contenteditable="true" data-f="importe">${imX}</span> <span contenteditable="true" data-f="importeLetras">${p.importeLetras}</span></strong>, y posterior emisión de la orden de pago respectiva.</div>`;
+    html+=`<div class="doc-art"><span class="doc-art-label">ARTICULO 2º:</span> Autorizar la compra al proveedor <strong><span class="sync-prov">${prov}</span></strong>, por el importe de <strong><span contenteditable="true" data-f="importe">${imX}</span> <span contenteditable="true" data-f="importeLetras">${p.importeLetras}</span></strong>, y posterior emisión de la orden de pago respectiva.</div>`;
     html+=`<div class="doc-art"><span class="doc-art-label">ARTICULO 3º:</span> Imputar la erogación por un importe total de <strong>${imX} ${p.importeLetras}</strong>, y posterior emisión de la orden de pago respectiva, a la Jurisdicción 67, Unidad de Organización 965-Recursos disponibles con los que cuenta el servicio-Finalidad/Función 314, Programa 19, Act. /Ob. 01 - Partida 200 – <strong>Subpartida 299</strong>– con Financiamiento del Recurso 10 Tesoro General de la Provincia, con cargo al <strong>Presupuesto 2026</strong>.-</div>`;
   } else {
     const puA="$ "+parseInt(p.precioUnit).toLocaleString("es-AR")+",00";
@@ -479,6 +483,8 @@ function renderPrevia(p){
   html+=`<div class="doc-firma"><p>Firmado digitalmente:</p><p><strong>C.P.N Mariela Agustina Castillo</strong></p><p>Gerente Administrativo</p><p>Dirección Gral. Prog. Integrado de Salud SI.PRO.SA</p></div>`;
 
   e("doc-preview").innerHTML=html;
+  const _provSrc=document.querySelector('#doc-preview [data-f="proveedor"]');
+  if(_provSrc){_provSrc.addEventListener('input',function(){document.querySelectorAll('#doc-preview .sync-prov').forEach(function(el){el.innerText=_provSrc.innerText;});});}
 }
 
 function getEditedPayload(){
@@ -497,6 +503,8 @@ function getEditedPayload(){
     else if(f==='firmasPrev') p.firmasPrev=txt;
     else if(f==='firmaGanadora'||f==='firmaGanadora2'||f==='firmaGanadora3') p.firmaGanadora=txt;
     else if(f==='cantidad') p.cantidad=txt;
+    else if(f==='proveedor') p.proveedor=txt;
+    else if(f==='insumoDesc') p.insumoDesc=txt;
   });
   // Extract numeric unit price from formatted string
   const precioSpan=document.querySelector('#doc-preview [data-f="precioUnit"]');
@@ -552,6 +560,8 @@ function construirHtmlResolucion(p) {
   const pu      = "$ " + fmt(nUnit);
   const pt      = "$ " + fmt(nPrecio) + ",00";
   const im_num  = "$ " + fmt(nPrecio) + ", 00";
+  const prov = (p.proveedor && p.proveedor.trim()) ? p.proveedor.trim() : "Grupo Vistalli S.R.L (Óptica Giorlent)";
+  const insumoDesc = (p.insumoDesc && p.insumoDesc.trim()) ? p.insumoDesc.trim() : "Par de Anteojo baja graduación estándar";
 
   // CSS calcado del Word: Century Gothic 11pt, márgenes 25mm top/bottom 30mm left/right
   const css = `
@@ -601,7 +611,7 @@ function construirHtmlResolucion(p) {
   body += '<p class="indent">Que se encuentra agregada la documentación correspondiente, la misma esta cumplimentada y debidamente conformada.</p>';
 
   if(p.tipo === "anteojos"){
-    body += '<p class="indent">Que se adjunta presupuesto de la Firma Comercial <b>Grupo Vistalli S.R.L (Óptica Giorlent). -</b></p>';
+    body += '<p class="indent">Que se adjunta presupuesto de la Firma Comercial <b>' + esc(prov) + '. -</b></p>';
   } else {
     body += '<p class="indent">Que se adjunta presupuestos de la Firmas Comerciales; <b>' + esc(p.firmasPrev) + ' ' + esc((p.firmaGanadora||"").toUpperCase()) + '.-</b></p>';
     body += '<p class="indent">Que la propuesta de <b>' + esc(p.firmaGanadora) + '</b> resulto la más conveniente para el Estado.</p>';
@@ -618,12 +628,12 @@ function construirHtmlResolucion(p) {
 
   if(p.tipo === "anteojos"){
     // Art 1
-    body += '<p class="just" style="margin-top:8pt;"><b><u>ARTICULO 1º</u></b> : Aprobar la compra de Anteojos, a favor de la firma <b>Grupo Vistalli S.R.L (Óptica Giorlent)</b> que se detalla a continuación:</p>';
+    body += '<p class="just" style="margin-top:8pt;"><b><u>ARTICULO 1º</u></b> : Aprobar la compra de Anteojos, a favor de la firma <b>' + esc(prov) + '</b> que se detalla a continuación:</p>';
     body += '<table><tr><th>FIRMA</th><th>INSUMO</th><th>CANTIDAD</th><th>PRECIO UNITARIO</th><th>PRECIO TOTAL</th></tr>' +
-      '<tr><td>Grupo Vistalli S.R.L (Óptica Giorlent)</td><td>Par de Anteojo baja graduación estándar</td><td>1</td><td>' + esc(pu) + '</td><td>' + esc(pt) + '</td></tr>' +
+      '<tr><td>' + esc(prov) + '</td><td>' + esc(insumoDesc) + '</td><td>' + esc(p.cantidad||"1") + '</td><td>' + esc(pu) + '</td><td>' + esc(pt) + '</td></tr>' +
       '<tr><td colspan="4" class="tdtot">TOTAL</td><td class="tdtot">' + esc(pt) + '</td></tr></table>';
     // Art 2
-    body += '<p class="just"><b><u>ARTICULO 2º</u></b> : Autorizar la compra al proveedor <b>Grupo Vistalli S.R.L (Óptica Giorlent)</b> , por el importe de <b>' + esc(im_num) + ' ' + esc(p.importeLetras) + '</b> , y posterior emisión de la orden de pago respectiva.</p>';
+    body += '<p class="just"><b><u>ARTICULO 2º</u></b> : Autorizar la compra al proveedor <b>' + esc(prov) + '</b> , por el importe de <b>' + esc(im_num) + ' ' + esc(p.importeLetras) + '</b> , y posterior emisión de la orden de pago respectiva.</p>';
     // Art 3
     body += '<p class="just"><b><u>ARTICULO 3º:</u></b> Imputar la erogación por un importe total de <b>' + esc(im_num) + ' ' + esc(p.importeLetras) + '</b> , y posterior emisión de la orden de pago respectiva, a la Jurisdicción 67, Unidad de Organización 965- Recursos disponibles con los que cuenta el servicio-Finalidad/Función 314, Programa 19, Act. /Ob. 01 - Partida 200 – <b>Subpartida 299</b> – con Financiamiento del Recurso 10 Tesoro General de la Provincia, con cargo al <b>Presupuesto 2026</b>.-</p>';
   } else {
