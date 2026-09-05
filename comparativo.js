@@ -261,6 +261,120 @@
     return { unit: mn, total: mx };
   }
 
+  /* ---------- OCR de respaldo (solo si el PDF no tiene texto) ---------- */
+  var _tessPromise = null;
+  function cargarTesseract() {
+    if (window.Tesseract) return Promise.resolve(window.Tesseract);
+    if (_tessPromise) return _tessPromise;
+    _tessPromise = new Promise(function (res, rej) {
+      var s = document.createElement("script");
+      s.src = "https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js";
+      s.onload = function () { window.Tesseract ? res(window.Tesseract) : rej(new Error("tesseract")); };
+      s.onerror = function () { rej(new Error("OCR no disponible")); };
+      document.head.appendChild(s);
+    });
+    return _tessPromise;
+  }
+
+  // Texto nativo del PDF (rápido; vacío si el PDF es una imagen escaneada)
+  function textoNativo(pdf) {
+    var paginas = Math.min(pdf.numPages, 5);
+    var cadena = Promise.resolve("");
+    for (var p = 1; p <= paginas; p++) {
+      (function (num) {
+        cadena = cadena.then(function (acum) {
+          return pdf.getPage(num).then(function (pg) {
+            return pg.getTextContent();
+          }).then(function (c) {
+            return acum + " " + c.items.map(function (it) { return it.str; }).join(" ");
+          });
+        });
+      })(p);
+    }
+    return cadena;
+  }
+
+  // OCR de las páginas (se rasteriza cada página y se la pasa por Tesseract)
+  function ocrPdf(pdf) {
+    return cargarTesseract().then(function (Tess) {
+      var paginas = Math.min(pdf.numPages, 3);
+      var cadena = Promise.resolve("");
+      for (var p = 1; p <= paginas; p++) {
+        (function (num) {
+          cadena = cadena.then(function (acum) {
+            return pdf.getPage(num).then(function (pg) {
+              var vp = pg.getViewport({ scale: 2 });
+              var canvas = document.createElement("canvas");
+              canvas.width = vp.width;
+              canvas.height = vp.height;
+              var ctx = canvas.getContext("2d");
+              return pg.render({ canvasContext: ctx, viewport: vp }).promise.then(function () {
+                return Tess.recognize(canvas, "eng").then(function (r) {
+                  return acum + " " + (r && r.data ? r.data.text : "");
+                });
+              });
+            });
+          });
+        })(p);
+      }
+      return cadena;
+    });
+  }
+
+  // Procesa el texto (venga del PDF nativo o del OCR): carga unitario, detecta negativa
+  function procesarTexto(k, file, info, sug, texto, viaOcr) {
+    var negativa = esNegativa(texto);
+    var montos = montosDelTexto(texto);
+    var marca = viaOcr ? " (OCR)" : "";
+    info.textContent = " 📎 " + file.name + marca;
+
+    var btnNeg = document.createElement("button");
+    btnNeg.type = "button";
+    btnNeg.className = "neg-btn";
+    btnNeg.textContent = "Marcar NEGATIVA";
+    btnNeg.addEventListener("click", function () {
+      var d = $("c-precio" + k);
+      if (d) { d.value = "NEGATIVA"; calcTotal(k); }
+    });
+
+    if (!montos.length) {
+      if (negativa) {
+        var dn = $("c-precio" + k);
+        if (dn) { dn.value = "NEGATIVA"; calcTotal(k); }
+        info.textContent += " — negativa detectada ✔ (se cargó como NEGATIVA)";
+      } else {
+        info.textContent += " — no encontré montos, cargá el precio a mano";
+      }
+      sug.appendChild(btnNeg);
+      return;
+    }
+
+    // Hay montos → elegimos unitario y total según la cantidad actual
+    var cant = soloNumeros($("c-cantidad").value) || 1;
+    var elec = elegirMontos(montos, cant);
+    var destino0 = $("c-precio" + k);
+    if (destino0 && !destino0.value) { destino0.value = elec.unit; calcTotal(k); }
+
+    var etiqueta = document.createElement("span");
+    etiqueta.style.cssText = "font-size:11px;color:#64748b";
+    etiqueta.textContent = "Detecté unitario $" + elec.unit.toLocaleString("es-AR") +
+      (montos.length > 1 ? (" · total $" + elec.total.toLocaleString("es-AR")) : "") +
+      " — si el unitario es otro, clic:";
+    sug.appendChild(etiqueta);
+
+    montos.slice(0, 6).forEach(function (n) {
+      var b = document.createElement("button");
+      b.type = "button";
+      b.textContent = "$ " + n.toLocaleString("es-AR");
+      b.addEventListener("click", function () {
+        var destino = $("c-precio" + k);
+        if (destino) { destino.value = n; calcTotal(k); }
+      });
+      sug.appendChild(b);
+    });
+    sug.appendChild(btnNeg);
+  }
+
   function conectarPdf(k) {
     var input = $("c-file" + k);
     if (!input) return;
@@ -272,76 +386,25 @@
       if (!file) { info.textContent = ""; return; }
       info.textContent = " 📎 " + file.name + " — leyendo…";
 
+      var pdfDoc = null;
       cargarPdfJs().then(function (pdfjs) {
         return file.arrayBuffer().then(function (buf) {
           return pdfjs.getDocument({ data: buf }).promise;
         });
       }).then(function (pdf) {
-        var paginas = Math.min(pdf.numPages, 5);
-        var cadena = Promise.resolve("");
-        for (var p = 1; p <= paginas; p++) {
-          (function (num) {
-            cadena = cadena.then(function (acum) {
-              return pdf.getPage(num).then(function (pg) {
-                return pg.getTextContent();
-              }).then(function (c) {
-                return acum + " " + c.items.map(function (it) { return it.str; }).join(" ");
-              });
-            });
-          })(p);
-        }
-        return cadena;
+        pdfDoc = pdf;
+        return textoNativo(pdf);
       }).then(function (texto) {
-        var negativa = esNegativa(texto);
-        var montos = montosDelTexto(texto);
-        info.textContent = " 📎 " + file.name;
-
-        // Botón para marcar NEGATIVA a mano (siempre disponible tras leer)
-        var btnNeg = document.createElement("button");
-        btnNeg.type = "button";
-        btnNeg.className = "neg-btn";
-        btnNeg.textContent = "Marcar NEGATIVA";
-        btnNeg.addEventListener("click", function () {
-          var d = $("c-precio" + k);
-          if (d) { d.value = "NEGATIVA"; calcTotal(k); }
-        });
-
-        if (!montos.length) {
-          if (negativa) {
-            var dn = $("c-precio" + k);
-            if (dn) { dn.value = "NEGATIVA"; calcTotal(k); }
-            info.textContent += " — negativa detectada ✔ (se cargó como NEGATIVA)";
-          } else {
-            info.textContent += " — no encontré montos, cargá el precio a mano";
-          }
-          sug.appendChild(btnNeg);
+        // Si el texto nativo ya trae montos o es una negativa, lo usamos (rápido)
+        if (montosDelTexto(texto).length || esNegativa(texto)) {
+          procesarTexto(k, file, info, sug, texto, false);
           return;
         }
-
-        // Hay montos → elegimos unitario y total según la cantidad actual
-        var cant = soloNumeros($("c-cantidad").value) || 1;
-        var elec = elegirMontos(montos, cant);
-        var destino0 = $("c-precio" + k);
-        if (destino0 && !destino0.value) { destino0.value = elec.unit; calcTotal(k); }
-
-        var etiqueta = document.createElement("span");
-        etiqueta.style.cssText = "font-size:11px;color:#64748b";
-        etiqueta.textContent = "Detecté unitario $" + elec.unit.toLocaleString("es-AR") +
-          (montos.length > 1 ? (" · total $" + elec.total.toLocaleString("es-AR")) : "") +
-          " — si el unitario es otro, clic:";
-        sug.appendChild(etiqueta);
-
-        montos.slice(0, 6).forEach(function (n) {
-          var b = document.createElement("button");
-          b.type = "button";
-          b.textContent = "$ " + n.toLocaleString("es-AR");
-          b.addEventListener("click", function () {
-            var destino = $("c-precio" + k);
-            if (destino) { destino.value = n; calcTotal(k); }
-          });
-          sug.appendChild(b);
+        // PDF sin texto útil (escaneado/imagen) → OCR de respaldo
+        info.textContent = " 📎 " + file.name + " — sin texto, leyendo con OCR (puede tardar unos segundos)…";
+        return ocrPdf(pdfDoc).then(function (textoOcr) {
+          procesarTexto(k, file, info, sug, textoOcr, true);
         });
-        sug.appendChild(btnNeg);
       }).catch(function () {
         info.textContent = " 📎 " + file.name + " — no pude leerlo, cargá el precio a mano";
       });
