@@ -55,15 +55,42 @@ def _lineas_constancia(nro_convocados, firmas):
     ]
 
 
+def _es_negativa(cot):
+    if bool(cot.get("negativa")):
+        return True
+    val = cot.get("precio_unit", cot.get("precio", ""))
+    return isinstance(val, str) and val.strip().upper() == "NEGATIVA"
+
+
+def _unit_de(cot):
+    val = cot.get("precio_unit", cot.get("precio", 0))
+    try:
+        return int(round(float(val or 0)))
+    except (TypeError, ValueError):
+        return 0
+
+
 def _leer(d):
     cots = d["cotizaciones"]
     if not (1 <= len(cots) <= 8):
         raise ValueError("Se admiten entre 1 y 8 proveedores")
+    cantidad = int(d["cantidad"])
+    # Para cada firma: unitario, total (= unitario × cantidad) y si es NEGATIVA
+    for cot in cots:
+        if _es_negativa(cot):
+            cot["_negativa"] = True
+            cot["_unit"] = 0
+            cot["_total"] = 0
+        else:
+            unit = _unit_de(cot)
+            cot["_negativa"] = False
+            cot["_unit"] = unit
+            cot["_total"] = unit * cantidad
     return {
         "expte": str(d["expte"]).strip(),
         "paciente": str(d["paciente"]).strip().upper(),
         "fecha_adj": str(d["fecha_adj"]).strip(),
-        "cantidad": int(d["cantidad"]),
+        "cantidad": cantidad,
         "cots": cots,
         "gan": int(d["idx_ganadora"]),
         "convocados": int(d.get("nro_convocados") or len(cots)),
@@ -155,16 +182,25 @@ def build_xlsx_bytes(d):
     for i, cot in enumerate(v["cots"]):
         col = cols_prov[i]
         cel = ws["%s8" % col]
-        cel.value = float(cot["precio"])
         cel.alignment = CTR
-        if i == v["gan"]:
-            cel.font = F_WIN
-            cel.fill = GRIS_GANADORA
-            cel.number_format = FMT_PESOS_WIN
-            ws["%s9" % col].fill = GRIS_GANADORA
+        if cot["_negativa"]:
+            cel.value = "NEGATIVA"
+            if i == v["gan"]:
+                cel.font = F_WIN
+                cel.fill = GRIS_GANADORA
+                ws["%s9" % col].fill = GRIS_GANADORA
+            else:
+                cel.font = F_DATA
         else:
-            cel.font = F_DATA
-            cel.number_format = FMT_PESOS
+            cel.value = float(cot["_total"])
+            if i == v["gan"]:
+                cel.font = F_WIN
+                cel.fill = GRIS_GANADORA
+                cel.number_format = FMT_PESOS_WIN
+                ws["%s9" % col].fill = GRIS_GANADORA
+            else:
+                cel.font = F_DATA
+                cel.number_format = FMT_PESOS
     for col in ["A", "B"] + cols_prov:
         ws["%s8" % col].border = Border(left=_thin, right=_thin, top=_thin)
         ws["%s9" % col].border = Border(left=_thin, right=_thin, bottom=_thin)
@@ -315,7 +351,7 @@ def build_pdf_bytes(d):
     cv.drawCentredString(xs[1] + w_cant / 2, y - h_data / 2 - 1 * mm, str(v["cantidad"]))
     for i, cot in enumerate(cots):
         cx = xs[2] + w_prov * i + w_prov / 2
-        txt = pesos_ar(cot["precio"])
+        txt = "NEGATIVA" if cot["_negativa"] else pesos_ar(cot["_total"])
         if i == v["gan"]:
             tam = _ajustar(cv, txt, "Helvetica-Bold", 10, w_prov - 4 * mm)
             cv.setFont("Helvetica-Bold", tam)
@@ -385,7 +421,11 @@ def nombre_archivo(d, ext):
     cant = int(d.get("cantidad", 1))
     etiqueta = "AUDIFONOS" if cant > 1 else "AUDIFONO"
     try:
-        precio = int(round(float(d["cotizaciones"][int(d["idx_ganadora"])]["precio"])))
+        gan = d["cotizaciones"][int(d["idx_ganadora"])]
+        if _es_negativa(gan):
+            precio = ""
+        else:
+            precio = _unit_de(gan) * cant
     except Exception:
         precio = ""
     return "CUADRO_COMPARATIVO_%s_%s_%s_X%s__%s.%s" % (exp_corto, pac, etiqueta, cant, precio, ext)
