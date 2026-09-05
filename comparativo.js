@@ -45,7 +45,12 @@
     ".btn-add:disabled{color:#94a3b8;cursor:default;border-style:solid}",
     ".btn-xlsx{width:100%;padding:13px;background:#166534;color:white;border:none;border-radius:8px;font-size:15px;font-weight:700;cursor:pointer;margin-top:12px}",
     ".btn-xlsx:hover{background:#14532d}",
-    ".btn-xlsx:disabled{background:#94a3b8;cursor:default}"
+    ".btn-xlsx:disabled{background:#94a3b8;cursor:default}",
+    ".cot-total{font-size:11px;color:#0f5132;min-height:14px}",
+    ".cot-total b{color:#166534}",
+    ".cot-total .neg{color:#b45309;font-weight:600}",
+    ".cot-sug .neg-btn{border-color:#fecaca;background:#fef2f2;color:#b91c1c}",
+    ".cot-sug .neg-btn:hover{background:#fee2e2}"
   ].join("\n");
 
   /* ---------- 2. Panel base ---------- */
@@ -98,10 +103,11 @@
     fila.className = "cot-row";
     fila.innerHTML = '' +
       '<input type="text" class="c-prov" id="c-prov' + k + '" value="' + (nombre || "") + '" placeholder="Nombre de la firma">' +
-      '<input type="text" class="c-precio" id="c-precio' + k + '" placeholder="Precio $">' +
+      '<input type="text" class="c-precio" id="c-precio' + k + '" placeholder="Precio unitario $">' +
       '<label class="cot-gan"><input type="radio" name="c-gan" class="c-gan"' + (ganadora ? " checked" : "") + '> Ganadora</label>' +
       '<button type="button" class="cot-del" title="Quitar proveedor">✕</button>' +
       '<div class="cot-extra">' +
+        '<div class="cot-total" id="c-total' + k + '"></div>' +
         '<div class="cot-pdf">📎 PDF opcional: ' +
           '<input type="file" accept="application/pdf" id="c-file' + k + '">' +
           '<span id="c-pdfinfo' + k + '"></span>' +
@@ -126,8 +132,33 @@
     });
 
     fila.querySelector(".c-prov").addEventListener("input", autoFirmas);
+    fila.querySelector(".c-precio").addEventListener("input", function () { calcTotal(k); });
     conectarPdf(k);
     refrescar();
+  }
+
+  /* ---------- Total en vivo (unitario × cantidad) ---------- */
+  function calcTotal(k) {
+    var campo = $("c-precio" + k);
+    var out = $("c-total" + k);
+    if (!campo || !out) return;
+    var raw = String(campo.value || "").trim();
+    if (raw.toUpperCase() === "NEGATIVA") {
+      out.innerHTML = '<span class="neg">NEGATIVA — no cotiza</span>';
+      return;
+    }
+    var unit = soloNumeros(raw);
+    if (!unit) { out.textContent = ""; return; }
+    var cant = soloNumeros($("c-cantidad").value) || 1;
+    var total = unit * cant;
+    out.innerHTML = "Unitario $" + unit.toLocaleString("es-AR") +
+      " × " + cant + " = <b>$" + total.toLocaleString("es-AR") + "</b>";
+  }
+
+  function recomputarTotales() {
+    [].slice.call(document.querySelectorAll(".c-precio")).forEach(function (inp) {
+      calcTotal(inp.id.replace("c-precio", ""));
+    });
   }
 
   function refrescar() {
@@ -207,6 +238,29 @@
     return base.sort(function (a, b) { return b - a; });
   }
 
+  // Detecta presupuestos que en realidad son una negativa a cotizar
+  function esNegativa(texto) {
+    return /no\s+cotiz|lamentamos\s+no|negativ|declina|desestima|no\s+presupuest|no\s+particip/i.test(String(texto));
+  }
+
+  // De los montos detectados, decide cuál es el unitario y cuál el total.
+  // Regla robusta: si existe un monto u tal que u × cantidad también aparece,
+  // ese u es el unitario; si no, el menor es unitario y el mayor es total.
+  function elegirMontos(montos, cant) {
+    if (!montos.length) return { unit: null, total: null };
+    if (montos.length === 1) return { unit: montos[0], total: montos[0] * (cant || 1) };
+    if (cant > 1) {
+      for (var i = 0; i < montos.length; i++) {
+        if (montos.indexOf(montos[i] * cant) >= 0) {
+          return { unit: montos[i], total: montos[i] * cant };
+        }
+      }
+    }
+    var mn = Math.min.apply(null, montos);
+    var mx = Math.max.apply(null, montos);
+    return { unit: mn, total: mx };
+  }
+
   function conectarPdf(k) {
     var input = $("c-file" + k);
     if (!input) return;
@@ -238,33 +292,56 @@
         }
         return cadena;
       }).then(function (texto) {
+        var negativa = esNegativa(texto);
         var montos = montosDelTexto(texto);
         info.textContent = " 📎 " + file.name;
+
+        // Botón para marcar NEGATIVA a mano (siempre disponible tras leer)
+        var btnNeg = document.createElement("button");
+        btnNeg.type = "button";
+        btnNeg.className = "neg-btn";
+        btnNeg.textContent = "Marcar NEGATIVA";
+        btnNeg.addEventListener("click", function () {
+          var d = $("c-precio" + k);
+          if (d) { d.value = "NEGATIVA"; calcTotal(k); }
+        });
+
         if (!montos.length) {
-          info.textContent += " — no encontré montos, cargá el precio a mano";
+          if (negativa) {
+            var dn = $("c-precio" + k);
+            if (dn) { dn.value = "NEGATIVA"; calcTotal(k); }
+            info.textContent += " — negativa detectada ✔ (se cargó como NEGATIVA)";
+          } else {
+            info.textContent += " — no encontré montos, cargá el precio a mano";
+          }
+          sug.appendChild(btnNeg);
           return;
         }
-        // Un solo monto claro → lo cargamos directo (igual se puede editar/reelegir)
-        if (montos.length === 1) {
-          var unico = $("c-precio" + k);
-          if (unico && !unico.value) unico.value = montos[0];
-        }
+
+        // Hay montos → elegimos unitario y total según la cantidad actual
+        var cant = soloNumeros($("c-cantidad").value) || 1;
+        var elec = elegirMontos(montos, cant);
+        var destino0 = $("c-precio" + k);
+        if (destino0 && !destino0.value) { destino0.value = elec.unit; calcTotal(k); }
+
         var etiqueta = document.createElement("span");
         etiqueta.style.cssText = "font-size:11px;color:#64748b";
-        etiqueta.textContent = montos.length === 1
-          ? "Monto cargado (clic para reconfirmar):"
-          : "Posibles montos (clic para usar):";
+        etiqueta.textContent = "Detecté unitario $" + elec.unit.toLocaleString("es-AR") +
+          (montos.length > 1 ? (" · total $" + elec.total.toLocaleString("es-AR")) : "") +
+          " — si el unitario es otro, clic:";
         sug.appendChild(etiqueta);
+
         montos.slice(0, 6).forEach(function (n) {
           var b = document.createElement("button");
           b.type = "button";
           b.textContent = "$ " + n.toLocaleString("es-AR");
           b.addEventListener("click", function () {
             var destino = $("c-precio" + k);
-            if (destino) destino.value = n;
+            if (destino) { destino.value = n; calcTotal(k); }
           });
           sug.appendChild(b);
         });
+        sug.appendChild(btnNeg);
       }).catch(function () {
         info.textContent = " 📎 " + file.name + " — no pude leerlo, cargá el precio a mano";
       });
@@ -290,9 +367,14 @@
 
     var filas = [].slice.call($("c-filas").children);
     var cotizaciones = filas.map(function (f) {
+      var raw = String(f.querySelector(".c-precio").value || "").trim();
+      var neg = raw.toUpperCase() === "NEGATIVA";
+      var unit = neg ? 0 : soloNumeros(raw);
       return {
         nombre: f.querySelector(".c-prov").value.trim(),
-        precio: soloNumeros(f.querySelector(".c-precio").value)
+        negativa: neg,
+        precio_unit: unit,
+        precio: unit            // compatibilidad: el backend calcula total = unit × cantidad
       };
     });
 
@@ -305,12 +387,20 @@
       avisar("Completá expediente, paciente, fecha y cantidad.", true);
       return null;
     }
-    if (cotizaciones.some(function (c) { return !c.nombre || !c.precio; })) {
-      avisar("Completá nombre y precio de todas las firmas.", true);
+    if (cotizaciones.some(function (c) { return !c.nombre; })) {
+      avisar("Completá el nombre de todas las firmas.", true);
+      return null;
+    }
+    if (cotizaciones.some(function (c) { return !c.negativa && !c.precio_unit; })) {
+      avisar("Cargá el precio unitario (o marcá NEGATIVA) en todas las firmas.", true);
       return null;
     }
     if (idxGanadora < 0) {
       avisar("Elegí la firma ganadora.", true);
+      return null;
+    }
+    if (cotizaciones[idxGanadora].negativa) {
+      avisar("La firma ganadora no puede ser una NEGATIVA. Elegí otra.", true);
       return null;
     }
 
@@ -447,6 +537,9 @@
 
     $("c-add").addEventListener("click", function () { agregarFila("", false); });
     $("c-btn").addEventListener("click", generar);
+
+    // Al cambiar la cantidad de audífonos, recalcular el total de cada fila
+    $("c-cantidad").addEventListener("input", recomputarTotales);
 
     // Tres filas iniciales, la tercera marcada como ganadora
     PROVEEDORES_SUGERIDOS.forEach(function (nombre, i) {
