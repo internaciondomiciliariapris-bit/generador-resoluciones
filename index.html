@@ -918,7 +918,7 @@ async function descargarExcel(){
     measurementId: "G-GHDRCXE81C"
   };
 
-  var db = null, cache = [];
+  var db = null, cache = [], estado = "conectando";
   var authReady = new Promise(function(resolve){
     try{
       if(!firebase.apps.length) firebase.initializeApp(firebaseConfig);
@@ -963,8 +963,9 @@ async function descargarExcel(){
   };
 
   // Escucha en vivo: un pendiente cargado en otra compu/persona aparece solo.
+  renderPendientes();
   authReady.then(function(ok){
-    if(!ok || !db) return;
+    if(!ok || !db){ estado = "sin-acceso"; renderPendientes(); return; }
     db.collection(COL).onSnapshot(function(snap){
       cache = [];
       snap.forEach(function(d){ var x = d.data(); x._id = d.id; cache.push(x); });
@@ -973,29 +974,35 @@ async function descargarExcel(){
         var tb = (b.fechaCuadro && b.fechaCuadro.seconds) ? b.fechaCuadro.seconds : 0;
         return tb - ta;
       });
+      estado = "ok";
       renderPendientes();
-    }, function(err){ console.warn("No se pudo leer pendientes:", err); });
+    }, function(err){ console.warn("No se pudo leer pendientes:", err); estado = "sin-acceso"; renderPendientes(); });
   });
 
   function renderPendientes(){
     var box = document.getElementById("pend-box");
     if(!box) return;
-    if(!cache.length){ box.innerHTML = ""; return; }
-    var filas = cache.map(function(p){
-      var id = String(p._id).replace(/\\/g,"\\\\").replace(/'/g,"\\'");
-      return '<div style="display:flex;align-items:center;gap:10px;padding:9px 12px;border-bottom:1px solid #eef2f7">'+
-               '<div style="flex:1;min-width:0">'+
-                 '<div style="font-size:13px;font-weight:600;color:#1a2b4a">'+esc(p.nroExp)+'</div>'+
-                 '<div style="font-size:12px;color:#64748b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+esc(p.paciente)+(fechaCorta(p.fechaCuadro)?' · cuadro '+fechaCorta(p.fechaCuadro):'')+'</div>'+
-               '</div>'+
-               '<button onclick="cargarPendiente(\''+id+'\')" style="background:#e0f2fe;color:#0369a1;border:1px solid #bae6fd;border-radius:7px;padding:7px 14px;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap">Cargar</button>'+
-             '</div>';
-    }).join("");
-    box.innerHTML =
-      '<div style="border:1.5px solid #bae6fd;border-radius:10px;overflow:hidden;margin-bottom:18px;background:#f8fbff">'+
-        '<div style="display:flex;align-items:center;gap:6px;padding:9px 12px;background:#e0f2fe;font-size:11px;font-weight:700;color:#0369a1;text-transform:uppercase;letter-spacing:.5px">📂 Cargar expediente pendiente ('+cache.length+')</div>'+
-        filas+
-      '</div>';
+    var head = '<div style="display:flex;align-items:center;gap:6px;padding:9px 12px;background:#e0f2fe;font-size:11px;font-weight:700;color:#0369a1;text-transform:uppercase;letter-spacing:.5px">📂 Expedientes pendientes'+(estado==="ok"?' ('+cache.length+')':'')+'</div>';
+    var cuerpo;
+    if(estado === "conectando"){
+      cuerpo = '<div style="padding:12px;font-size:13px;color:#64748b">Conectando a la base…</div>';
+    } else if(estado === "sin-acceso"){
+      cuerpo = '<div style="padding:12px;font-size:13px;color:#b91c1c">Sin acceso a la base. Revisá las reglas de Firestore para la colección <b>genres_pendientes</b> (y que el login anónimo esté habilitado en el proyecto).</div>';
+    } else if(!cache.length){
+      cuerpo = '<div style="padding:12px;font-size:13px;color:#64748b">No hay expedientes pendientes. Generá un cuadro comparativo y va a aparecer acá.</div>';
+    } else {
+      cuerpo = cache.map(function(p){
+        var id = String(p._id).replace(/\\/g,"\\\\").replace(/'/g,"\\'");
+        return '<div style="display:flex;align-items:center;gap:10px;padding:9px 12px;border-top:1px solid #eef2f7">'+
+                 '<div style="flex:1;min-width:0">'+
+                   '<div style="font-size:13px;font-weight:600;color:#1a2b4a">'+esc(p.nroExp)+'</div>'+
+                   '<div style="font-size:12px;color:#64748b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+esc(p.paciente)+(fechaCorta(p.fechaCuadro)?' · cuadro '+fechaCorta(p.fechaCuadro):'')+'</div>'+
+                 '</div>'+
+                 '<button onclick="cargarPendiente(\''+id+'\')" style="background:#e0f2fe;color:#0369a1;border:1px solid #bae6fd;border-radius:7px;padding:7px 14px;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap">Cargar</button>'+
+               '</div>';
+      }).join("");
+    }
+    box.innerHTML = '<div style="border:1.5px solid #bae6fd;border-radius:10px;overflow:hidden;margin-bottom:18px;background:#f8fbff">'+head+cuerpo+'</div>';
   }
 
   // ---- Mapea las firmas del cuadro (texto libre) a las casillas fijas de Audífonos ----
