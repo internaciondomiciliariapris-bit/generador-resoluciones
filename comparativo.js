@@ -515,21 +515,23 @@
     });
   }
 
-  // Guarda el expediente como "pendiente de resolución" (Firestore, vía index.html)
+  // Guarda el expediente como "pendiente de resolución" y salta a la pestaña Audífonos ya precargado.
   function guardarPendiente(payload) {
-    if (!window.PendientesStore || !payload) return;
+    if (!payload) return;
     var gan = payload.cotizaciones[payload.idx_ganadora] || {};
     var cotizantes = payload.cotizaciones
-      .filter(function (c) { return !c.negativa && c.nombre; })
+      .filter(function (c) { return c.nombre; })
       .map(function (c) { return c.nombre; });
-    window.PendientesStore.guardar({
+    var reg = {
       nroExp: payload.expte,
       paciente: payload.paciente,
       cantidad: String(payload.cantidad || ""),
       precioUnit: String(gan.precio_unit || ""),
       ganadora: gan.nombre || "",
       cotizantes: cotizantes
-    });
+    };
+    if (window.PendientesStore) window.PendientesStore.guardar(reg);
+    if (typeof window.prefillAudio === "function") window.prefillAudio(reg);
   }
 
   function generar() {
