@@ -998,7 +998,10 @@ async function descargarExcel(){
                    '<div style="font-size:13px;font-weight:600;color:#1a2b4a">'+esc(p.nroExp)+'</div>'+
                    '<div style="font-size:12px;color:#64748b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+esc(p.paciente)+(fechaCorta(p.fechaCuadro)?' · cuadro '+fechaCorta(p.fechaCuadro):'')+'</div>'+
                  '</div>'+
-                 '<button onclick="cargarPendiente(\''+id+'\')" style="background:#e0f2fe;color:#0369a1;border:1px solid #bae6fd;border-radius:7px;padding:7px 14px;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap">Cargar</button>'+
+                 '<div style="display:flex;gap:6px;flex-shrink:0">'+
+                   '<button onclick="cargarPendiente(\''+id+'\')" style="background:#e0f2fe;color:#0369a1;border:1px solid #bae6fd;border-radius:7px;padding:7px 14px;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap">Cargar</button>'+
+                   '<button onclick="eliminarPendiente(\''+id+'\')" style="background:#fef2f2;color:#b91c1c;border:1px solid #fecaca;border-radius:7px;padding:7px 12px;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap">Eliminar</button>'+
+                 '</div>'+
                '</div>';
       }).join("");
     }
@@ -1024,11 +1027,9 @@ async function descargarExcel(){
     if(el) el.value = (val==null ? "" : String(val));
   }
 
-  window.cargarPendiente = function(id){
-    var p = null, i;
-    for(i=0;i<cache.length;i++){ if(String(cache[i]._id)===String(id)){ p = cache[i]; break; } }
+  function prefillAudioForm(p){
     if(!p) return;
-
+    var i;
     setVal("b-nroExp", p.nroExp);
     setVal("b-paciente", p.paciente);
     setVal("b-cantidad", p.cantidad);
@@ -1069,6 +1070,25 @@ async function descargarExcel(){
     }
     var f = document.getElementById("b-fecha");
     if(f && f.scrollIntoView) f.scrollIntoView({behavior:"smooth", block:"center"});
+  }
+
+  function buscarEnCache(id){
+    for(var i=0;i<cache.length;i++){ if(String(cache[i]._id)===String(id)) return cache[i]; }
+    return null;
+  }
+
+  window.prefillAudio = prefillAudioForm;
+
+  window.cargarPendiente = function(id){
+    var p = buscarEnCache(id);
+    if(p) prefillAudioForm(p);
+  };
+
+  window.eliminarPendiente = function(id){
+    var p = buscarEnCache(id);
+    if(!p) return;
+    if(!confirm("¿Eliminar el expediente " + (p.nroExp||"") + " de la lista de pendientes? Esta acción no se puede deshacer.")) return;
+    if(window.PendientesStore) window.PendientesStore.resolver(p.nroExp);
   };
 })();
 </script>
