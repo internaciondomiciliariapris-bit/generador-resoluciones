@@ -515,6 +515,23 @@
     });
   }
 
+  // Guarda el expediente como "pendiente de resolución" (Firestore, vía index.html)
+  function guardarPendiente(payload) {
+    if (!window.PendientesStore || !payload) return;
+    var gan = payload.cotizaciones[payload.idx_ganadora] || {};
+    var cotizantes = payload.cotizaciones
+      .filter(function (c) { return !c.negativa && c.nombre; })
+      .map(function (c) { return c.nombre; });
+    window.PendientesStore.guardar({
+      nroExp: payload.expte,
+      paciente: payload.paciente,
+      cantidad: String(payload.cantidad || ""),
+      precioUnit: String(gan.precio_unit || ""),
+      ganadora: gan.nombre || "",
+      cotizantes: cotizantes
+    });
+  }
+
   function generar() {
     var payload = armarPayload();
     if (!payload) return;
@@ -533,7 +550,8 @@
     }).then(function () {
       return bajarUno(payload, "pdf", base + ".pdf");
     }).then(function () {
-      avisar("✅ Listo: se descargaron el Excel y el PDF.", false);
+      guardarPendiente(payload);
+      avisar("✅ Listo: se descargaron el Excel y el PDF. El expediente quedó pendiente de resolución.", false);
     }).catch(function (ex) {
       avisar("Error: " + ex.message, true);
     }).then(function () {
