@@ -119,6 +119,9 @@ hr{border:none;border-top:1.5px solid #e2e8f0;margin:16px 0 14px}
 @media print{#splash{display:none!important}}
 </style>
 </head>
+<script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore-compat.js"></script>
 <script src="/comparativo.js"></script><body>
 
 <!-- PANTALLA DE INICIO -->
@@ -178,6 +181,7 @@ hr{border:none;border-top:1.5px solid #e2e8f0;margin:16px 0 14px}
 
   <!-- AUDIFONOS -->
   <div id="panel-audio" class="panel">
+    <div id="pend-box"></div>
     <div class="stitle">Datos del encabezado</div>
     <div class="row">
       <div class="field"><label>Fecha <span>*</span></label>
@@ -304,11 +308,9 @@ hr{border:none;border-top:1.5px solid #e2e8f0;margin:16px 0 14px}
   <div class="edit-note">✏️ <span>Hacé clic sobre cualquier texto en <strong>fondo amarillo</strong> para editarlo antes de descargar.</span></div>
   <div class="doc" id="doc-preview"></div>
   <div style="padding:20px 32px 24px">
-    <div>
-      <button class="btn-word" onclick="descargarWord()" style="width:100%">📄 Descargar Word</button>
-    </div>
-    <div style="margin-top:12px; padding:12px 14px; background:#f0f9ff; border:1px solid #bae6fd; border-radius:8px; font-size:13px; color:#0369a1;">
-      💡 <b>Para generar el PDF:</b> abrí el Word descargado → <b>Archivo → Guardar como → PDF</b>
+    <div class="btn-row">
+      <button class="btn-word" onclick="descargarWord()">📄 Descargar Word</button>
+      <button class="btn-pdf" onclick="descargarPDF()">🖨️ Descargar PDF</button>
     </div>
     <button class="btn-back" onclick="volverForm()">← Volver al formulario</button>
     <div class="msg" id="dl-msg"></div>
@@ -739,6 +741,7 @@ function registrarExpediente(p){
   if(i >= 0){ reg.orden = arr[i].orden || ""; arr[i] = reg; } else { arr.push(reg); }
   listadoGuardar(arr);
   renderListado();
+  if(reg.tipo === "audio" && window.PendientesStore){ window.PendientesStore.resolver(reg.nroExp); }
 }
 
 function borrarExpediente(nroExp){
@@ -898,6 +901,168 @@ async function descargarExcel(){
     const el=document.getElementById(id);
     if(el && !el.value) el.value=hoy;   // solo si está vacío, no pisa lo que edites
   });
+})();
+</script>
+<script>
+/* ===== Pendientes de resolución — compartidos vía Firestore (proyecto visitas-siprosa) ===== */
+(function(){
+  "use strict";
+  var COL = "genres_pendientes";
+  var firebaseConfig = {
+    apiKey: "AIzaSyCDFcb5B7swNnetMOxXhVNQWaDxa1LVRF4",
+    authDomain: "visitas-siprosa.firebaseapp.com",
+    projectId: "visitas-siprosa",
+    storageBucket: "visitas-siprosa.firebasestorage.app",
+    messagingSenderId: "957519453967",
+    appId: "1:957519453967:web:e6c2bfac7a4da10fed287a",
+    measurementId: "G-GHDRCXE81C"
+  };
+
+  var db = null, cache = [];
+  var authReady = new Promise(function(resolve){
+    try{
+      if(!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+      db = firebase.firestore();
+      firebase.auth().signInAnonymously()
+        .then(function(){ resolve(true); })
+        .catch(function(err){ console.warn("Auth anónima falló:", err); resolve(false); });
+    }catch(err){ console.warn("Firebase no disponible:", err); resolve(false); }
+  });
+
+  function docId(nroExp){
+    return String(nroExp||"").trim().replace(/[\/#\?\[\]\*\.\u0000-\u001f]+/g,"_") || "sin_exp";
+  }
+  function esc(t){ return String(t==null?"":t).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
+  function fechaCorta(ts){
+    if(!ts || !ts.seconds) return "";
+    var d = new Date(ts.seconds*1000);
+    return String(d.getDate()).padStart(2,"0")+"/"+String(d.getMonth()+1).padStart(2,"0");
+  }
+
+  window.PendientesStore = {
+    guardar: function(reg){
+      return authReady.then(function(ok){
+        if(!ok || !db) return false;
+        return db.collection(COL).doc(docId(reg.nroExp)).set({
+          nroExp: reg.nroExp || "",
+          paciente: reg.paciente || "",
+          cantidad: reg.cantidad || "",
+          precioUnit: reg.precioUnit || "",
+          ganadora: reg.ganadora || "",
+          cotizantes: reg.cotizantes || [],
+          fechaCuadro: firebase.firestore.FieldValue.serverTimestamp()
+        }, { merge: true }).then(function(){ return true; });
+      }).catch(function(err){ console.warn("No se pudo guardar el pendiente:", err); return false; });
+    },
+    resolver: function(nroExp){
+      return authReady.then(function(ok){
+        if(!ok || !db) return false;
+        return db.collection(COL).doc(docId(nroExp)).delete().then(function(){ return true; });
+      }).catch(function(err){ console.warn("No se pudo cerrar el pendiente:", err); return false; });
+    }
+  };
+
+  // Escucha en vivo: un pendiente cargado en otra compu/persona aparece solo.
+  authReady.then(function(ok){
+    if(!ok || !db) return;
+    db.collection(COL).onSnapshot(function(snap){
+      cache = [];
+      snap.forEach(function(d){ var x = d.data(); x._id = d.id; cache.push(x); });
+      cache.sort(function(a,b){
+        var ta = (a.fechaCuadro && a.fechaCuadro.seconds) ? a.fechaCuadro.seconds : 0;
+        var tb = (b.fechaCuadro && b.fechaCuadro.seconds) ? b.fechaCuadro.seconds : 0;
+        return tb - ta;
+      });
+      renderPendientes();
+    }, function(err){ console.warn("No se pudo leer pendientes:", err); });
+  });
+
+  function renderPendientes(){
+    var box = document.getElementById("pend-box");
+    if(!box) return;
+    if(!cache.length){ box.innerHTML = ""; return; }
+    var filas = cache.map(function(p){
+      var id = String(p._id).replace(/\\/g,"\\\\").replace(/'/g,"\\'");
+      return '<div style="display:flex;align-items:center;gap:10px;padding:9px 12px;border-bottom:1px solid #eef2f7">'+
+               '<div style="flex:1;min-width:0">'+
+                 '<div style="font-size:13px;font-weight:600;color:#1a2b4a">'+esc(p.nroExp)+'</div>'+
+                 '<div style="font-size:12px;color:#64748b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+esc(p.paciente)+(fechaCorta(p.fechaCuadro)?' · cuadro '+fechaCorta(p.fechaCuadro):'')+'</div>'+
+               '</div>'+
+               '<button onclick="cargarPendiente(\''+id+'\')" style="background:#e0f2fe;color:#0369a1;border:1px solid #bae6fd;border-radius:7px;padding:7px 14px;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap">Cargar</button>'+
+             '</div>';
+    }).join("");
+    box.innerHTML =
+      '<div style="border:1.5px solid #bae6fd;border-radius:10px;overflow:hidden;margin-bottom:18px;background:#f8fbff">'+
+        '<div style="display:flex;align-items:center;gap:6px;padding:9px 12px;background:#e0f2fe;font-size:11px;font-weight:700;color:#0369a1;text-transform:uppercase;letter-spacing:.5px">📂 Cargar expediente pendiente ('+cache.length+')</div>'+
+        filas+
+      '</div>';
+  }
+
+  // ---- Mapea las firmas del cuadro (texto libre) a las casillas fijas de Audífonos ----
+  function normal(s){
+    return String(s||"").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[^a-z0-9]/g,"");
+  }
+  function casillaDe(nombre){
+    var n = normal(nombre);
+    if(!n) return null;
+    var cbs = document.querySelectorAll('#panel-audio .emp-cb');
+    for(var i=0;i<cbs.length;i++){
+      var v = normal(cbs[i].value);
+      if(v && (v === n || v.indexOf(n) >= 0 || n.indexOf(v) >= 0)) return cbs[i];
+    }
+    return null;
+  }
+  function setVal(id, val){
+    var el = document.getElementById(id);
+    if(el) el.value = (val==null ? "" : String(val));
+  }
+
+  window.cargarPendiente = function(id){
+    var p = null, i;
+    for(i=0;i<cache.length;i++){ if(String(cache[i]._id)===String(id)){ p = cache[i]; break; } }
+    if(!p) return;
+
+    setVal("b-nroExp", p.nroExp);
+    setVal("b-paciente", p.paciente);
+    setVal("b-cantidad", p.cantidad);
+    setVal("b-precioUnit", p.precioUnit);
+
+    var cbs = document.querySelectorAll('#panel-audio .emp-cb');
+    for(i=0;i<cbs.length;i++) cbs[i].checked = false;
+    var rad = document.querySelectorAll('#panel-audio input[name="ganadora"]');
+    for(i=0;i<rad.length;i++) rad[i].checked = false;
+
+    var sinMatch = [];
+    (p.cotizantes||[]).forEach(function(nombre){
+      var cb = casillaDe(nombre);
+      if(cb) cb.checked = true; else if(nombre) sinMatch.push(nombre);
+    });
+    var cbGan = casillaDe(p.ganadora);
+    if(cbGan){
+      cbGan.checked = true;
+      var fila = cbGan.closest(".empresa-row");
+      var radGan = fila ? fila.querySelector('input[name="ganadora"]') : null;
+      if(radGan) radGan.checked = true;
+    } else if(p.ganadora){
+      sinMatch.push(p.ganadora + " (GANADORA)");
+    }
+
+    if(typeof window.calcTotal === "function") window.calcTotal();
+    if(typeof window.cambiarTab === "function") window.cambiarTab("audio");
+
+    var msg = document.getElementById("b-msg");
+    if(msg){
+      if(sinMatch.length){
+        msg.className = "msg er";
+        msg.textContent = "Cargado. Revisá estas firmas a mano (no coincidían con la lista): " + sinMatch.join(", ") + ". Falta completar Fecha y Nº de Resolución.";
+      } else {
+        msg.className = "msg ok";
+        msg.textContent = "Expediente cargado. Solo falta completar Fecha y Nº de Resolución.";
+      }
+    }
+    var f = document.getElementById("b-fecha");
+    if(f && f.scrollIntoView) f.scrollIntoView({behavior:"smooth", block:"center"});
+  };
 })();
 </script>
 </body>
