@@ -6,8 +6,9 @@ con el precio unitario y el total. Se usa como lector principal del cuadro
 comparativo; entiende que numero es unitario y cual es total, cosa que la
 lectura por regex/OCR no resuelve de forma confiable.
 
-Variable de entorno (Vercel > Settings > Environment Variables):
+Variables de entorno (Vercel > Settings > Environment Variables):
     GEMINI_API_KEY = <key de https://aistudio.google.com/apikey>   (gratis, sin tarjeta)
+    GEMINI_MODEL   = (opcional) nombre del modelo Flash; por defecto gemini-3.6-flash
 
 Solo usa libreria estandar: NO agrega dependencias a requirements.txt.
 
@@ -30,7 +31,9 @@ import os
 import urllib.request
 import urllib.error
 
-MODELO = "gemini-2.5-flash"  # gratis en AI Studio, sin tarjeta
+# Modelo Flash vigente (gratis en AI Studio, sin tarjeta). Se puede sobreescribir
+# creando la variable de entorno GEMINI_MODEL en Vercel, sin tocar este archivo.
+MODELO = os.environ.get("GEMINI_MODEL", "gemini-3.6-flash")
 URL = "https://generativelanguage.googleapis.com/v1beta/models/%s:generateContent" % MODELO
 
 PROMPT = (
