@@ -321,13 +321,8 @@
     });
   }
 
-  // Procesa el texto (venga del PDF nativo o del OCR): carga unitario, detecta negativa
-  function procesarTexto(k, file, info, sug, texto, viaOcr) {
-    var negativa = esNegativa(texto);
-    var montos = montosDelTexto(texto);
-    var marca = viaOcr ? " (OCR)" : "";
-    info.textContent = " 📎 " + file.name + marca;
-
+  // Botón "Marcar NEGATIVA" (reutilizado por el lector Gemini y por el local)
+  function crearBtnNegativa(k) {
     var btnNeg = document.createElement("button");
     btnNeg.type = "button";
     btnNeg.className = "neg-btn";
@@ -336,6 +331,17 @@
       var d = $("c-precio" + k);
       if (d) { d.value = "NEGATIVA"; calcTotal(k); }
     });
+    return btnNeg;
+  }
+
+  // Procesa el texto (venga del PDF nativo o del OCR): carga unitario, detecta negativa
+  function procesarTexto(k, file, info, sug, texto, viaOcr) {
+    var negativa = esNegativa(texto);
+    var montos = montosDelTexto(texto);
+    var marca = viaOcr ? " (OCR)" : "";
+    info.textContent = " 📎 " + file.name + marca;
+
+    var btnNeg = crearBtnNegativa(k);
 
     if (!montos.length) {
       if (negativa) {
@@ -375,6 +381,116 @@
     sug.appendChild(btnNeg);
   }
 
+  /* ---------- Lector principal: Gemini (backend /api/leer_presupuesto) ---------- */
+
+  // Convierte un File a base64 sin el prefijo "data:...;base64,"
+  function fileABase64(file) {
+    return new Promise(function (resolve, reject) {
+      var r = new FileReader();
+      r.onload = function () { resolve(String(r.result).split(",")[1]); };
+      r.onerror = function () { reject(new Error("no se pudo leer el archivo")); };
+      r.readAsDataURL(file);
+    });
+  }
+
+  function cantidadActual() {
+    return soloNumeros($("c-cantidad").value) || 1;
+  }
+
+  // Llama al endpoint serverless que lee el PDF con Gemini
+  function leerPresupuestoGemini(file, cant) {
+    return fileABase64(file).then(function (b64) {
+      return fetch("/api/leer_presupuesto", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          pdf_base64: b64,
+          mime_type: file.type || "application/pdf",
+          cantidad: cant
+        })
+      });
+    }).then(function (r) {
+      if (!r.ok) throw new Error("HTTP " + r.status);
+      return r.json();
+    }).then(function (out) {
+      if (!out || !out.ok) throw new Error((out && out.error) || "sin datos");
+      return out.datos || {};
+    });
+  }
+
+  // Aplica en la fila lo que devolvió Gemini (unitario/total/negativa)
+  function aplicarGemini(k, file, info, sug, d) {
+    info.textContent = " 📎 " + file.name + " (Gemini)";
+    var btnNeg = crearBtnNegativa(k);
+
+    if (d.negativa) {
+      var dn = $("c-precio" + k);
+      if (dn) { dn.value = "NEGATIVA"; calcTotal(k); }
+      info.textContent += " — negativa detectada ✔ (se cargó como NEGATIVA)";
+      sug.appendChild(btnNeg);
+      return;
+    }
+
+    var unit = Number(d.unitario) || 0;
+    var total = Number(d.total) || 0;
+
+    if (!unit) {
+      info.textContent += " — no encontré el precio, cargalo a mano";
+      sug.appendChild(btnNeg);
+      return;
+    }
+
+    var destino = $("c-precio" + k);
+    if (destino && !destino.value) { destino.value = unit; calcTotal(k); }
+
+    var etiqueta = document.createElement("span");
+    etiqueta.style.cssText = "font-size:11px;color:#64748b";
+    etiqueta.textContent = "Detecté unitario $" + unit.toLocaleString("es-AR") +
+      (total ? (" · total $" + total.toLocaleString("es-AR")) : "") +
+      " — si el unitario es otro, clic:";
+    sug.appendChild(etiqueta);
+
+    [unit, total].filter(Boolean).forEach(function (n) {
+      var b = document.createElement("button");
+      b.type = "button";
+      b.textContent = "$ " + n.toLocaleString("es-AR");
+      b.addEventListener("click", function () {
+        var dd = $("c-precio" + k);
+        if (dd) { dd.value = n; calcTotal(k); }
+      });
+      sug.appendChild(b);
+    });
+    sug.appendChild(btnNeg);
+  }
+
+  /* ---------- Respaldo local: pdf.js nativo + Tesseract (si Gemini no está) ---------- */
+  function leerLocal(k, file, info, sug) {
+    var pdfDoc = null;
+    info.textContent = " 📎 " + file.name + " — leyendo…";
+    cargarPdfJs().then(function (pdfjs) {
+      return file.arrayBuffer().then(function (buf) {
+        return pdfjs.getDocument({ data: buf }).promise;
+      });
+    }).then(function (pdf) {
+      pdfDoc = pdf;
+      return textoNativo(pdf);
+    }).then(function (texto) {
+      // Si el texto nativo ya trae montos o es una negativa, lo usamos (rápido)
+      if (montosDelTexto(texto).length || esNegativa(texto)) {
+        procesarTexto(k, file, info, sug, texto, false);
+        return;
+      }
+      // PDF sin texto útil (escaneado/imagen) → OCR de respaldo
+      info.textContent = " 📎 " + file.name + " — sin texto, leyendo con OCR (puede tardar unos segundos)…";
+      return ocrPdf(pdfDoc).then(function (textoOcr) {
+        procesarTexto(k, file, info, sug, textoOcr, true);
+      });
+    }).catch(function () {
+      info.textContent = " 📎 " + file.name + " — no pude leerlo, cargá el precio a mano";
+      sug.appendChild(crearBtnNegativa(k));
+    });
+  }
+
   function conectarPdf(k) {
     var input = $("c-file" + k);
     if (!input) return;
@@ -384,29 +500,19 @@
       sug.innerHTML = "";
       var file = input.files && input.files[0];
       if (!file) { info.textContent = ""; return; }
-      info.textContent = " 📎 " + file.name + " — leyendo…";
+      info.textContent = " 📎 " + file.name + " — leyendo con Gemini…";
 
-      var pdfDoc = null;
-      cargarPdfJs().then(function (pdfjs) {
-        return file.arrayBuffer().then(function (buf) {
-          return pdfjs.getDocument({ data: buf }).promise;
-        });
-      }).then(function (pdf) {
-        pdfDoc = pdf;
-        return textoNativo(pdf);
-      }).then(function (texto) {
-        // Si el texto nativo ya trae montos o es una negativa, lo usamos (rápido)
-        if (montosDelTexto(texto).length || esNegativa(texto)) {
-          procesarTexto(k, file, info, sug, texto, false);
-          return;
+      // 1) Gemini primero (lee el PDF entendiendo unitario vs total)
+      leerPresupuestoGemini(file, cantidadActual()).then(function (d) {
+        if (d && (Number(d.unitario) || d.negativa)) {
+          aplicarGemini(k, file, info, sug, d);
+        } else {
+          // Gemini respondió pero sin datos útiles → respaldo local
+          leerLocal(k, file, info, sug);
         }
-        // PDF sin texto útil (escaneado/imagen) → OCR de respaldo
-        info.textContent = " 📎 " + file.name + " — sin texto, leyendo con OCR (puede tardar unos segundos)…";
-        return ocrPdf(pdfDoc).then(function (textoOcr) {
-          procesarTexto(k, file, info, sug, textoOcr, true);
-        });
       }).catch(function () {
-        info.textContent = " 📎 " + file.name + " — no pude leerlo, cargá el precio a mano";
+        // Gemini no disponible (sin key, sin red, cuota) → respaldo local
+        leerLocal(k, file, info, sug);
       });
     });
   }
