@@ -966,6 +966,7 @@ async function descargarExcel(){
           precioUnit: reg.precioUnit || "",
           ganadora: reg.ganadora || "",
           cotizantes: reg.cotizantes || [],
+          negativas: reg.negativas || [],
           fechaCuadro: firebase.firestore.FieldValue.serverTimestamp()
         }, { merge: true }).then(function(){ return true; });
       }).catch(function(err){ console.warn("No se pudo guardar el pendiente:", err); return false; });
