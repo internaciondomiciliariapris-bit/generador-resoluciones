@@ -628,13 +628,17 @@
     var cotizantes = payload.cotizaciones
       .filter(function (c) { return c.nombre; })
       .map(function (c) { return c.nombre; });
+    var negativas = payload.cotizaciones
+      .filter(function (c) { return c.nombre && c.negativa; })
+      .map(function (c) { return c.nombre; });
     var reg = {
       nroExp: payload.expte,
       paciente: payload.paciente,
       cantidad: String(payload.cantidad || ""),
       precioUnit: String(gan.precio_unit || ""),
       ganadora: gan.nombre || "",
-      cotizantes: cotizantes
+      cotizantes: cotizantes,
+      negativas: negativas
     };
     if (window.PendientesStore) window.PendientesStore.guardar(reg);
     if (typeof window.prefillAudio === "function") window.prefillAudio(reg);
