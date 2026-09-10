@@ -270,10 +270,12 @@ hr{border:none;border-top:1.5px solid #e2e8f0;margin:16px 0 14px}
         <table style="width:100%;border-collapse:collapse;font-size:13px">
           <thead><tr>
             <th style="background:#1a56a0;color:#fff;padding:8px;border:1px solid #ccc;text-align:left">Nº Expediente</th>
+            <th style="background:#1a56a0;color:#fff;padding:8px;border:1px solid #ccc;text-align:center">Fecha creación</th>
             <th style="background:#1a56a0;color:#fff;padding:8px;border:1px solid #ccc;text-align:left">Apellido y Nombre</th>
             <th style="background:#1a56a0;color:#fff;padding:8px;border:1px solid #ccc;text-align:center">Cantidad</th>
             <th style="background:#1a56a0;color:#fff;padding:8px;border:1px solid #ccc;text-align:right">Monto</th>
             <th style="background:#1a56a0;color:#fff;padding:8px;border:1px solid #ccc;text-align:center">Nº Orden</th>
+            <th style="background:#1a56a0;color:#fff;padding:8px;border:1px solid #ccc;text-align:center">Fecha Nº Orden</th>
             <th style="background:#1a56a0;color:#fff;padding:8px;border:1px solid #ccc;width:34px"></th>
           </tr></thead>
           <tbody id="listado-body-anteojos"></tbody>
@@ -289,10 +291,12 @@ hr{border:none;border-top:1.5px solid #e2e8f0;margin:16px 0 14px}
         <table style="width:100%;border-collapse:collapse;font-size:13px">
           <thead><tr>
             <th style="background:#1a56a0;color:#fff;padding:8px;border:1px solid #ccc;text-align:left">Nº Expediente</th>
+            <th style="background:#1a56a0;color:#fff;padding:8px;border:1px solid #ccc;text-align:center">Fecha creación</th>
             <th style="background:#1a56a0;color:#fff;padding:8px;border:1px solid #ccc;text-align:left">Apellido y Nombre</th>
             <th style="background:#1a56a0;color:#fff;padding:8px;border:1px solid #ccc;text-align:center">Cantidad</th>
             <th style="background:#1a56a0;color:#fff;padding:8px;border:1px solid #ccc;text-align:right">Monto</th>
             <th style="background:#1a56a0;color:#fff;padding:8px;border:1px solid #ccc;text-align:center">Nº Orden</th>
+            <th style="background:#1a56a0;color:#fff;padding:8px;border:1px solid #ccc;text-align:center">Fecha Nº Orden</th>
             <th style="background:#1a56a0;color:#fff;padding:8px;border:1px solid #ccc;width:34px"></th>
           </tr></thead>
           <tbody id="listado-body-audio"></tbody>
@@ -719,6 +723,7 @@ function volverForm(){
 }
 
 // ===== Listado local de expedientes (guardado SOLO en esta computadora) =====
+function _hoy(){var d=new Date();function p(n){return String(n).padStart(2,"0");}return p(d.getDate())+"/"+p(d.getMonth()+1)+"/"+d.getFullYear();}
 const LISTADO_KEY = "resoluciones_pris_listado";
 function _escL(t){return String(t==null?"":t).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");}
 function tipoLegible(t){ return t==="audio" ? "Audífonos" : t==="anteojos" ? "Anteojos" : "—"; }
@@ -736,7 +741,7 @@ function listadoGuardar(arr){
 function registrarExpediente(p){
   let cantidad, monto;
   if(p.tipo === "anteojos"){
-    cantidad = parseInt(String(p.insumo||"").replace(/[^0-9]/g,"")) || 1;
+    cantidad = parseInt(String(p.cantidad||"").replace(/[^0-9]/g,"")) || 1;
     monto    = parseInt(String(p.precio||"").replace(/[^0-9]/g,"")) || 0;
   } else {
     cantidad = parseInt(String(p.cantidad||"").replace(/[^0-9]/g,"")) || 0;
@@ -748,13 +753,15 @@ function registrarExpediente(p){
     cantidad: cantidad,
     monto: monto,
     tipo: p.tipo,
-    orden: ""
+    orden: "",
+    ordenFecha: "",
+    creado: _hoy()
   };
   if(!reg.nroExp) return;
   const arr = listadoLeer();
   // upsert por Nº Expediente: si descargás Word y PDF del mismo, no se duplica
   const i = arr.findIndex(x => (x.nroExp||"").trim() === reg.nroExp);
-  if(i >= 0){ reg.orden = arr[i].orden || ""; arr[i] = reg; } else { arr.push(reg); }
+  if(i >= 0){ reg.orden = arr[i].orden || ""; reg.ordenFecha = arr[i].ordenFecha || ""; reg.creado = arr[i].creado || reg.creado; arr[i] = reg; } else { arr.push(reg); }
   listadoGuardar(arr);
   renderListado();
   if(reg.tipo === "audio" && window.PendientesStore){ window.PendientesStore.resolver(reg.nroExp); }
@@ -770,7 +777,14 @@ function borrarExpediente(nroExp){
 function setOrden(nroExp, valor){
   const arr = listadoLeer();
   const i = arr.findIndex(x => (x.nroExp||"").trim() === String(nroExp).trim());
-  if(i >= 0){ arr[i].orden = String(valor||"").trim(); listadoGuardar(arr); }
+  if(i >= 0){
+    const val = String(valor||"").trim();
+    arr[i].orden = val;
+    if(val){ if(!arr[i].ordenFecha) arr[i].ordenFecha = _hoy(); }
+    else { arr[i].ordenFecha = ""; }
+    listadoGuardar(arr);
+    renderListado();
+  }
 }
 
 // Dibuja las filas de un grupo en su tbody y devuelve el subtotal en $
@@ -783,10 +797,12 @@ function _renderGrupo(grupo, tbodyId){
     const ordVal = _escL(r.orden).replace(/"/g,"&quot;");
     return '<tr>' +
       '<td style="'+td+'">'+_escL(r.nroExp)+'</td>' +
+      '<td style="'+td+'text-align:center;white-space:nowrap">'+_escL(r.creado||"—")+'</td>' +
       '<td style="'+td+'">'+_escL(r.paciente)+'</td>' +
       '<td style="'+td+'text-align:center">'+_escL(r.cantidad)+'</td>' +
       '<td style="'+td+'text-align:right">$ '+Number(r.monto||0).toLocaleString("es-AR")+'</td>' +
       '<td style="'+td+'text-align:center"><input type="text" value="'+ordVal+'" onchange="setOrden(\''+key+'\', this.value)" placeholder="—" style="width:100px;border:1px solid #cbd5e1;border-radius:6px;padding:5px 7px;font-size:13px;text-align:center;outline:none"></td>' +
+      '<td style="'+td+'text-align:center;white-space:nowrap">'+_escL(r.ordenFecha||"—")+'</td>' +
       '<td style="'+td+'text-align:center"><button title="Eliminar" onclick="borrarExpediente(\''+key+'\')" style="border:none;background:#fee2e2;color:#b91c1c;border-radius:6px;width:26px;height:26px;cursor:pointer">✕</button></td>' +
     '</tr>';
   }).join("");
@@ -876,14 +892,16 @@ async function descargarExcel(){
   btn.disabled=true; btn.textContent="Generando...";
   try{
     await cargarXLSX();
-    const HEADER = ["Nº Expediente","Apellido y Nombre","Cantidad","Monto","Nº Orden"];
-    const COLS   = [{wch:18},{wch:34},{wch:10},{wch:16},{wch:14}];
+    const HEADER = ["Nº Expediente","Fecha creación","Apellido y Nombre","Cantidad","Monto","Nº Orden","Fecha Nº Orden"];
+    const COLS   = [{wch:18},{wch:14},{wch:34},{wch:10},{wch:16},{wch:14},{wch:16}];
     const mapear = r => ({
       "Nº Expediente": r.nroExp,
+      "Fecha creación": r.creado || "",
       "Apellido y Nombre": r.paciente,
       "Cantidad": Number(r.cantidad)||0,
       "Monto": Number(r.monto)||0,
-      "Nº Orden": r.orden || ""
+      "Nº Orden": r.orden || "",
+      "Fecha Nº Orden": r.ordenFecha || ""
     });
     const anteojos = arr.filter(r => r.tipo === "anteojos").map(mapear);
     const audio    = arr.filter(r => r.tipo === "audio").map(mapear);
