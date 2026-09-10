@@ -308,6 +308,7 @@ hr{border:none;border-top:1.5px solid #e2e8f0;margin:16px 0 14px}
     <div id="listado-total" class="hint" style="display:none;font-size:14px;color:#0f172a;margin-top:14px;padding-top:12px;border-top:2px solid #1a56a0;text-align:right"></div>
     <div style="display:flex;gap:10px;margin-top:14px;flex-wrap:wrap">
       <button class="btn-preview" id="btn-excel" style="width:auto;flex:1;min-width:200px" onclick="descargarExcel()">⬇️ Descargar Excel</button>
+      <button id="btn-corregir" style="width:auto;flex:0 0 auto;background:#fef3c7;color:#92400e;border:1px solid #fbbf24;border-radius:8px;padding:10px 14px;font-size:13px;font-weight:600;cursor:pointer" onclick="corregirDatosViejos()">🔧 Corregir datos viejos (una vez)</button>
     </div>
     <div class="msg" id="lst-msg"></div>
   </div>
@@ -773,6 +774,17 @@ function borrarExpediente(nroExp){
   renderListado();
 }
 
+// Corrige a mano la cantidad de una fila ya guardada (las viejas quedaron en 1 por el bug anterior)
+function setCantidad(nroExp, valor){
+  const arr = listadoLeer();
+  const i = arr.findIndex(x => (x.nroExp||"").trim() === String(nroExp).trim());
+  if(i >= 0){
+    arr[i].cantidad = parseInt(String(valor||"").replace(/[^0-9]/g,"")) || 0;
+    listadoGuardar(arr);
+    renderListado();
+  }
+}
+
 // Guarda el Nº de Orden escrito a mano (sin re-renderizar, para no perder el foco)
 function setOrden(nroExp, valor){
   const arr = listadoLeer();
@@ -799,7 +811,7 @@ function _renderGrupo(grupo, tbodyId){
       '<td style="'+td+'">'+_escL(r.nroExp)+'</td>' +
       '<td style="'+td+'text-align:center;white-space:nowrap">'+_escL(r.creado||"—")+'</td>' +
       '<td style="'+td+'">'+_escL(r.paciente)+'</td>' +
-      '<td style="'+td+'text-align:center">'+_escL(r.cantidad)+'</td>' +
+      '<td style="'+td+'text-align:center"><input type="text" value="'+_escL(r.cantidad)+'" onchange="setCantidad(\''+key+'\', this.value)" style="width:52px;border:1px solid #cbd5e1;border-radius:6px;padding:5px 6px;font-size:13px;text-align:center;outline:none"></td>' +
       '<td style="'+td+'text-align:right">$ '+Number(r.monto||0).toLocaleString("es-AR")+'</td>' +
       '<td style="'+td+'text-align:center"><input type="text" value="'+ordVal+'" onchange="setOrden(\''+key+'\', this.value)" placeholder="—" style="width:100px;border:1px solid #cbd5e1;border-radius:6px;padding:5px 7px;font-size:13px;text-align:center;outline:none"></td>' +
       '<td style="'+td+'text-align:center;white-space:nowrap">'+_escL(r.ordenFecha||"—")+'</td>' +
@@ -870,6 +882,26 @@ function renderListado(){
     totEl.style.display = "block";
     totEl.innerHTML = "<b>"+arr.length+"</b> expediente(s)" + (q ? " (filtrados)" : "") + " — TOTAL GENERAL: <b>$ "+total.toLocaleString("es-AR")+"</b>";
   }
+}
+
+// Corrección puntual de los expedientes ya guardados (una sola vez, a pedido de Jorge):
+// anteojos de $76.000 y $154.000 -> Cantidad 2; audífonos sin fecha -> creados el 08/09/2026.
+function corregirDatosViejos(){
+  if(!confirm("Corrección de una sola vez sobre los expedientes ya guardados:\n\n• Anteojos de $76.000 -> Cantidad 2\n• Anteojos de $154.000 -> Cantidad 2\n• Audífonos sin fecha -> Fecha de creación 08/09/2026\n\nEl resto queda igual. ¿Confirmás?")) return;
+  const arr = listadoLeer();
+  let nCant=0, nFecha=0;
+  arr.forEach(function(r){
+    if(r.tipo==="anteojos"){
+      const m=Number(r.monto)||0;
+      if((m===76000 || m===154000) && Number(r.cantidad)!==2){ r.cantidad=2; nCant++; }
+    } else if(r.tipo==="audio"){
+      if(!r.creado){ r.creado="08/09/2026"; nFecha++; }
+    }
+  });
+  listadoGuardar(arr);
+  renderListado();
+  const msgEl=document.getElementById("lst-msg");
+  if(msgEl){ msgEl.className="msg ok"; msgEl.textContent="✅ Listo: "+nCant+" anteojo(s) a Cantidad 2 y "+nFecha+" audífono(s) con fecha 08/09/2026."; }
 }
 
 // ===== Exportar a Excel (.xlsx). Carga SheetJS solo cuando hace falta =====
