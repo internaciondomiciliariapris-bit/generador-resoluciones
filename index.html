@@ -310,6 +310,8 @@ hr{border:none;border-top:1.5px solid #e2e8f0;margin:16px 0 14px}
       <button class="btn-preview" id="btn-excel" style="width:auto;flex:1;min-width:200px" onclick="descargarExcel()">⬇️ Descargar Excel</button>
       <button id="btn-corregir" style="width:auto;flex:0 0 auto;background:#fef3c7;color:#92400e;border:1px solid #fbbf24;border-radius:8px;padding:10px 14px;font-size:13px;font-weight:600;cursor:pointer" onclick="corregirDatosViejos()">🔧 Corregir datos viejos (una vez)</button>
       <button id="btn-fecha-orden" style="width:auto;flex:0 0 auto;background:#dbeafe;color:#1e40af;border:1px solid #60a5fa;border-radius:8px;padding:10px 14px;font-size:13px;font-weight:600;cursor:pointer" onclick="ponerFechaOrdenATodos()">📅 Fecha de orden a todos</button>
+      <button id="btn-vaciar-anteojos" style="width:auto;flex:0 0 auto;background:#fee2e2;color:#b91c1c;border:1px solid #fca5a5;border-radius:8px;padding:10px 14px;font-size:13px;font-weight:600;cursor:pointer" onclick="vaciarLista('anteojos')">🗑️ Vaciar Anteojos</button>
+      <button id="btn-vaciar-audio" style="width:auto;flex:0 0 auto;background:#fee2e2;color:#b91c1c;border:1px solid #fca5a5;border-radius:8px;padding:10px 14px;font-size:13px;font-weight:600;cursor:pointer" onclick="vaciarLista('audio')">🗑️ Vaciar Audífonos</button>
     </div>
     <div class="msg" id="lst-msg"></div>
   </div>
@@ -820,6 +822,24 @@ function setOrden(nroExp, valor){
     listadoGuardar(arr);
     renderListado();
   }
+}
+
+// Vacía por completo la lista de un tipo (anteojos o audio). Pensado para arrancar
+// un listado nuevo DESPUÉS de descargar el Excel. No se puede deshacer.
+function vaciarLista(tipo){
+  const arr = listadoLeer();
+  const grupo = arr.filter(function(r){ return r.tipo === tipo; });
+  const nombre = tipoLegible(tipo);
+  const msgEl = document.getElementById("lst-msg");
+  if(grupo.length === 0){
+    if(msgEl){ msgEl.className="msg"; msgEl.textContent="No hay expedientes de "+nombre+" para vaciar."; }
+    return;
+  }
+  if(!confirm("Vas a ELIMINAR los "+grupo.length+" expediente(s) de "+nombre+" del listado de esta computadora.\n\nEsto NO se puede deshacer. Asegurate de haber descargado el Excel primero.\n\n¿Confirmás?")) return;
+  const resto = arr.filter(function(r){ return r.tipo !== tipo; });
+  listadoGuardar(resto);
+  renderListado();
+  if(msgEl){ msgEl.className="msg ok"; msgEl.textContent="✅ Lista de "+nombre+" vaciada ("+grupo.length+" eliminados). Ya podés cargar nuevos."; }
 }
 
 // Dibuja las filas de un grupo en su tbody y devuelve el subtotal en $
