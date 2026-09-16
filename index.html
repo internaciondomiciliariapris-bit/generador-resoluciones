@@ -309,6 +309,8 @@ hr{border:none;border-top:1.5px solid #e2e8f0;margin:16px 0 14px}
     <div style="display:flex;gap:10px;margin-top:14px;flex-wrap:wrap">
       <button class="btn-preview" id="btn-excel" style="width:auto;flex:1;min-width:200px" onclick="descargarExcel()">⬇️ Descargar Excel</button>
       <button id="btn-corregir" style="width:auto;flex:0 0 auto;background:#fef3c7;color:#92400e;border:1px solid #fbbf24;border-radius:8px;padding:10px 14px;font-size:13px;font-weight:600;cursor:pointer" onclick="corregirDatosViejos()">🔧 Corregir datos viejos (una vez)</button>
+      <button id="btn-reprocesar" style="width:auto;flex:0 0 auto;background:#ede9fe;color:#5b21b6;border:1px solid #a78bfa;border-radius:8px;padding:10px 14px;font-size:13px;font-weight:600;cursor:pointer" onclick="document.getElementById('rep-file').click()">🔁 Reprocesar precios (x100)</button>
+      <input id="rep-file" type="file" accept="application/pdf" multiple style="display:none" onchange="reprocesarLote(this.files)">
       <button id="btn-fecha-orden" style="width:auto;flex:0 0 auto;background:#dbeafe;color:#1e40af;border:1px solid #60a5fa;border-radius:8px;padding:10px 14px;font-size:13px;font-weight:600;cursor:pointer" onclick="ponerFechaOrdenATodos()">📅 Fecha de orden a todos</button>
       <button id="btn-vaciar-anteojos" style="width:auto;flex:0 0 auto;background:#fee2e2;color:#b91c1c;border:1px solid #fca5a5;border-radius:8px;padding:10px 14px;font-size:13px;font-weight:600;cursor:pointer" onclick="vaciarLista('anteojos')">🗑️ Vaciar Anteojos</button>
       <button id="btn-vaciar-audio" style="width:auto;flex:0 0 auto;background:#fee2e2;color:#b91c1c;border:1px solid #fca5a5;border-radius:8px;padding:10px 14px;font-size:13px;font-weight:600;cursor:pointer" onclick="vaciarLista('audio')">🗑️ Vaciar Audífonos</button>
@@ -1011,6 +1013,45 @@ async function descargarExcel(){
     if(el && !el.value) el.value=hoy;   // solo si está vacío, no pisa lo que edites
   });
 })();
+
+async function reprocesarLote(fileList){
+  const msgEl=document.getElementById("lst-msg");
+  const files=Array.from(fileList||[]);
+  if(!files.length) return;
+  msgEl.style.color="#5b21b6";
+  msgEl.textContent="\u23F3 Leyendo "+files.length+" PDF(s)\u2026";
+  try{
+    const pdfs=[];
+    for(const f of files){
+      const b64=await new Promise((res,rej)=>{
+        const r=new FileReader();
+        r.onload=()=>res(String(r.result).split(",")[1]);
+        r.onerror=()=>rej(new Error("No se pudo leer "+f.name));
+        r.readAsDataURL(f);
+      });
+      pdfs.push({nombre:f.name, base64:b64});
+    }
+    msgEl.textContent="\u23F3 Reprocesando "+pdfs.length+" resoluci\u00F3n(es)\u2026";
+    const resp=await fetch("/api/reprocesar",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({pdfs})});
+    const data=await resp.json();
+    if(!data.ok){ msgEl.style.color="#b91c1c"; msgEl.textContent="\u274C "+(data.error||"Error al reprocesar"); return; }
+    const bin=atob(data.zip_base64); const arr=new Uint8Array(bin.length);
+    for(let i=0;i<bin.length;i++) arr[i]=bin.charCodeAt(i);
+    const blob=new Blob([arr],{type:"application/zip"});
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement("a"); a.href=url; a.download="Resoluciones_corregidas.zip"; a.click();
+    URL.revokeObjectURL(url);
+    const okN=data.resultados.length, errN=(data.errores||[]).length;
+    let html="\u2705 "+okN+" corregida(s) y descargadas en el ZIP (revis\u00E1 el valor y volv\u00E9 a firmar).";
+    if(errN) html+=" \u26A0\uFE0F "+errN+" con problemas: "+data.errores.map(e=>e.nombre+" ("+e.error+")").join("; ");
+    msgEl.style.color = errN? "#92400e":"#166534";
+    msgEl.innerHTML=html;
+  }catch(ex){
+    msgEl.style.color="#b91c1c"; msgEl.textContent="\u274C "+ex.message;
+  }finally{
+    const inp=document.getElementById("rep-file"); if(inp) inp.value="";
+  }
+}
 </script>
 <script>
 /* ===== Pendientes de resolución — compartidos vía Firestore (proyecto visitas-siprosa) ===== */
