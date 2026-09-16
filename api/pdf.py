@@ -216,6 +216,16 @@ def generar_pdf(data):
     return pdf.output()
 
 class handler(BaseHTTPRequestHandler):
+    def _cors(self):
+        self.send_header("Access-Control-Allow-Origin", "*")
+        self.send_header("Access-Control-Allow-Methods", "POST, OPTIONS")
+        self.send_header("Access-Control-Allow-Headers", "Content-Type")
+
+    def do_OPTIONS(self):
+        self.send_response(204)
+        self._cors()
+        self.end_headers()
+
     def do_POST(self):
         length = int(self.headers.get("Content-Length",0))
         body = self.rfile.read(length)
@@ -225,6 +235,7 @@ class handler(BaseHTTPRequestHandler):
             apellido = data.get("paciente","").split(",")[0].strip().replace(" ","_")
             nombre = f"Resolucion_{data.get('nroRes','0')}_{apellido}.pdf"
             self.send_response(200)
+            self._cors()
             self.send_header("Content-Type","application/pdf")
             self.send_header("Content-Disposition",f'attachment; filename="{nombre}"')
             self.send_header("Content-Length",str(len(pdf_bytes)))
@@ -232,6 +243,7 @@ class handler(BaseHTTPRequestHandler):
             self.wfile.write(pdf_bytes)
         except Exception as ex:
             self.send_response(500)
+            self._cors()
             self.send_header("Content-Type","application/json")
             self.end_headers()
             self.wfile.write(json.dumps({"error":str(ex)}).encode())
