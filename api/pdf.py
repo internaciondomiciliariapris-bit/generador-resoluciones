@@ -185,7 +185,7 @@ def generar_pdf(data):
     pdf.ln(2)
 
     subp = "299" if tipo=="anteojos" else "297"
-    art3 = f"Imputar la erogacion por un importe total de {importe} {imp_letras}, y posterior emision de la orden de pago respectiva, a la Jurisdiccion 67, Unidad de Organizacion 965-Recursos disponibles con los que cuenta el servicio-Finalidad/Funcion 314, Programa 19, Act./Ob. 01 - Partida 200 - Subpartida {subp} - con Financiamiento del Recurso 10 Tesoro General de la Provincia, con cargo al Presupuesto 2026.-"
+    art3 = f"Imputar la erogacion por un importe total de {importe} {imp_letras}, y posterior emision de la orden de pago respectiva, a la Jurisdiccion 67, Unidad de Organizacion 965-Recursos disponibles con los que cuenta el servicio-Finalidad/Funcion 314, Programa 19, Act./Ob. 01 - Partida 200 - Subpartida {subp}, con cargo al Presupuesto 2026.-"
     pdf.set_font("Helvetica","BU",11)
     pdf.cell(27,6,"ARTICULO 3o:")
     pdf.set_font("Helvetica","",11)
