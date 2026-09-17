@@ -494,7 +494,7 @@ function renderPrevia(p){
       <tr><td><span contenteditable="true" data-f="proveedor">${prov}</span></td><td><span contenteditable="true" data-f="insumoDesc">${insumoDesc}</span></td><td><span contenteditable="true" data-f="cantidad">${cantA}</span></td><td><span contenteditable="true" data-f="precioUnit">${puX}</span></td><td><span contenteditable="true" data-f="precioTotal">${ptX}</span></td></tr>
       <tr><td colspan="4">TOTAL</td><td>${ptX}</td></tr></tbody></table>`;
     html+=`<div class="doc-art"><span class="doc-art-label">ARTICULO 2º:</span> Autorizar la compra al proveedor <strong><span class="sync-prov">${prov}</span></strong>, por el importe de <strong><span contenteditable="true" data-f="importe">${imX}</span> <span contenteditable="true" data-f="importeLetras">${p.importeLetras}</span></strong>, y posterior emisión de la orden de pago respectiva.</div>`;
-    html+=`<div class="doc-art"><span class="doc-art-label">ARTICULO 3º:</span> Imputar la erogación por un importe total de <strong>${imX} ${p.importeLetras}</strong>, y posterior emisión de la orden de pago respectiva, a la Jurisdicción 67, Unidad de Organización 965-Recursos disponibles con los que cuenta el servicio-Finalidad/Función 314, Programa 19, Act. /Ob. 01 - Partida 200 – <strong>Subpartida 299</strong>– con Financiamiento del Recurso 10 Tesoro General de la Provincia, con cargo al <strong>Presupuesto 2026</strong>.-</div>`;
+    html+=`<div class="doc-art"><span class="doc-art-label">ARTICULO 3º:</span> Imputar la erogación por un importe total de <strong>${imX} ${p.importeLetras}</strong>, y posterior emisión de la orden de pago respectiva, a la Jurisdicción 67, Unidad de Organización 965-Recursos disponibles con los que cuenta el servicio-Finalidad/Función 314, Programa 19, Act. /Ob. 01 - Partida 200 – <strong>Subpartida 299</strong>, con cargo al <strong>Presupuesto 2026</strong>.-</div>`;
   } else {
     const puA="$ "+parseInt(p.precioUnit).toLocaleString("es-AR")+",00";
     const ptA="$ "+parseInt(p.precioTotal).toLocaleString("es-AR")+",00";
@@ -503,7 +503,7 @@ function renderPrevia(p){
       <tr><td>${p.firmaGanadora}</td><td>Audifonos</td><td><span contenteditable="true" data-f="cantidad">${p.cantidad}</span></td><td><span contenteditable="true" data-f="precioUnit">${puA}</span></td><td><span contenteditable="true" data-f="precioTotal">${ptA}</span></td></tr>
       <tr><td colspan="4">TOTAL</td><td>${ptA}</td></tr></tbody></table>`;
     html+=`<div class="doc-art"><span class="doc-art-label">ARTICULO 2º:</span> Autorizar la compra al proveedor <strong>${p.firmaGanadora}</strong>, por el importe de <strong><span contenteditable="true" data-f="importe">${ptA}</span> (<span contenteditable="true" data-f="importeLetras">${p.importeLetras}</span>)</strong>, y posterior emisión de la orden de pago respectiva.</div>`;
-    html+=`<div class="doc-art"><span class="doc-art-label">ARTICULO 3º:</span> Imputar la erogación por un importe total de <strong>${ptA} (${p.importeLetras})</strong>, y posterior emisión de la orden de pago respectiva, a la Jurisdicción 67, Unidad de Organización 965-Recursos disponibles con los que cuenta el servicio-Finalidad/Función 314, Programa 19, Act. /Ob. 01 - Partida 200 – <strong>Subpartida 297</strong>– con Financiamiento del Recurso 10 Tesoro General de la Provincia, con cargo al <strong>Presupuesto 2026</strong>.-</div>`;
+    html+=`<div class="doc-art"><span class="doc-art-label">ARTICULO 3º:</span> Imputar la erogación por un importe total de <strong>${ptA} (${p.importeLetras})</strong>, y posterior emisión de la orden de pago respectiva, a la Jurisdicción 67, Unidad de Organización 965-Recursos disponibles con los que cuenta el servicio-Finalidad/Función 314, Programa 19, Act. /Ob. 01 - Partida 200 – <strong>Subpartida 297</strong>, con cargo al <strong>Presupuesto 2026</strong>.-</div>`;
   }
 
   html+=`<div class="doc-art"><span class="doc-art-label">ARTICULO 4º:</span> Pase a control de Ley del Honorable Tribunal de Cuentas.</div>`;
@@ -640,12 +640,12 @@ function construirHtmlResolucion(p) {
 
   if(p.tipo === "anteojos"){
     body += '<p class="indent">Que se adjunta presupuesto de la Firma Comercial <b>' + esc(prov) + '. -</b></p>';
+    body += '<p class="indent">Que la propuesta resulto la más conveniente para el Estado.</p>';
   } else {
     body += '<p class="indent">Que se adjunta presupuestos de la Firmas Comerciales; <b>' + esc(p.firmasPrev) + ' ' + esc((p.firmaGanadora||"").toUpperCase()) + '.-</b></p>';
     body += '<p class="indent">Que la propuesta de <b>' + esc(p.firmaGanadora) + '</b> resulto la más conveniente para el Estado.</p>';
   }
 
-  body += '<p class="indent">Que la propuesta resulto la más conveniente para el Estado.</p>';
   body += '<p class="indent">Que se adjunta Dictamen Jurídico con opinión favorable.</p>';
   body += '<p class="indent">Que se aprueba todo lo actuado por encuadrarse a las disposiciones legales vigentes, que rigen sobre materia de contrataciones, conforme a lo normado en la Res. Nº 388/SPS-05.</p>';
 
@@ -663,7 +663,7 @@ function construirHtmlResolucion(p) {
     // Art 2
     body += '<p class="just"><b><u>ARTICULO 2º</u></b> : Autorizar la compra al proveedor <b>' + esc(prov) + '</b> , por el importe de <b>' + esc(im_num) + ' ' + esc(p.importeLetras) + '</b> , y posterior emisión de la orden de pago respectiva.</p>';
     // Art 3
-    body += '<p class="just"><b><u>ARTICULO 3º:</u></b> Imputar la erogación por un importe total de <b>' + esc(im_num) + ' ' + esc(p.importeLetras) + '</b> , y posterior emisión de la orden de pago respectiva, a la Jurisdicción 67, Unidad de Organización 965- Recursos disponibles con los que cuenta el servicio-Finalidad/Función 314, Programa 19, Act. /Ob. 01 - Partida 200 – <b>Subpartida 299</b> – con Financiamiento del Recurso 10 Tesoro General de la Provincia, con cargo al <b>Presupuesto 2026</b>.-</p>';
+    body += '<p class="just"><b><u>ARTICULO 3º:</u></b> Imputar la erogación por un importe total de <b>' + esc(im_num) + ' ' + esc(p.importeLetras) + '</b> , y posterior emisión de la orden de pago respectiva, a la Jurisdicción 67, Unidad de Organización 965- Recursos disponibles con los que cuenta el servicio-Finalidad/Función 314, Programa 19, Act. /Ob. 01 - Partida 200 – <b>Subpartida 299</b>, con cargo al <b>Presupuesto 2026</b>.-</p>';
   } else {
     const puA = "$ " + fmt(parseInt(p.precioUnit||0)) + ",00";
     const ptA = "$ " + fmt(parseInt(p.precioTotal||0)) + ",00";
@@ -673,7 +673,7 @@ function construirHtmlResolucion(p) {
       '<tr><td>' + esc(p.firmaGanadora) + '</td><td>Audífonos</td><td>' + esc(p.cantidad) + '</td><td>' + esc(puA) + '</td><td>' + esc(ptA) + '</td></tr>' +
       '<tr><td colspan="4" class="tdtot">TOTAL</td><td class="tdtot">' + esc(ptA) + '</td></tr></table>';
     body += '<p class="just"><b><u>ARTICULO 2º</u></b> : Autorizar la compra al proveedor <b>' + esc(p.firmaGanadora) + '</b> , por el importe de <b>' + esc(ptA) + ' (' + esc(p.importeLetras) + ')</b> , y posterior emisión de la orden de pago respectiva.</p>';
-    body += '<p class="just"><b><u>ARTICULO 3º:</u></b> Imputar la erogación por un importe total de <b>' + esc(ptA) + ' (' + esc(p.importeLetras) + ')</b>, y posterior emisión de la orden de pago respectiva, a la Jurisdicción 67, Unidad de Organización 965-Recursos disponibles con los que cuenta el servicio-Finalidad/Función 314, Programa 19, Act. /Ob. 01 - Partida 200 – <b>Subpartida 297</b> – con Financiamiento del Recurso 10 Tesoro General de la Provincia, con cargo al <b>Presupuesto 2026</b>.-</p>';
+    body += '<p class="just"><b><u>ARTICULO 3º:</u></b> Imputar la erogación por un importe total de <b>' + esc(ptA) + ' (' + esc(p.importeLetras) + ')</b>, y posterior emisión de la orden de pago respectiva, a la Jurisdicción 67, Unidad de Organización 965-Recursos disponibles con los que cuenta el servicio-Finalidad/Función 314, Programa 19, Act. /Ob. 01 - Partida 200 – <b>Subpartida 297</b>, con cargo al <b>Presupuesto 2026</b>.-</p>';
   }
 
   body += '<p class="just"><b><u>ARTICULO 4º:</u></b> Pase a control de Ley del Honorable Tribunal de Cuentas.</p>';
