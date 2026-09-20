@@ -975,8 +975,10 @@ function corregirDatosViejos(){
   if(msgEl){ msgEl.className="msg ok"; msgEl.textContent="✅ Listo: "+nCant+" anteojo(s) a Cantidad 2 y "+nFecha+" audífono(s) con fecha 08/09/2026."; }
 }
 
-// ===== Exportar a Excel (.xlsx). Carga SheetJS solo cuando hace falta =====
-const XLSX_CDN = "https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js";
+// ===== Exportar a Excel (.xlsx). Carga xlsx-js-style solo cuando hace falta =====
+// Fork de SheetJS que respeta los estilos (bordes, fuente, relleno y formato de número);
+// el build community de SheetJS los ignora, por eso no salían los bordes ni el formato $.
+const XLSX_CDN = "https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js";
 function cargarXLSX(){
   return new Promise((res,rej)=>{
     if(window.XLSX) return res();
@@ -984,6 +986,36 @@ function cargarXLSX(){
     s.src=XLSX_CDN; s.onload=()=>res(); s.onerror=()=>rej(new Error("No se pudo cargar el generador de Excel. Revisá tu conexión."));
     document.head.appendChild(s);
   });
+}
+// Arma una hoja con el formato del modelo:
+//   A (NUMERO RES) vacía, centrada y con borde (para asignar el Nº de resolución a mano)
+//   B: "expte NRO INSUMO Xcant PACIENTE" — Arial 10, ajuste de texto, relleno blanco, borde, columna ancha
+//   C: "jorge barone" fijo, con borde
+//   D: monto en formato contable $ #,##0.00, con borde
+function _hojaModeloExcel(rows, tipo){
+  const MONEY='_-"$"\\ * #,##0.00_-;\\-"$"\\ * #,##0.00_-;_-"$"\\ * "-"??_-;_-@_-';
+  const LINEA={style:"thin",color:{rgb:"000000"}};
+  const BORDE={top:LINEA,bottom:LINEA,left:LINEA,right:LINEA};
+  const stA={border:BORDE,alignment:{horizontal:"center"}};
+  const stB={font:{name:"Arial",sz:10},alignment:{wrapText:true,vertical:"center"},fill:{patternType:"solid",fgColor:{rgb:"FFFFFF"}},border:BORDE};
+  const stC={border:BORDE};
+  const stD={border:BORDE,numFmt:MONEY};
+  const INS = (tipo==="anteojos") ? "ANTEOJOS" : "AUDÍFONOS";
+  const ws={};
+  ws["A1"]={t:"s",v:"NUMERO RES"};
+  rows.forEach((r,i)=>{
+    const R=i+2;
+    const cant=Number(r.cantidad)||0;
+    const pac=String(r.paciente||"").toUpperCase().replace(/,/g," ").replace(/\s+/g," ").trim();
+    ws["A"+R]={t:"s",v:"",s:stA};
+    ws["B"+R]={t:"s",v:"expte "+String(r.nroExp||"").trim()+" "+INS+" X"+cant+" "+pac,s:stB};
+    ws["C"+R]={t:"s",v:"jorge barone",s:stC};
+    ws["D"+R]={t:"n",v:Number(r.monto)||0,s:stD};
+  });
+  ws["!ref"]="A1:D"+(rows.length+1);
+  // Anchos idénticos al modelo (B≈137,14  D≈15,57); A y C quedan en el ancho por defecto.
+  const cols=[]; cols[1]={wch:136.30859375}; cols[3]={wch:14.73828125}; ws["!cols"]=cols;
+  return ws;
 }
 async function descargarExcel(){
   const msgEl = document.getElementById("lst-msg");
@@ -995,30 +1027,14 @@ async function descargarExcel(){
   btn.disabled=true; btn.textContent="Generando...";
   try{
     await cargarXLSX();
-    const HEADER = ["Nº Expediente","Fecha creación","Apellido y Nombre","Cantidad","Monto","Nº Orden","Fecha Nº Orden"];
-    const COLS   = [{wch:18},{wch:14},{wch:34},{wch:10},{wch:16},{wch:14},{wch:16}];
-    const mapear = r => ({
-      "Nº Expediente": r.nroExp,
-      "Fecha creación": r.creado || "",
-      "Apellido y Nombre": r.paciente,
-      "Cantidad": Number(r.cantidad)||0,
-      "Monto": Number(r.monto)||0,
-      "Nº Orden": r.orden || "",
-      "Fecha Nº Orden": r.ordenFecha || ""
-    });
-    const anteojos = arr.filter(r => r.tipo === "anteojos").map(mapear);
-    const audio    = arr.filter(r => r.tipo === "audio").map(mapear);
-
+    const anteojos = arr.filter(r => r.tipo === "anteojos");
+    const audio    = arr.filter(r => r.tipo === "audio");
     const wb = XLSX.utils.book_new();
     if(anteojos.length > 0){
-      const wsA = XLSX.utils.json_to_sheet(anteojos, {header:HEADER});
-      wsA["!cols"]=COLS;
-      XLSX.utils.book_append_sheet(wb, wsA, "Anteojos");
+      XLSX.utils.book_append_sheet(wb, _hojaModeloExcel(anteojos,"anteojos"), "Anteojos");
     }
     if(audio.length > 0){
-      const wsB = XLSX.utils.json_to_sheet(audio, {header:HEADER});
-      wsB["!cols"]=COLS;
-      XLSX.utils.book_append_sheet(wb, wsB, "Audífonos");
+      XLSX.utils.book_append_sheet(wb, _hojaModeloExcel(audio,"audio"), "Audífonos");
     }
     const hoy = new Date().toISOString().slice(0,10);
     XLSX.writeFile(wb, "Listado_Expedientes_"+hoy+".xlsx");
