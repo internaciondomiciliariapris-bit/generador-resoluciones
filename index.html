@@ -195,6 +195,10 @@ hr{border:none;border-top:1.5px solid #e2e8f0;margin:16px 0 14px}
     </div>
     <div id="sub-anteojos-proc" style="display:none">
       <div class="stitle">Resoluciones en proceso — falta Fecha y Nº Resolución</div>
+      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:0 0 10px">
+        <button class="btn-preview" id="btn-excel-proc-anteojos" style="width:auto;flex:0 0 auto;min-width:260px" onclick="descargarBorradoresExcel('anteojos')">⬇️ Descargar Excel (para asignar Nº)</button>
+        <span id="proc-msg-anteojos" class="msg" style="margin:0"></span>
+      </div>
       <div id="proc-list-anteojos" class="proc-list"></div>
     </div>
   </div>
@@ -275,6 +279,10 @@ hr{border:none;border-top:1.5px solid #e2e8f0;margin:16px 0 14px}
     </div>
     <div id="sub-audio-proc" style="display:none">
       <div class="stitle">Resoluciones en proceso — falta Fecha y Nº Resolución</div>
+      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:0 0 10px">
+        <button class="btn-preview" id="btn-excel-proc-audio" style="width:auto;flex:0 0 auto;min-width:260px" onclick="descargarBorradoresExcel('audio')">⬇️ Descargar Excel (para asignar Nº)</button>
+        <span id="proc-msg-audio" class="msg" style="margin:0"></span>
+      </div>
       <div id="proc-list-audio" class="proc-list"></div>
     </div>
   </div>
@@ -1027,14 +1035,30 @@ async function descargarExcel(){
   btn.disabled=true; btn.textContent="Generando...";
   try{
     await cargarXLSX();
-    const anteojos = arr.filter(r => r.tipo === "anteojos");
-    const audio    = arr.filter(r => r.tipo === "audio");
+    const HEADER = ["Nº Expediente","Fecha creación","Apellido y Nombre","Cantidad","Monto","Nº Orden","Fecha Nº Orden"];
+    const COLS   = [{wch:18},{wch:14},{wch:34},{wch:10},{wch:16},{wch:14},{wch:16}];
+    const mapear = r => ({
+      "Nº Expediente": r.nroExp,
+      "Fecha creación": r.creado || "",
+      "Apellido y Nombre": r.paciente,
+      "Cantidad": Number(r.cantidad)||0,
+      "Monto": Number(r.monto)||0,
+      "Nº Orden": r.orden || "",
+      "Fecha Nº Orden": r.ordenFecha || ""
+    });
+    const anteojos = arr.filter(r => r.tipo === "anteojos").map(mapear);
+    const audio    = arr.filter(r => r.tipo === "audio").map(mapear);
+
     const wb = XLSX.utils.book_new();
     if(anteojos.length > 0){
-      XLSX.utils.book_append_sheet(wb, _hojaModeloExcel(anteojos,"anteojos"), "Anteojos");
+      const wsA = XLSX.utils.json_to_sheet(anteojos, {header:HEADER});
+      wsA["!cols"]=COLS;
+      XLSX.utils.book_append_sheet(wb, wsA, "Anteojos");
     }
     if(audio.length > 0){
-      XLSX.utils.book_append_sheet(wb, _hojaModeloExcel(audio,"audio"), "Audífonos");
+      const wsB = XLSX.utils.json_to_sheet(audio, {header:HEADER});
+      wsB["!cols"]=COLS;
+      XLSX.utils.book_append_sheet(wb, wsB, "Audífonos");
     }
     const hoy = new Date().toISOString().slice(0,10);
     XLSX.writeFile(wb, "Listado_Expedientes_"+hoy+".xlsx");
@@ -1043,6 +1067,48 @@ async function descargarExcel(){
     msgEl.className="msg er"; msgEl.textContent="Error: "+ex.message;
   }
   btn.disabled=false; btn.textContent=txt;
+}
+
+// ===== Exportar "En proceso" (borradores SIN Nº) al formato del modelo, para mandar al sistema y que asigne los Nº =====
+// Fuente: window.BorradoresStore.listar(tipo) (Firestore genres_borradores). La columna A (NUMERO RES) va vacía a propósito.
+// Monto: anteojos → precio unitario guardado × cantidad (la cantidad va en el prefijo del insumo, ej "2-ANTEOJOS");
+//        audífonos → precioUnit × cantidad. Es el TOTAL, igual que el modelo.
+function _rowsDesdeBorradores(tipo, borradores){
+  return borradores.map(function(p){
+    var cant, monto;
+    if(tipo === "anteojos"){
+      var pi = (typeof parseInsumoAnteojos === "function") ? parseInsumoAnteojos(p.insumo||"") : {cant:1};
+      cant = pi.cant || 1;
+      monto = (parseInt(String(p.precio||"").replace(/[^0-9]/g,""))||0) * cant;
+    } else {
+      cant = parseInt(String(p.cantidad||"").replace(/[^0-9]/g,"")) || 0;
+      monto = (parseInt(String(p.precioUnit||"").replace(/[^0-9]/g,""))||0) * cant;
+    }
+    return { nroExp: p.nroExp, paciente: p.paciente, cantidad: cant, monto: monto };
+  });
+}
+async function descargarBorradoresExcel(tipo){
+  var suf = (tipo==="anteojos") ? "anteojos" : "audio";
+  var msgEl = document.getElementById("proc-msg-"+suf);
+  var btn   = document.getElementById("btn-excel-proc-"+suf);
+  var setMsg = function(cls,t){ if(msgEl){ msgEl.className = "msg"+(cls?" "+cls:""); msgEl.textContent = t; } };
+  setMsg("","");
+  var lista = (window.BorradoresStore && window.BorradoresStore.listar) ? window.BorradoresStore.listar(tipo) : [];
+  if(!lista.length){ setMsg("er","No hay resoluciones en proceso para exportar."); return; }
+  var txt0 = btn ? btn.textContent : "";
+  if(btn){ btn.disabled = true; btn.textContent = "Generando..."; }
+  try{
+    await cargarXLSX();
+    var rows = _rowsDesdeBorradores(tipo, lista);
+    var wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, _hojaModeloExcel(rows, tipo), (tipo==="anteojos"?"Anteojos":"Audífonos"));
+    var hoy = new Date().toISOString().slice(0,10);
+    XLSX.writeFile(wb, "EnProceso_"+(tipo==="anteojos"?"Anteojos":"Audifonos")+"_"+hoy+".xlsx");
+    setMsg("ok","✅ Excel descargado ("+rows.length+" en proceso).");
+  }catch(ex){
+    setMsg("er","Error: "+ex.message);
+  }
+  if(btn){ btn.disabled = false; btn.textContent = txt0; }
 }
 
 // Fecha de hoy predeterminada (hora LOCAL de Tucumán, formato "31 de Julio de 2026")
@@ -1380,6 +1446,7 @@ async function reprocesarLote(fileList){
       }).catch(function(err){ console.warn("No se pudo eliminar el borrador:", err); return false; });
     }
   };
+  Store.listar = function(tipo){ return filasDe(tipo).slice(); };
   window.BorradoresStore = Store;
 
   render();
