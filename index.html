@@ -159,6 +159,11 @@ hr{border:none;border-top:1.5px solid #e2e8f0;margin:16px 0 14px}
 
   <!-- ANTEOJOS -->
   <div id="panel-anteojos" class="panel active">
+    <div class="subtabs">
+      <div class="subtab active" id="subtab-anteojos-form" onclick="cambiarSub('anteojos','form')">📝 Armar resolución</div>
+      <div class="subtab" id="subtab-anteojos-proc" onclick="cambiarSub('anteojos','proc')">⏳ En proceso (<span id="cnt-anteojos">0</span>)</div>
+    </div>
+    <div id="sub-anteojos-form">
     <div class="stitle">Datos del encabezado</div>
     <div class="row">
       <div class="field"><label>Fecha <span>*</span></label>
@@ -182,12 +187,25 @@ hr{border:none;border-top:1.5px solid #e2e8f0;margin:16px 0 14px}
       <div class="hint">Precio por unidad — se multiplica por la cantidad</div></div>
     <div class="field"><label>Importe en letras (automático)</label>
       <input type="text" id="a-letras" class="ro" readonly></div>
-    <button class="btn-preview" onclick="mostrarPrevia('anteojos')">👁️ Ver Resolución</button>
+    <div style="display:flex;gap:10px;flex-wrap:wrap">
+      <button class="btn-preview" style="flex:2;min-width:200px" onclick="mostrarPrevia('anteojos')">👁️ Ver Resolución</button>
+      <button class="btn-proceso" style="flex:1;min-width:170px" onclick="guardarEnProceso('anteojos')">💾 Guardar en proceso</button>
+    </div>
     <div class="msg" id="a-msg"></div>
+    </div>
+    <div id="sub-anteojos-proc" style="display:none">
+      <div class="stitle">Resoluciones en proceso — falta Fecha y Nº Resolución</div>
+      <div id="proc-list-anteojos" class="proc-list"></div>
+    </div>
   </div>
 
   <!-- AUDIFONOS -->
   <div id="panel-audio" class="panel">
+    <div class="subtabs">
+      <div class="subtab active" id="subtab-audio-form" onclick="cambiarSub('audio','form')">📝 Armar resolución</div>
+      <div class="subtab" id="subtab-audio-proc" onclick="cambiarSub('audio','proc')">⏳ En proceso (<span id="cnt-audio">0</span>)</div>
+    </div>
+    <div id="sub-audio-form">
     <div id="pend-box"></div>
     <div class="stitle">Datos del encabezado</div>
     <div class="row">
@@ -249,8 +267,16 @@ hr{border:none;border-top:1.5px solid #e2e8f0;margin:16px 0 14px}
       <input type="text" id="b-precioTotal" class="ro" readonly></div>
     <div class="field"><label>Importe en letras (automático)</label>
       <input type="text" id="b-letras" class="ro" readonly></div>
-    <button class="btn-preview" onclick="mostrarPrevia('audio')">👁️ Ver Resolución</button>
+    <div style="display:flex;gap:10px;flex-wrap:wrap">
+      <button class="btn-preview" style="flex:2;min-width:200px" onclick="mostrarPrevia('audio')">👁️ Ver Resolución</button>
+      <button class="btn-proceso" style="flex:1;min-width:170px" onclick="guardarEnProceso('audio')">💾 Guardar en proceso</button>
+    </div>
     <div class="msg" id="b-msg"></div>
+    </div>
+    <div id="sub-audio-proc" style="display:none">
+      <div class="stitle">Resoluciones en proceso — falta Fecha y Nº Resolución</div>
+      <div id="proc-list-audio" class="proc-list"></div>
+    </div>
   </div>
 
   <!-- LISTADO -->
@@ -1260,6 +1286,236 @@ async function reprocesarLote(fileList){
     if(!p) return;
     if(!confirm("¿Eliminar el expediente " + (p.nroExp||"") + " de la lista de pendientes? Esta acción no se puede deshacer.")) return;
     if(window.PendientesStore) window.PendientesStore.resolver(p.nroExp);
+  };
+})();
+</script>
+<style>
+.subtabs{display:flex;gap:4px;margin:0 0 16px;border-bottom:2px solid #e2e8f0}
+.subtab{padding:9px 14px;font-size:13px;font-weight:600;color:#64748b;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px;user-select:none;border-radius:8px 8px 0 0}
+.subtab:hover{color:#1a56a0;background:#f1f5f9}
+.subtab.active{color:#1a56a0;border-bottom-color:#1a56a0}
+.btn-proceso{background:#dcfce7;color:#166534;border:1px solid #86efac;border-radius:10px;padding:14px 12px;font-size:15px;font-weight:600;cursor:pointer}
+.btn-proceso:hover{background:#bbf7d0}
+.proc-list{border:1.5px solid #e2e8f0;border-radius:10px;overflow:hidden;background:#f8fafc}
+</style>
+<script>
+/* ===== Borradores "En proceso" — Anteojos y Audífonos, vía Firestore (proyecto visitas-siprosa) =====
+   Reusa el MISMO Firebase que los pendientes del cuadro; colección NUEVA y separada: genres_borradores.
+   Regla Firestore necesaria: match /genres_borradores/{id} { allow read, write: if request.auth != null; } */
+(function(){
+  "use strict";
+  var COL = "genres_borradores";
+  var firebaseConfig = {
+    apiKey: "AIzaSyCDFcb5B7swNnetMOxXhVNQWaDxa1LVRF4",
+    authDomain: "visitas-siprosa.firebaseapp.com",
+    projectId: "visitas-siprosa",
+    storageBucket: "visitas-siprosa.firebasestorage.app",
+    messagingSenderId: "957519453967",
+    appId: "1:957519453967:web:e6c2bfac7a4da10fed287a",
+    measurementId: "G-GHDRCXE81C"
+  };
+
+  var db = null, cache = [], estado = "conectando";
+  var authReady = new Promise(function(resolve){
+    try{
+      if(!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+      db = firebase.firestore();
+      firebase.auth().signInAnonymously()
+        .then(function(){ resolve(true); })
+        .catch(function(err){ console.warn("Auth anónima falló (borradores):", err); resolve(false); });
+    }catch(err){ console.warn("Firebase no disponible (borradores):", err); resolve(false); }
+  });
+
+  function _safe(s){ return String(s==null?"":s).trim().replace(/[\/#\?\[\]\*\.\u0000-\u001f]+/g,"_"); }
+  function docId(tipo, clave){ return (tipo==="anteojos"?"ant":"aud")+"_"+(_safe(clave)||"sin_dato"); }
+  function esc(t){ return String(t==null?"":t).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
+  function fechaCorta(ts){
+    if(!ts || !ts.seconds) return "";
+    var d = new Date(ts.seconds*1000);
+    return String(d.getDate()).padStart(2,"0")+"/"+String(d.getMonth()+1).padStart(2,"0");
+  }
+
+  var Store = {
+    guardar: function(reg){
+      return authReady.then(function(ok){
+        if(!ok || !db) return false;
+        var id = docId(reg.tipo, reg.nroExp || reg.paciente);
+        return db.collection(COL).doc(id).set({
+          tipo: reg.tipo || "",
+          nroExp: reg.nroExp || "",
+          paciente: reg.paciente || "",
+          fecha: reg.fecha || "",
+          nroRes: reg.nroRes || "",
+          insumo: reg.insumo || "",
+          precio: reg.precio || "",
+          cantidad: reg.cantidad || "",
+          precioUnit: reg.precioUnit || "",
+          cotizantes: reg.cotizantes || [],
+          negativas: reg.negativas || [],
+          ganadora: reg.ganadora || "",
+          actualizado: firebase.firestore.FieldValue.serverTimestamp()
+        }, { merge: true }).then(function(){ return true; });
+      }).catch(function(err){ console.warn("No se pudo guardar el borrador:", err); return false; });
+    },
+    eliminar: function(id){
+      return authReady.then(function(ok){
+        if(!ok || !db) return false;
+        return db.collection(COL).doc(id).delete().then(function(){ return true; });
+      }).catch(function(err){ console.warn("No se pudo eliminar el borrador:", err); return false; });
+    }
+  };
+  window.BorradoresStore = Store;
+
+  render();
+  authReady.then(function(ok){
+    if(!ok || !db){ estado = "sin-acceso"; render(); return; }
+    db.collection(COL).onSnapshot(function(snap){
+      cache = [];
+      snap.forEach(function(d){ var x = d.data(); x._id = d.id; cache.push(x); });
+      cache.sort(function(a,b){
+        var ta = (a.actualizado && a.actualizado.seconds) ? a.actualizado.seconds : 0;
+        var tb = (b.actualizado && b.actualizado.seconds) ? b.actualizado.seconds : 0;
+        return tb - ta;
+      });
+      estado = "ok";
+      render();
+    }, function(err){ console.warn("No se pudo leer borradores:", err); estado = "sin-acceso"; render(); });
+  });
+
+  function filasDe(tipo){ return cache.filter(function(p){ return (p.tipo||"") === tipo; }); }
+
+  function render(){
+    ["anteojos","audio"].forEach(function(tipo){
+      var sufijo = (tipo==="anteojos") ? "anteojos" : "audio";
+      var cont = document.getElementById("proc-list-"+sufijo);
+      var cnt  = document.getElementById("cnt-"+sufijo);
+      var filas = filasDe(tipo);
+      if(cnt) cnt.textContent = (estado==="ok") ? String(filas.length) : "0";
+      if(!cont) return;
+      if(estado==="conectando"){ cont.innerHTML = '<div style="padding:14px;font-size:13px;color:#64748b">Conectando a la base…</div>'; return; }
+      if(estado==="sin-acceso"){ cont.innerHTML = '<div style="padding:14px;font-size:13px;color:#b91c1c">Sin acceso a la base. Revisá las reglas de Firestore para la colección <b>genres_borradores</b> (y que el login anónimo esté habilitado).</div>'; return; }
+      if(!filas.length){ cont.innerHTML = '<div style="padding:14px;font-size:13px;color:#64748b">No hay resoluciones en proceso. Armá una y tocá <b>💾 Guardar en proceso</b>.</div>'; return; }
+      cont.innerHTML = filas.map(function(p){
+        var id = String(p._id).replace(/\\/g,"\\\\").replace(/'/g,"\\'");
+        var falta = [];
+        if(!String(p.fecha||"").trim()) falta.push("Fecha");
+        if(!String(p.nroRes||"").trim()) falta.push("Nº Resolución");
+        var faltaTxt = falta.length ? '<span style="color:#b45309">Falta '+falta.join(" y ")+'</span>' : '<span style="color:#166534;font-weight:600">Listo para generar</span>';
+        return '<div style="display:flex;align-items:center;gap:10px;padding:10px 12px;border-top:1px solid #eef2f7">'+
+                 '<div style="flex:1;min-width:0">'+
+                   '<div style="font-size:13px;font-weight:600;color:#1a2b4a">'+(esc(p.nroExp)||'(sin expediente)')+'</div>'+
+                   '<div style="font-size:12px;color:#64748b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+esc(p.paciente)+(fechaCorta(p.actualizado)?' · '+fechaCorta(p.actualizado):'')+' · '+faltaTxt+'</div>'+
+                 '</div>'+
+                 '<div style="display:flex;gap:6px;flex-shrink:0">'+
+                   '<button onclick="cargarBorrador(\''+id+'\')" style="background:#e0f2fe;color:#0369a1;border:1px solid #bae6fd;border-radius:7px;padding:7px 14px;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap">Cargar</button>'+
+                   '<button onclick="eliminarBorrador(\''+id+'\')" style="background:#fef2f2;color:#b91c1c;border:1px solid #fecaca;border-radius:7px;padding:7px 12px;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap">Eliminar</button>'+
+                 '</div>'+
+               '</div>';
+      }).join("");
+    });
+  }
+
+  function val(id){ var el = document.getElementById(id); return el ? el.value.trim() : ""; }
+
+  function leerAnteojos(){
+    var ins = document.getElementById("a-insumo");
+    return {
+      tipo: "anteojos",
+      nroExp: val("a-nroExp"),
+      paciente: val("a-paciente"),
+      insumo: ins ? ins.value : "",
+      precio: val("a-precio").replace(/[^0-9]/g,""),
+      fecha: val("a-fecha"),
+      nroRes: val("a-nroRes")
+    };
+  }
+  function leerAudio(){
+    var cotizantes = [], negativas = [];
+    var filas = document.querySelectorAll('#panel-audio .empresa-row');
+    for(var i=0;i<filas.length;i++){
+      var cb = filas[i].querySelector('.emp-cb');
+      if(cb && cb.checked) cotizantes.push(cb.value);
+      if(filas[i].dataset.negativa === "1" && cb) negativas.push(cb.value);
+    }
+    var gan = document.querySelector('#panel-audio input[name="ganadora"]:checked');
+    return {
+      tipo: "audio",
+      nroExp: val("b-nroExp"),
+      paciente: val("b-paciente"),
+      cantidad: val("b-cantidad"),
+      precioUnit: val("b-precioUnit").replace(/[^0-9]/g,""),
+      cotizantes: cotizantes,
+      negativas: negativas,
+      ganadora: gan ? gan.value : "",
+      fecha: val("b-fecha"),
+      nroRes: val("b-nroRes")
+    };
+  }
+
+  function set(id, v){ var el = document.getElementById(id); if(el) el.value = (v==null ? "" : String(v)); }
+
+  function restaurarAnteojos(p){
+    set("a-nroExp", p.nroExp);
+    set("a-paciente", p.paciente);
+    set("a-insumo", p.insumo);
+    set("a-precio", p.precio);
+    set("a-fecha", p.fecha);
+    set("a-nroRes", p.nroRes);
+    if(typeof window.calcAnteojos === "function") window.calcAnteojos();
+    var msg = document.getElementById("a-msg");
+    if(msg){ msg.className = "msg ok"; msg.textContent = "Cargado. Completá Fecha y Nº de Resolución y generá."; }
+  }
+  function restaurarAudio(p){
+    if(typeof window.prefillAudio === "function") window.prefillAudio(p); // firmas, negativas, ganadora + calcTotal
+    set("b-fecha", p.fecha);   // prefillAudio no toca Fecha ni Nº
+    set("b-nroRes", p.nroRes);
+  }
+
+  window.cambiarSub = function(tipo, which){
+    var pre = (tipo==="anteojos") ? "anteojos" : "audio";
+    var f  = document.getElementById("sub-"+pre+"-form");
+    var pr = document.getElementById("sub-"+pre+"-proc");
+    if(f)  f.style.display  = (which==="proc") ? "none" : "";
+    if(pr) pr.style.display = (which==="proc") ? "" : "none";
+    var tf = document.getElementById("subtab-"+pre+"-form");
+    var tp = document.getElementById("subtab-"+pre+"-proc");
+    if(tf) tf.classList.toggle("active", which!=="proc");
+    if(tp) tp.classList.toggle("active", which==="proc");
+  };
+
+  window.guardarEnProceso = function(tipo){
+    var reg = (tipo==="anteojos") ? leerAnteojos() : leerAudio();
+    var msg = document.getElementById((tipo==="anteojos") ? "a-msg" : "b-msg");
+    if(!reg.nroExp && !reg.paciente){
+      if(msg){ msg.className = "msg er"; msg.textContent = "Cargá al menos el Nº de Expediente o el Paciente para dejarla en proceso."; }
+      return;
+    }
+    Store.guardar(reg).then(function(ok){
+      if(!msg) return;
+      if(ok){ msg.className = "msg ok"; msg.textContent = "✅ Guardada en proceso. La encontrás en la subpestaña «⏳ En proceso»."; }
+      else  { msg.className = "msg er"; msg.textContent = "No se pudo guardar en la base. Revisá conexión / reglas de Firestore (genres_borradores)."; }
+    });
+  };
+
+  function buscar(id){ for(var i=0;i<cache.length;i++){ if(String(cache[i]._id) === String(id)) return cache[i]; } return null; }
+
+  window.cargarBorrador = function(id){
+    var p = buscar(id); if(!p) return;
+    if((p.tipo||"") === "anteojos"){
+      if(window.cambiarTab) window.cambiarTab("anteojos");
+      restaurarAnteojos(p);
+      window.cambiarSub("anteojos","form");
+    } else {
+      restaurarAudio(p);
+      if(window.cambiarTab) window.cambiarTab("audio");
+      window.cambiarSub("audio","form");
+    }
+  };
+
+  window.eliminarBorrador = function(id){
+    var p = buscar(id); if(!p) return;
+    if(!confirm("¿Eliminar de «En proceso» "+(p.nroExp||p.paciente||"esta resolución")+"? Esta acción no se puede deshacer.")) return;
+    Store.eliminar(id);
   };
 })();
 </script>
