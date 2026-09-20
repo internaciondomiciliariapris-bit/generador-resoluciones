@@ -195,8 +195,14 @@ hr{border:none;border-top:1.5px solid #e2e8f0;margin:16px 0 14px}
     </div>
     <div id="sub-anteojos-proc" style="display:none">
       <div class="stitle">Resoluciones en proceso — falta Fecha y Nº Resolución</div>
-      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:0 0 10px">
-        <button class="btn-preview" id="btn-excel-proc-anteojos" style="width:auto;flex:0 0 auto;min-width:260px" onclick="descargarBorradoresExcel('anteojos')">⬇️ Descargar Excel (para asignar Nº)</button>
+      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:0 0 8px">
+        <button class="btn-preview" id="btn-excel-proc-anteojos" style="width:auto;flex:0 0 auto;min-width:240px" onclick="descargarBorradoresExcel('anteojos')">⬇️ Descargar Excel (para asignar Nº)</button>
+        <input type="file" id="proc-file-anteojos" accept=".xlsx,.xls" style="display:none" onchange="subirNumerosExcel('anteojos', this.files)">
+        <button class="btn-proceso" id="btn-subir-proc-anteojos" style="width:auto;flex:0 0 auto;min-width:240px" onclick="document.getElementById('proc-file-anteojos').click()">⬆️ Subir Excel con los Nº</button>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:0 0 10px">
+        <label for="proc-fecha-anteojos" style="font-size:12.5px;color:#475569;font-weight:600">Fecha para todas:</label>
+        <input type="text" id="proc-fecha-anteojos" style="flex:0 0 auto;min-width:190px;padding:7px 10px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:13px" placeholder="31 de Julio de 2026">
         <span id="proc-msg-anteojos" class="msg" style="margin:0"></span>
       </div>
       <div id="proc-list-anteojos" class="proc-list"></div>
@@ -279,8 +285,14 @@ hr{border:none;border-top:1.5px solid #e2e8f0;margin:16px 0 14px}
     </div>
     <div id="sub-audio-proc" style="display:none">
       <div class="stitle">Resoluciones en proceso — falta Fecha y Nº Resolución</div>
-      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:0 0 10px">
-        <button class="btn-preview" id="btn-excel-proc-audio" style="width:auto;flex:0 0 auto;min-width:260px" onclick="descargarBorradoresExcel('audio')">⬇️ Descargar Excel (para asignar Nº)</button>
+      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:0 0 8px">
+        <button class="btn-preview" id="btn-excel-proc-audio" style="width:auto;flex:0 0 auto;min-width:240px" onclick="descargarBorradoresExcel('audio')">⬇️ Descargar Excel (para asignar Nº)</button>
+        <input type="file" id="proc-file-audio" accept=".xlsx,.xls" style="display:none" onchange="subirNumerosExcel('audio', this.files)">
+        <button class="btn-proceso" id="btn-subir-proc-audio" style="width:auto;flex:0 0 auto;min-width:240px" onclick="document.getElementById('proc-file-audio').click()">⬆️ Subir Excel con los Nº</button>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:0 0 10px">
+        <label for="proc-fecha-audio" style="font-size:12.5px;color:#475569;font-weight:600">Fecha para todas:</label>
+        <input type="text" id="proc-fecha-audio" style="flex:0 0 auto;min-width:190px;padding:7px 10px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:13px" placeholder="31 de Julio de 2026">
         <span id="proc-msg-audio" class="msg" style="margin:0"></span>
       </div>
       <div id="proc-list-audio" class="proc-list"></div>
@@ -1111,12 +1123,69 @@ async function descargarBorradoresExcel(tipo){
   if(btn){ btn.disabled = false; btn.textContent = txt0; }
 }
 
+// ===== Subir el Excel ya numerado y asignar los Nº de resolución a los borradores en proceso =====
+// Matchea por Nº de Expediente (lo lee de la columna B: "expte NRO INSUMO ..."); toma el Nº de la columna A.
+// Si hay "Fecha para todas", también la escribe, así quedan "Listo para generar".
+function _normExp(s){ return String(s==null?"":s).trim().toUpperCase().replace(/\s+/g,""); }
+function _nroExpDeTextoB(b){
+  var m = String(b||"").match(/^\s*expte\s+(.+?)\s+(?:ANTEOJOS|AUD[IÍ]FONOS)\b/i);
+  return m ? m[1].trim() : "";
+}
+async function subirNumerosExcel(tipo, fileList){
+  var suf = (tipo==="anteojos") ? "anteojos" : "audio";
+  var msgEl = document.getElementById("proc-msg-"+suf);
+  var fileInput = document.getElementById("proc-file-"+suf);
+  var setMsg = function(cls,t){ if(msgEl){ msgEl.className = "msg"+(cls?" "+cls:""); msgEl.textContent = t; } };
+  var files = Array.prototype.slice.call(fileList||[]);
+  if(!files.length) return;
+  setMsg("","Leyendo el Excel…");
+  try{
+    await cargarXLSX();
+    var buf = await files[0].arrayBuffer();
+    var wb = XLSX.read(buf, {type:"array"});
+    var wsName = (tipo==="anteojos") ? "Anteojos" : "Audífonos";
+    var ws = wb.Sheets[wsName] || wb.Sheets[wb.SheetNames[0]];
+    if(!ws){ setMsg("er","El Excel no tiene ninguna hoja legible."); if(fileInput) fileInput.value=""; return; }
+    var filas = XLSX.utils.sheet_to_json(ws, {header:1, blankrows:false, defval:""});
+    var fecha = String((document.getElementById("proc-fecha-"+suf)||{}).value || "").trim();
+    var borr = (window.BorradoresStore && window.BorradoresStore.listar) ? window.BorradoresStore.listar(tipo) : [];
+    var porExp = {};
+    borr.forEach(function(b){ porExp[_normExp(b.nroExp)] = b; });
+    var asignados=0, sinNumero=0, sinMatch=[], promesas=[];
+    for(var i=1;i<filas.length;i++){                 // fila 0 = encabezado (NUMERO RES)
+      var fila = filas[i] || [];
+      var nroRes = String(fila[0]==null?"":fila[0]).trim();   // columna A
+      var nroExp = _nroExpDeTextoB(fila[1]);                  // columna B
+      if(!nroExp) continue;
+      if(!nroRes){ sinNumero++; continue; }
+      var b = porExp[_normExp(nroExp)];
+      if(!b){ sinMatch.push(nroExp); continue; }
+      promesas.push(window.BorradoresStore.asignar(b._id, {nroRes:nroRes, fecha:fecha}));
+      asignados++;
+    }
+    if(!promesas.length){
+      setMsg("er","No encontré filas con Nº para asignar. Revisá que la columna A (NUMERO RES) tenga los números y que sea el Excel de "+(tipo==="anteojos"?"Anteojos":"Audífonos")+".");
+      if(fileInput) fileInput.value=""; return;
+    }
+    var oks = await Promise.all(promesas);
+    var fallaron = oks.filter(function(x){ return !x; }).length;
+    var resumen = "✅ "+(asignados-fallaron)+" resolución(es) con Nº asignado"+(fecha?" y fecha «"+fecha+"»":"")+".";
+    if(sinNumero) resumen += " "+sinNumero+" sin Nº en la planilla (salteadas).";
+    if(sinMatch.length) resumen += " Sin coincidencia ("+sinMatch.length+"): "+sinMatch.slice(0,6).join(", ")+(sinMatch.length>6?"…":"")+".";
+    if(fallaron) resumen += " "+fallaron+" no se pudieron guardar (revisá conexión/reglas).";
+    setMsg(fallaron?"er":"ok", resumen);
+  }catch(ex){
+    setMsg("er","Error al leer el Excel: "+ex.message);
+  }
+  if(fileInput) fileInput.value="";
+}
+
 // Fecha de hoy predeterminada (hora LOCAL de Tucumán, formato "31 de Julio de 2026")
 (function(){
   const meses=["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
   const d=new Date();
   const hoy=d.getDate()+" de "+meses[d.getMonth()]+" de "+d.getFullYear();
-  ["a-fecha","b-fecha"].forEach(function(id){
+  ["a-fecha","b-fecha","proc-fecha-anteojos","proc-fecha-audio"].forEach(function(id){
     const el=document.getElementById(id);
     if(el && !el.value) el.value=hoy;   // solo si está vacío, no pisa lo que edites
   });
@@ -1444,6 +1513,15 @@ async function reprocesarLote(fileList){
         if(!ok || !db) return false;
         return db.collection(COL).doc(id).delete().then(function(){ return true; });
       }).catch(function(err){ console.warn("No se pudo eliminar el borrador:", err); return false; });
+    },
+    asignar: function(id, campos){
+      return authReady.then(function(ok){
+        if(!ok || !db) return false;
+        var patch = { actualizado: firebase.firestore.FieldValue.serverTimestamp() };
+        if(campos && campos.nroRes != null && String(campos.nroRes).trim() !== "") patch.nroRes = String(campos.nroRes).trim();
+        if(campos && campos.fecha  != null && String(campos.fecha ).trim() !== "") patch.fecha  = String(campos.fecha ).trim();
+        return db.collection(COL).doc(id).set(patch, { merge: true }).then(function(){ return true; });
+      }).catch(function(err){ console.warn("No se pudo asignar el Nº:", err); return false; });
     }
   };
   Store.listar = function(tipo){ return filasDe(tipo).slice(); };
