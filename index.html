@@ -205,6 +205,10 @@ hr{border:none;border-top:1.5px solid #e2e8f0;margin:16px 0 14px}
         <input type="text" id="proc-fecha-anteojos" style="flex:0 0 auto;min-width:190px;padding:7px 10px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:13px" placeholder="31 de Julio de 2026">
         <span id="proc-msg-anteojos" class="msg" style="margin:0"></span>
       </div>
+      <div style="position:relative;margin:0 0 10px">
+        <span style="position:absolute;left:12px;top:50%;transform:translateY(-50%);font-size:14px;color:#94a3b8;pointer-events:none">🔍</span>
+        <input type="text" id="proc-buscar-anteojos" oninput="filtrarProceso('anteojos', this.value)" placeholder="Buscar por Nº de expediente o paciente" style="width:100%;padding:9px 12px 9px 36px;border:1px solid #cbd5e1;border-radius:8px;font-size:13px;outline:none">
+      </div>
       <div id="proc-list-anteojos" class="proc-list"></div>
     </div>
   </div>
@@ -294,6 +298,10 @@ hr{border:none;border-top:1.5px solid #e2e8f0;margin:16px 0 14px}
         <label for="proc-fecha-audio" style="font-size:12.5px;color:#475569;font-weight:600">Fecha para todas:</label>
         <input type="text" id="proc-fecha-audio" style="flex:0 0 auto;min-width:190px;padding:7px 10px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:13px" placeholder="31 de Julio de 2026">
         <span id="proc-msg-audio" class="msg" style="margin:0"></span>
+      </div>
+      <div style="position:relative;margin:0 0 10px">
+        <span style="position:absolute;left:12px;top:50%;transform:translateY(-50%);font-size:14px;color:#94a3b8;pointer-events:none">🔍</span>
+        <input type="text" id="proc-buscar-audio" oninput="filtrarProceso('audio', this.value)" placeholder="Buscar por Nº de expediente o paciente" style="width:100%;padding:9px 12px 9px 36px;border:1px solid #cbd5e1;border-radius:8px;font-size:13px;outline:none">
       </div>
       <div id="proc-list-audio" class="proc-list"></div>
     </div>
@@ -1545,17 +1553,25 @@ async function reprocesarLote(fileList){
 
   function filasDe(tipo){ return cache.filter(function(p){ return (p.tipo||"") === tipo; }); }
 
+  var filtro = { anteojos:"", audio:"" };
+  function normProc(s){ return String(s==null?"":s).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,""); }
+  function coincideProc(p, q){ return (normProc(p.nroExp)+" "+normProc(p.paciente)).indexOf(q) !== -1; }
+  window.filtrarProceso = function(tipo, valor){ if(tipo!=="anteojos"&&tipo!=="audio") return; filtro[tipo] = normProc(valor).trim(); render(); };
+
   function render(){
     ["anteojos","audio"].forEach(function(tipo){
       var sufijo = (tipo==="anteojos") ? "anteojos" : "audio";
       var cont = document.getElementById("proc-list-"+sufijo);
       var cnt  = document.getElementById("cnt-"+sufijo);
-      var filas = filasDe(tipo);
-      if(cnt) cnt.textContent = (estado==="ok") ? String(filas.length) : "0";
+      var todas = filasDe(tipo);
+      if(cnt) cnt.textContent = (estado==="ok") ? String(todas.length) : "0";
       if(!cont) return;
       if(estado==="conectando"){ cont.innerHTML = '<div style="padding:14px;font-size:13px;color:#64748b">Conectando a la base…</div>'; return; }
       if(estado==="sin-acceso"){ cont.innerHTML = '<div style="padding:14px;font-size:13px;color:#b91c1c">Sin acceso a la base. Revisá las reglas de Firestore para la colección <b>genres_borradores</b> (y que el login anónimo esté habilitado).</div>'; return; }
-      if(!filas.length){ cont.innerHTML = '<div style="padding:14px;font-size:13px;color:#64748b">No hay resoluciones en proceso. Armá una y tocá <b>💾 Guardar en proceso</b>.</div>'; return; }
+      if(!todas.length){ cont.innerHTML = '<div style="padding:14px;font-size:13px;color:#64748b">No hay resoluciones en proceso. Armá una y tocá <b>💾 Guardar en proceso</b>.</div>'; return; }
+      var q = filtro[tipo] || "";
+      var filas = q ? todas.filter(function(p){ return coincideProc(p, q); }) : todas;
+      if(!filas.length){ cont.innerHTML = '<div style="padding:14px;font-size:13px;color:#64748b">No se encontraron resoluciones que coincidan con la búsqueda.</div>'; return; }
       cont.innerHTML = filas.map(function(p){
         var id = String(p._id).replace(/\\/g,"\\\\").replace(/'/g,"\\'");
         var falta = [];
