@@ -199,6 +199,7 @@ hr{border:none;border-top:1.5px solid #e2e8f0;margin:16px 0 14px}
         <button class="btn-preview" id="btn-excel-proc-anteojos" style="width:auto;flex:0 0 auto;min-width:240px" onclick="descargarBorradoresExcel('anteojos')">⬇️ Descargar Excel (para asignar Nº)</button>
         <input type="file" id="proc-file-anteojos" accept=".xlsx,.xls" style="display:none" onchange="subirNumerosExcel('anteojos', this.files)">
         <button class="btn-proceso" id="btn-subir-proc-anteojos" style="width:auto;flex:0 0 auto;min-width:240px" onclick="document.getElementById('proc-file-anteojos').click()">⬆️ Subir Excel con los Nº</button>
+        <button class="btn-zip" id="btn-zip-proc-anteojos" onclick="descargarTodasPDFZip('anteojos')">📦 Descargar todas en PDF (ZIP)</button>
       </div>
       <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:0 0 10px">
         <label for="proc-fecha-anteojos" style="font-size:12.5px;color:#475569;font-weight:600">Fecha para todas:</label>
@@ -293,6 +294,7 @@ hr{border:none;border-top:1.5px solid #e2e8f0;margin:16px 0 14px}
         <button class="btn-preview" id="btn-excel-proc-audio" style="width:auto;flex:0 0 auto;min-width:240px" onclick="descargarBorradoresExcel('audio')">⬇️ Descargar Excel (para asignar Nº)</button>
         <input type="file" id="proc-file-audio" accept=".xlsx,.xls" style="display:none" onchange="subirNumerosExcel('audio', this.files)">
         <button class="btn-proceso" id="btn-subir-proc-audio" style="width:auto;flex:0 0 auto;min-width:240px" onclick="document.getElementById('proc-file-audio').click()">⬆️ Subir Excel con los Nº</button>
+        <button class="btn-zip" id="btn-zip-proc-audio" onclick="descargarTodasPDFZip('audio')">📦 Descargar todas en PDF (ZIP)</button>
       </div>
       <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:0 0 10px">
         <label for="proc-fecha-audio" style="font-size:12.5px;color:#475569;font-weight:600">Fecha para todas:</label>
@@ -1456,6 +1458,22 @@ async function reprocesarLote(fileList){
 .btn-proceso{background:#dcfce7;color:#166534;border:1px solid #86efac;border-radius:10px;padding:14px 12px;font-size:15px;font-weight:600;cursor:pointer}
 .btn-proceso:hover{background:#bbf7d0}
 .proc-list{border:1.5px solid #e2e8f0;border-radius:10px;overflow:hidden;background:#f8fafc}
+.btn-zip{background:#7c3aed;color:#fff;border:none;border-radius:10px;padding:14px 16px;font-size:15px;font-weight:700;cursor:pointer;min-width:240px}
+.btn-zip:hover{background:#6d28d9}
+.btn-zip:disabled{background:#a78bfa;cursor:wait}
+.msg.info{background:#eff6ff;color:#1e40af;border:1px solid #bfdbfe;display:block}
+.eb-overlay{position:fixed;inset:0;background:rgba(15,23,42,.55);display:none;align-items:flex-start;justify-content:center;z-index:9999;overflow-y:auto;padding:30px 12px}
+.eb-overlay.open{display:flex}
+.eb-card{background:#fff;border-radius:12px;box-shadow:0 10px 40px rgba(0,0,0,.25);width:100%;max-width:620px;overflow:hidden}
+.eb-head{background:#1a56a0;color:#fff;padding:14px 18px;font-size:16px;font-weight:700;display:flex;justify-content:space-between;align-items:center}
+.eb-head button{background:transparent;border:none;color:#fff;font-size:22px;cursor:pointer;line-height:1}
+.eb-body{padding:18px}
+.eb-foot{display:flex;gap:10px;justify-content:flex-end;padding:0 18px 18px}
+.eb-foot button{border-radius:8px;padding:11px 18px;font-size:14px;font-weight:700;cursor:pointer}
+.eb-save{background:#0f766e;color:#fff;border:none}
+.eb-save:hover{background:#0d6460}
+.eb-cancel{background:#f1f5f9;color:#374151;border:1px solid #e2e8f0}
+.eb-calc{font-size:12px;color:#0f766e;background:#f0fdfa;border:1px solid #99f6e4;border-radius:7px;padding:8px 11px;margin:-2px 0 13px}
 </style>
 <script>
 /* ===== Borradores "En proceso" — Anteojos y Audífonos, vía Firestore (proyecto visitas-siprosa) =====
@@ -1532,6 +1550,25 @@ async function reprocesarLote(fileList){
       }).catch(function(err){ console.warn("No se pudo asignar el Nº:", err); return false; });
     }
   };
+  // Edita un borrador. Si cambia el Nº de Expediente (y por lo tanto el id), lo mueve al id nuevo y borra el viejo,
+  // así no queda duplicado si después se vuelve a tocar «Guardar en proceso» desde el formulario.
+  Store.editar = function(id, campos){
+    return authReady.then(function(ok){
+      if(!ok || !db) return {ok:false};
+      var viejo = buscar(id) || {};
+      var datos = {};
+      Object.keys(viejo).forEach(function(k){ if(k !== "_id") datos[k] = viejo[k]; });
+      Object.keys(campos||{}).forEach(function(k){ datos[k] = campos[k]; });
+      datos.actualizado = firebase.firestore.FieldValue.serverTimestamp();
+      var nuevoId = docId(datos.tipo, datos.nroExp || datos.paciente);
+      if(nuevoId === id){
+        return db.collection(COL).doc(id).set(datos, { merge: true }).then(function(){ return {ok:true, id:id}; });
+      }
+      return db.collection(COL).doc(nuevoId).set(datos).then(function(){
+        return db.collection(COL).doc(id).delete();
+      }).then(function(){ return {ok:true, id:nuevoId}; });
+    }).catch(function(err){ console.warn("No se pudo editar el borrador:", err); return {ok:false}; });
+  };
   Store.listar = function(tipo){ return filasDe(tipo).slice(); };
   window.BorradoresStore = Store;
 
@@ -1585,6 +1622,7 @@ async function reprocesarLote(fileList){
                  '</div>'+
                  '<div style="display:flex;gap:6px;flex-shrink:0">'+
                    '<button onclick="cargarBorrador(\''+id+'\')" style="background:#e0f2fe;color:#0369a1;border:1px solid #bae6fd;border-radius:7px;padding:7px 14px;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap">Cargar</button>'+
+                   '<button onclick="editarBorrador(\''+id+'\')" style="background:#fef9c3;color:#854d0e;border:1px solid #fde68a;border-radius:7px;padding:7px 14px;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap">Editar</button>'+
                    '<button onclick="eliminarBorrador(\''+id+'\')" style="background:#fef2f2;color:#b91c1c;border:1px solid #fecaca;border-radius:7px;padding:7px 12px;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap">Eliminar</button>'+
                  '</div>'+
                '</div>';
@@ -1693,6 +1731,322 @@ async function reprocesarLote(fileList){
     var p = buscar(id); if(!p) return;
     if(!confirm("¿Eliminar de «En proceso» "+(p.nroExp||p.paciente||"esta resolución")+"? Esta acción no se puede deshacer.")) return;
     Store.eliminar(id);
+  };
+
+  /* ================= EDITAR borrador (ventana emergente, sin salir de «En proceso») ================= */
+  function nrm(s){ return String(s||"").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[^a-z0-9]/g,""); }
+  function mismaFirma(a, b){ var x = nrm(a), y = nrm(b); return !!x && !!y && (x === y || x.indexOf(y) >= 0 || y.indexOf(x) >= 0); }
+  function firmasFijas(){
+    var out = [], cbs = document.querySelectorAll('#panel-audio .emp-cb');
+    for(var i=0;i<cbs.length;i++) out.push(cbs[i].value);
+    return out;
+  }
+  function escA(t){ return esc(t).replace(/"/g,"&quot;"); }
+
+  var ebId = null, ebTipo = null;
+  function ebOverlay(){
+    var ov = document.getElementById("eb-overlay");
+    if(ov) return ov;
+    ov = document.createElement("div");
+    ov.id = "eb-overlay"; ov.className = "eb-overlay";
+    ov.innerHTML = '<div class="eb-card" role="dialog" aria-modal="true">'+
+      '<div class="eb-head"><span id="eb-titulo">Editar resolución en proceso</span><button type="button" title="Cerrar" onclick="cerrarEditarBorrador()">×</button></div>'+
+      '<div class="eb-body" id="eb-body"></div>'+
+      '<div class="msg" id="eb-msg" style="margin:0 18px 12px"></div>'+
+      '<div class="eb-foot"><button type="button" class="eb-cancel" onclick="cerrarEditarBorrador()">Cancelar</button>'+
+      '<button type="button" class="eb-save" id="eb-save" onclick="guardarEdicionBorrador()">💾 Guardar cambios</button></div>'+
+      '</div>';
+    ov.addEventListener("click", function(ev){ if(ev.target === ov) window.cerrarEditarBorrador(); });
+    document.addEventListener("keydown", function(ev){ if(ev.key === "Escape" && ov.classList.contains("open")) window.cerrarEditarBorrador(); });
+    document.body.appendChild(ov);
+    return ov;
+  }
+  function campo(id, label, valor, extra){
+    return '<div class="field"><label for="'+id+'">'+label+'</label><input type="text" id="'+id+'" value="'+escA(valor)+'"'+(extra||"")+'></div>';
+  }
+  function ebVal(id){ var el = document.getElementById(id); return el ? el.value.trim() : ""; }
+
+  window.ebRecalc = function(){
+    var box = document.getElementById("eb-calc"); if(!box) return;
+    var cant, unit;
+    if(ebTipo === "anteojos"){
+      cant = parseInsumoAnteojos(ebVal("eb-insumo")).cant;
+      unit = parseInt(ebVal("eb-precio").replace(/[^0-9]/g,""))||0;
+    } else {
+      cant = parseInt(ebVal("eb-cantidad").replace(/[^0-9]/g,""))||0;
+      unit = parseInt(ebVal("eb-precioUnit").replace(/[^0-9]/g,""))||0;
+    }
+    var tot = cant*unit;
+    box.textContent = tot>0 ? ("Cantidad "+cant+" × $ "+unit.toLocaleString("es-AR")+" = $ "+tot.toLocaleString("es-AR")+" — "+numLetras(tot)+" pesos con 00/100") : "Completá cantidad y precio para ver el total.";
+  };
+  window.ebNeg = function(i){
+    var neg = document.getElementById("eb-neg-"+i), cot = document.getElementById("eb-cot-"+i), gan = document.getElementById("eb-gan-"+i);
+    if(!neg) return;
+    if(neg.checked){ if(cot) cot.checked = true; if(gan){ gan.checked = false; gan.disabled = true; } }
+    else if(gan){ gan.disabled = false; }
+  };
+  window.ebGan = function(i){ var cot = document.getElementById("eb-cot-"+i); if(cot) cot.checked = true; };
+
+  window.editarBorrador = function(id){
+    var p = buscar(id); if(!p) return;
+    ebId = id; ebTipo = (p.tipo === "anteojos") ? "anteojos" : "audio";
+    var ov = ebOverlay();
+    var html = '<div class="row">'+campo("eb-fecha","Fecha",p.fecha,' placeholder="1 de Julio de 2026"')+campo("eb-nroRes","Nº Resolución",p.nroRes,' placeholder="2987"')+'</div>';
+    html += campo("eb-nroExp","Nº Expediente",p.nroExp,' maxlength="20" onkeydown="expKeydown(this,event)"');
+    html += campo("eb-paciente","Paciente — Apellido, Nombre",p.paciente);
+    if(ebTipo === "anteojos"){
+      html += campo("eb-insumo","Insumo (ej: 2-ANTEOJOS)",p.insumo,' oninput="ebRecalc()"');
+      html += campo("eb-precio","Precio unitario",p.precio,' oninput="ebRecalc()"');
+      html += '<div class="eb-calc" id="eb-calc"></div>';
+    } else {
+      html += '<div class="row">'+campo("eb-cantidad","Cantidad",p.cantidad,' oninput="ebRecalc()"')+campo("eb-precioUnit","Precio unitario",p.precioUnit,' oninput="ebRecalc()"')+'</div>';
+      html += '<div class="eb-calc" id="eb-calc"></div>';
+      // Firmas: las 5 casillas fijas + cualquier firma del borrador que no coincida con ellas
+      var nombres = firmasFijas();
+      var cot = (p.cotizantes||[]).map(function(c){ return (c && typeof c === "object") ? c.nombre : c; }).filter(Boolean);
+      var negs = (p.negativas||[]).slice();
+      (p.cotizantes||[]).forEach(function(c){ if(c && typeof c === "object" && c.negativa) negs.push(c.nombre); });
+      cot.concat(p.ganadora ? [p.ganadora] : []).forEach(function(n){
+        if(!nombres.some(function(f){ return mismaFirma(f, n); })) nombres.push(n);
+      });
+      html += '<div class="stitle" style="margin-top:4px">Firmas comerciales</div><div class="empresas-grid">'+
+        '<div class="col-headers"><div class="col-check-h">✓ Cotizó</div><div class="col-neg-h">⊘ No cotizó</div><div class="col-radio-h">★ Ganadora</div></div>';
+      nombres.forEach(function(n, i){
+        var esCot = cot.some(function(c){ return mismaFirma(c, n); });
+        var esNeg = negs.some(function(c){ return mismaFirma(c, n); });
+        var esGan = !!p.ganadora && mismaFirma(p.ganadora, n) && !esNeg;
+        html += '<div class="empresa-row" data-nombre="'+escA(n)+'">'+
+          '<label class="emp-check"><input type="checkbox" id="eb-cot-'+i+'"'+((esCot||esGan)?' checked':'')+'> <span class="emp-name">'+esc(n)+'</span></label>'+
+          '<label class="emp-neg"><input type="checkbox" id="eb-neg-'+i+'"'+(esNeg?' checked':'')+' onchange="ebNeg('+i+')"> <span class="emp-neg-label">No cotizó</span></label>'+
+          '<label class="emp-radio"><input type="radio" name="eb-gan" id="eb-gan-'+i+'"'+(esGan?' checked':'')+(esNeg?' disabled':'')+' onchange="ebGan('+i+')"> <span class="emp-radio-label">Ganadora</span></label>'+
+        '</div>';
+      });
+      html += '</div>';
+    }
+    document.getElementById("eb-body").innerHTML = html;
+    document.getElementById("eb-titulo").textContent = "Editar — "+(ebTipo === "anteojos" ? "Anteojos" : "Audífonos");
+    var m = document.getElementById("eb-msg"); m.className = "msg"; m.textContent = "";
+    var sv = document.getElementById("eb-save"); sv.disabled = false; sv.textContent = "💾 Guardar cambios";
+    window.ebRecalc();
+    ov.classList.add("open");
+  };
+
+  window.cerrarEditarBorrador = function(){
+    var ov = document.getElementById("eb-overlay"); if(ov) ov.classList.remove("open");
+    ebId = null; ebTipo = null;
+  };
+
+  window.guardarEdicionBorrador = function(){
+    if(!ebId) return;
+    var m = document.getElementById("eb-msg");
+    var err = function(t){ m.className = "msg er"; m.textContent = t; };
+    var campos = { fecha: ebVal("eb-fecha"), nroRes: ebVal("eb-nroRes"), nroExp: ebVal("eb-nroExp"), paciente: ebVal("eb-paciente") };
+    if(!campos.nroExp && !campos.paciente) return err("Tiene que quedar al menos el Nº de Expediente o el Paciente.");
+    if(ebTipo === "anteojos"){
+      campos.insumo = ebVal("eb-insumo");
+      campos.precio = ebVal("eb-precio").replace(/[^0-9]/g,"");
+    } else {
+      campos.cantidad = ebVal("eb-cantidad").replace(/[^0-9]/g,"");
+      campos.precioUnit = ebVal("eb-precioUnit").replace(/[^0-9]/g,"");
+      var filas = document.querySelectorAll("#eb-body .empresa-row");
+      var cot = [], neg = [], gan = "";
+      for(var i=0;i<filas.length;i++){
+        var n = filas[i].getAttribute("data-nombre");
+        var c = document.getElementById("eb-cot-"+i), ng = document.getElementById("eb-neg-"+i), g = document.getElementById("eb-gan-"+i);
+        if(c && c.checked) cot.push(n);
+        if(ng && ng.checked) neg.push(n);
+        if(g && g.checked) gan = n;
+      }
+      if(gan && neg.indexOf(gan) >= 0) return err("La firma ganadora no puede estar marcada como No cotizó.");
+      if(gan && cot.indexOf(gan) < 0) cot.push(gan);
+      campos.cotizantes = cot; campos.negativas = neg; campos.ganadora = gan;
+    }
+    var nuevoId = docId(ebTipo, campos.nroExp || campos.paciente);
+    if(nuevoId !== ebId && buscar(nuevoId)){
+      if(!confirm("Ya hay otra resolución en proceso con el expediente «"+(campos.nroExp||campos.paciente)+"». Si guardás, se reemplaza por esta. ¿Continuar?")) return;
+    }
+    var sv = document.getElementById("eb-save"); sv.disabled = true; sv.textContent = "Guardando...";
+    var tipo = ebTipo;
+    Store.editar(ebId, campos).then(function(r){
+      if(!r.ok){ sv.disabled = false; sv.textContent = "💾 Guardar cambios"; return err("No se pudo guardar. Revisá conexión / reglas de Firestore (genres_borradores)."); }
+      window.cerrarEditarBorrador();
+      var pm = document.getElementById("proc-msg-"+tipo);
+      if(pm){ pm.className = "msg ok"; pm.textContent = "✅ Cambios guardados en "+(campos.nroExp||campos.paciente)+"."; }
+    });
+  };
+
+  /* ================= DESCARGA MASIVA: todas las «En proceso» con Nº → PDF → ZIP ================= */
+  // Arma el mismo payload que mostrarPrevia() arma desde el formulario, pero a partir del borrador guardado.
+  function payloadDesdeBorrador(p, fechaTodas){
+    var fecha = String(p.fecha||"").trim() || fechaTodas;
+    var nroRes = String(p.nroRes||"").trim();
+    var nroExp = String(p.nroExp||"").trim();
+    var paciente = String(p.paciente||"").trim();
+    if(!nroRes) return { error: "sin Nº de Resolución", sinNumero: true };
+    if(!fecha) return { error: "sin Fecha" };
+    if(!nroExp || !paciente) return { error: "falta expediente o paciente" };
+    var pl = { tipo: p.tipo, fecha: fecha, nroRes: nroRes, nroExp: nroExp, paciente: paciente };
+    if(p.tipo === "anteojos"){
+      var pi = parseInsumoAnteojos(p.insumo||"");
+      var unitA = parseInt(String(p.precio||"").replace(/[^0-9]/g,""))||0;
+      if(!pi.texto || !unitA) return { error: "falta insumo o precio" };
+      var totA = pi.cant*unitA;
+      pl.cantidad = String(pi.cant);
+      pl.insumo = pi.texto;
+      pl.precioUnit = String(unitA);
+      pl.precioTotal = String(totA);
+      pl.precio = pl.precioTotal;
+      pl.proveedor = "Grupo Vistalli S.R.L (Óptica Giorlent)";
+      pl.insumoDesc = "Par de Anteojo baja graduación estándar";
+      pl.importeLetras = numLetras(totA)+" pesos con 00/100";
+    } else {
+      var cant = parseInt(String(p.cantidad||"").replace(/[^0-9]/g,""))||0;
+      var unit = parseInt(String(p.precioUnit||"").replace(/[^0-9]/g,""))||0;
+      var gan = String(p.ganadora||"").trim();
+      if(!cant || !unit) return { error: "falta cantidad o precio" };
+      if(!gan) return { error: "sin firma ganadora" };
+      var negs = (p.negativas||[]).slice();
+      var cot = (p.cotizantes||[]).map(function(c){
+        if(c && typeof c === "object"){ if(c.negativa) negs.push(c.nombre); return c.nombre; }
+        return c;
+      }).filter(Boolean);
+      if(negs.some(function(n){ return mismaFirma(n, gan); })) return { error: "la ganadora está marcada como No cotizó" };
+      var previas = cot.filter(function(n){ return !mismaFirma(n, gan); }).map(function(n){
+        return negs.some(function(x){ return mismaFirma(x, n); }) ? n+" (NO COTIZÓ)" : n;
+      });
+      pl.firmasPrev = previas.join("; ")+(previas.length>0?";":"");
+      pl.firmaGanadora = gan;
+      pl.cantidad = String(cant);
+      pl.precioUnit = String(unit);
+      pl.precioTotal = String(cant*unit);
+      pl.importeLetras = numLetras(cant*unit)+" pesos con 00/100";
+    }
+    return { payload: pl };
+  }
+
+  function nombreArchivo(pl){
+    var limpio = function(s){ return String(s||"").replace(/[\\\/:*?"<>|]+/g,"-").replace(/\s+/g," ").trim(); };
+    var apellido = String(pl.paciente||"").split(",")[0].trim();
+    return limpio("RES "+pl.nroRes+" - "+pl.nroExp+" - "+apellido);
+  }
+
+  function pdfDesdeApps(pl, titulo){
+    return fetch(APPS_SCRIPT_URL, {
+      method: "POST",
+      body: JSON.stringify({ clave: APPS_CLAVE, accion: "htmlAPdf", titulo: titulo, html: construirHtmlResolucion(pl) })
+    }).then(function(resp){
+      if(!resp.ok) throw new Error("HTTP "+resp.status);
+      return resp.json();
+    }).then(function(data){
+      if(!data || !data.ok || !data.pdfBase64) throw new Error((data && data.error) || "respuesta vacía");
+      var bin = atob(data.pdfBase64), arr = new Uint8Array(bin.length);
+      for(var i=0;i<bin.length;i++) arr[i] = bin.charCodeAt(i);
+      return arr;
+    });
+  }
+  function esperar(ms){ return new Promise(function(r){ setTimeout(r, ms); }); }
+  function pdfConReintento(pl, titulo){
+    return pdfDesdeApps(pl, titulo).catch(function(){ return esperar(2000).then(function(){ return pdfDesdeApps(pl, titulo); }); });
+  }
+
+  var JSZIP_CDN = "https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js";
+  function cargarJSZip(){
+    return new Promise(function(res, rej){
+      if(window.JSZip) return res();
+      var s = document.createElement("script");
+      s.src = JSZIP_CDN; s.onload = function(){ res(); };
+      s.onerror = function(){ rej(new Error("No se pudo cargar el compresor ZIP. Revisá tu conexión.")); };
+      document.head.appendChild(s);
+    });
+  }
+
+  var zipEnCurso = false;
+  function avisoSalida(ev){ ev.preventDefault(); ev.returnValue = ""; return ""; }
+
+  window.descargarTodasPDFZip = async function(tipo){
+    if(zipEnCurso) return;
+    var suf = (tipo === "anteojos") ? "anteojos" : "audio";
+    var msgEl = document.getElementById("proc-msg-"+suf);
+    var btn = document.getElementById("btn-zip-proc-"+suf);
+    var setMsg = function(cls, t){ if(msgEl){ msgEl.className = "msg"+(cls?" "+cls:""); msgEl.textContent = t; } };
+    var fechaTodas = String((document.getElementById("proc-fecha-"+suf)||{}).value || "").trim();
+
+    var lista = filasDe(tipo);
+    if(!lista.length){ setMsg("er","No hay resoluciones en proceso."); return; }
+    var listos = [], sinNumero = 0, conProblema = [];
+    lista.forEach(function(p){
+      var r = payloadDesdeBorrador(p, fechaTodas);
+      if(r.payload) listos.push(r.payload);
+      else if(r.sinNumero) sinNumero++;
+      else conProblema.push((p.nroExp||p.paciente||"?")+" ("+r.error+")");
+    });
+    if(!listos.length){
+      setMsg("er","No hay ninguna lista para generar: "+(sinNumero?sinNumero+" sin Nº de Resolución. ":"")+(conProblema.length?"Con datos incompletos: "+conProblema.slice(0,5).join("; ")+(conProblema.length>5?"…":""):"")+" Subí el Excel con los Nº o completalas con Editar.");
+      return;
+    }
+    var aviso = "Se van a generar "+listos.length+" PDF y descargar en un ZIP.";
+    if(sinNumero) aviso += "\n\n"+sinNumero+" sin Nº de Resolución quedan afuera.";
+    if(conProblema.length) aviso += "\n"+conProblema.length+" con datos incompletos quedan afuera.";
+    aviso += "\n\nTarda unos segundos por resolución. No cierres la pestaña hasta que termine.\n\n¿Continuar?";
+    if(!confirm(aviso)) return;
+
+    zipEnCurso = true;
+    window.addEventListener("beforeunload", avisoSalida);
+    var txt0 = btn ? btn.textContent : "";
+    if(btn) btn.disabled = true;
+    try{
+      await cargarJSZip();
+      var zip = new window.JSZip();
+      var usados = {}, oks = [], fallos = [], hechos = 0, idx = 0;
+      var progreso = function(){
+        var t = "⏳ Generando PDF "+hechos+" de "+listos.length+"…";
+        setMsg("info", t); if(btn) btn.textContent = "⏳ "+hechos+" / "+listos.length;
+      };
+      progreso();
+      var trabajador = async function(){
+        while(idx < listos.length){
+          var pl = listos[idx++];
+          var base = nombreArchivo(pl), nom = base, k = 2;
+          while(usados[nom.toLowerCase()]) nom = base+" ("+(k++)+")";
+          usados[nom.toLowerCase()] = true;
+          try{
+            var bytes = await pdfConReintento(pl, nom);
+            zip.file(nom+".pdf", bytes);
+            oks.push(pl);
+          }catch(ex){
+            fallos.push(pl.nroExp+" ("+ex.message+")");
+          }
+          hechos++; progreso();
+        }
+      };
+      var hilos = [];
+      for(var h=0; h<Math.min(3, listos.length); h++) hilos.push(trabajador());
+      await Promise.all(hilos);
+
+      if(!oks.length){ setMsg("er","❌ No se pudo generar ningún PDF. "+fallos.slice(0,4).join("; ")); return; }
+      setMsg("info","📦 Armando el ZIP…");
+      var blob = await zip.generateAsync({ type: "blob" });
+      var d = new Date(), p2 = function(n){ return String(n).padStart(2,"0"); };
+      var zipNom = "Resoluciones_"+(tipo === "anteojos" ? "Anteojos" : "Audifonos")+"_"+p2(d.getDate())+"-"+p2(d.getMonth()+1)+"-"+d.getFullYear()+".zip";
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement("a"); a.href = url; a.download = zipNom;
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(function(){ URL.revokeObjectURL(url); }, 4000);
+
+      oks.forEach(function(pl){ try{ registrarExpediente(pl); }catch(_){ } });
+
+      var res = "✅ ZIP descargado con "+oks.length+" PDF ("+zipNom+"). Quedaron registradas en el Listado.";
+      if(sinNumero) res += " "+sinNumero+" sin Nº (no incluidas).";
+      if(conProblema.length) res += " Incompletas ("+conProblema.length+"): "+conProblema.slice(0,4).join("; ")+(conProblema.length>4?"…":"")+".";
+      if(fallos.length) res += " ⚠️ Fallaron ("+fallos.length+"): "+fallos.slice(0,4).join("; ")+(fallos.length>4?"…":"")+" — generalas de a una con Cargar → Ver Resolución → PDF.";
+      setMsg((fallos.length || conProblema.length) ? "er" : "ok", res);
+    }catch(ex){
+      setMsg("er","Error: "+ex.message);
+    }finally{
+      zipEnCurso = false;
+      window.removeEventListener("beforeunload", avisoSalida);
+      if(btn){ btn.disabled = false; btn.textContent = txt0; }
+    }
   };
 })();
 </script>
