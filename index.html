@@ -636,10 +636,10 @@ const LOGO2_DATA = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAgwAAACDCAYAAA
 function construirHtmlResolucion(p) {
   const esc = (t) => String(t||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
 
-  // Precios formateados exactamente como en el Word original
+  // Precios formateados exactamente como en la resolución modelo
   const nPrecio = p.precio ? parseInt(p.precio) : parseInt(p.precioTotal||0);
   const nUnit   = p.precioUnit ? parseInt(p.precioUnit) : nPrecio;
-  const fmt     = (n) => n.toLocaleString("es-AR");
+  const fmt     = (n) => (n||0).toLocaleString("es-AR");
 
   const pu      = "$ " + fmt(nUnit);
   const pt      = "$ " + fmt(nPrecio) + ",00";
@@ -647,53 +647,64 @@ function construirHtmlResolucion(p) {
   const prov = (p.proveedor && p.proveedor.trim()) ? p.proveedor.trim() : "Grupo Vistalli S.R.L (Óptica Giorlent)";
   const insumoDesc = (p.insumoDesc && p.insumoDesc.trim()) ? p.insumoDesc.trim() : "Par de Anteojo baja graduación estándar";
 
-  // CSS calcado del Word: Century Gothic 11pt, márgenes 25mm top/bottom 30mm left/right
+  // En el VISTO va como en el expediente: "2-ANTEOJOS"
+  let insumoVisto = String(p.insumo||"").trim();
+  if(insumoVisto && !/^\d+\s*[-\u2013]/.test(insumoVisto)) insumoVisto = (parseInt(p.cantidad)||1) + "-" + insumoVisto;
+  insumoVisto = insumoVisto.toUpperCase();
+
+  // CSS calcado de la resolución modelo (Nº 3903/DGPRIS)
   const css = `
-    @page { size: A4; margin: 25mm 30mm 25mm 30mm; }
-    body { margin:0; padding:0; font-family:'Century Gothic',CenturyGothic,Calibri,sans-serif; font-size:11pt; color:#000; }
-    p { margin:0 0 8pt 0; line-height:1.35; }
+    @page { size: A4; margin: 20mm 25mm 20mm 25mm; }
+    body { margin:0; padding:0; font-family:'Century Gothic',CenturyGothic,'Trebuchet MS',Calibri,sans-serif; font-size:11pt; color:#000; }
+    p { margin:0 0 8pt 0; line-height:1.3; }
     .right  { text-align:right; }
     .center { text-align:center; }
     .just   { text-align:justify; }
     .bold   { font-weight:bold; }
     .ul     { text-decoration:underline; }
-    .indent { text-indent:25mm; text-align:justify; }
-    table   { border-collapse:collapse; width:100%; font-size:10pt; margin:6pt 0 10pt 0; }
-    th      { background:#4a90c4; color:#fff; border:1pt solid #aaa; padding:4pt 5pt; text-align:center; }
-    td      { border:1pt solid #aaa; padding:4pt 5pt; text-align:center; }
-    .tdtot  { font-weight:bold; background:#f0f4f8; }
-    .firma  { margin-top:50pt; }
+    .titulo { text-align:center; font-weight:bold; font-size:13pt; margin:0; line-height:1.25; }
+    .seccion{ font-weight:bold; text-decoration:underline; margin:10pt 0 2pt 0; }
+    .indent { text-indent:40mm; text-align:justify; }
+    .porello{ text-align:center; font-weight:bold; font-size:14pt; margin:0; line-height:1.3; }
+    .art    { text-align:justify; margin:0 0 10pt 0; }
+    .art-l  { font-weight:bold; text-decoration:underline; }
+    table.det { border-collapse:collapse; width:100%; font-family:Calibri,Carlito,Arial,sans-serif; font-size:10pt; margin:4pt 0 10pt 0; }
+    table.det th { background:#fff; color:#000; border:0.75pt solid #000; padding:2pt 4pt; text-align:left; vertical-align:bottom; font-weight:bold; }
+    table.det td { border:0.75pt solid #000; padding:2pt 4pt; text-align:left; vertical-align:bottom; }
+    table.det td.num { text-align:right; white-space:nowrap; }
+    table.det tr.tot td { font-weight:bold; border-bottom:1.5pt solid #000; }
+    .firma  { font-family:'Times New Roman',Times,serif; font-weight:bold; font-size:11pt; margin:0; line-height:1.2; }
+    .pie    { border-top:2pt solid #5b9bd5; margin-top:12pt; padding-top:8pt; font-family:'Times New Roman',Times,serif; font-size:11pt; line-height:1.2; }
+    .salto  { page-break-before:always; }
   `;
 
   const encabezado =
-    '<table style="border:none; margin-bottom:0;"><tr>' +
-    '<td style="border:none; padding:0; width:50%;"><img src="' + LOGO1_DATA + '" style="height:34pt;"></td>' +
-    '<td style="border:none; padding:0; text-align:right;"><img src="' + LOGO2_DATA + '" style="height:44pt;"></td>' +
+    '<table style="border:none; border-collapse:collapse; width:100%; margin-bottom:0;"><tr>' +
+    '<td style="border:none; padding:0; width:50%; vertical-align:middle;"><img src="' + LOGO1_DATA + '" style="height:34pt;"></td>' +
+    '<td style="border:none; padding:0; text-align:right; vertical-align:middle;"><img src="' + LOGO2_DATA + '" style="height:44pt;"></td>' +
     '</tr></table>' +
-    '<div style="border-bottom:2pt solid #4a90c4; margin-bottom:10pt;"></div>';
+    '<div style="border-bottom:2pt solid #5b9bd5; margin:6pt 0 18pt 0;"></div>';
 
   let body = encabezado;
 
   // Fecha - derecha
-  body += '<p class="right">San Miguel de Tucumán, ' + esc(p.fecha) + '.</p>';
+  body += '<p class="right" style="margin-bottom:26pt;">San Miguel de Tucumán, ' + esc(p.fecha) + '.</p>';
 
-  // Título - centrado negrita
-  body += '<p class="center bold">Resolución Interna: Nº ' + esc(p.nroRes) + '/DGPRIS.</p>';
-  body += '<p class="center bold">PROGRAMA INTEGRADO DE SALUD</p>';
+  // Título
+  body += '<p class="titulo">Resolución Interna: Nº ' + esc(p.nroRes) + '/DGPRIS.</p>';
+  body += '<p class="titulo" style="margin-bottom:6pt;">PROGRAMA INTEGRADO DE SALUD</p>';
 
   // VISTO
-  body += '<p class="bold ul" style="margin-top:8pt;">VISTO:</p>';
-
+  body += '<p class="seccion">VISTO:</p>';
   if(p.tipo === "anteojos"){
-    body += '<p class="just" style="margin-top:4pt;">El <b>Expte. Nº ' + esc(p.nroExp) + '</b>, por el que se solicita la compra de <b>' + esc(p.insumo) + '</b> para el paciente; <b>' + esc(p.paciente) + '</b> y</p>';
+    body += '<p class="indent">El <b>Expte. Nº' + esc(p.nroExp) + '</b>, por el que se solicita la compra de <b style="white-space:nowrap;">' + esc(insumoVisto) + '</b> para el paciente; <b>' + esc(p.paciente) + '</b> y</p>';
   } else {
-    body += '<p class="just" style="margin-top:4pt;">El <b>Expte. Nº ' + esc(p.nroExp) + '</b>, por el que se solicita la compra de <b>AUDIFONOS</b> para el paciente; <b>' + esc(p.paciente) + '</b> y</p>';
+    body += '<p class="indent">El <b>Expte. Nº' + esc(p.nroExp) + '</b>, por el que se solicita la compra de <b>AUDIFONOS</b> para el paciente; <b>' + esc(p.paciente) + '</b> y</p>';
   }
 
   // CONSIDERANDO
-  body += '<p class="bold ul" style="margin-top:8pt;">CONSIDERANDO:</p>';
+  body += '<p class="seccion">CONSIDERANDO:</p>';
   body += '<p class="indent">Que se encuentra agregada la documentación correspondiente, la misma esta cumplimentada y debidamente conformada.</p>';
-
   if(p.tipo === "anteojos"){
     body += '<p class="indent">Que se adjunta presupuesto de la Firma Comercial <b>' + esc(prov) + '. -</b></p>';
     body += '<p class="indent">Que la propuesta resulto la más conveniente para el Estado.</p>';
@@ -701,46 +712,49 @@ function construirHtmlResolucion(p) {
     body += '<p class="indent">Que se adjunta presupuestos de la Firmas Comerciales; <b>' + esc(p.firmasPrev) + ' ' + esc((p.firmaGanadora||"").toUpperCase()) + '.-</b></p>';
     body += '<p class="indent">Que la propuesta de <b>' + esc(p.firmaGanadora) + '</b> resulto la más conveniente para el Estado.</p>';
   }
-
   body += '<p class="indent">Que se adjunta Dictamen Jurídico con opinión favorable.</p>';
-  body += '<p class="indent">Que se aprueba todo lo actuado por encuadrarse a las disposiciones legales vigentes, que rigen sobre materia de contrataciones, conforme a lo normado en la Res. Nº 388/SPS-05.</p>';
+  body += '<p class="indent" style="line-height:1.6;">Que se aprueba todo lo actuado por encuadrarse a las disposiciones legales vigentes, que rigen sobre materia de contrataciones, conforme a lo normado en la Res. Nº 388/SPS-05.</p>';
 
   // POR ELLO
-  body += '<p class="center bold ul" style="margin-top:10pt;">POR ELLO:</p>';
-  body += '<p class="center bold">LA GERENCIA ADMINISTRATIVA DEL PROGRAMA INTEGRADO DE SALUD</p>';
-  body += '<p class="center bold ul">RESUELVE:</p>';
+  body += '<p class="porello ul" style="margin-top:14pt;">POR ELLO:</p>';
+  body += '<p class="porello">LA GERENCIA ADMINISTRATIVA DEL PROGRAMA INTEGRADO DE SALUD</p>';
+  body += '<p class="porello ul" style="margin-bottom:14pt;">RESUELVE:</p>';
+
+  const tabla = (firma, insumo, cant, unit, total) =>
+    '<table class="det"><tr><th style="width:22%;">FIRMA</th><th style="width:30%;">INSUMO</th><th style="width:13%;">CANTIDAD</th><th style="width:15%;">PRECIO UNITARIO</th><th style="width:20%;">PRECIO TOTAL</th></tr>' +
+    '<tr><td>' + esc(firma) + '</td><td>' + esc(insumo) + '</td><td class="num">' + esc(cant) + '</td><td class="num">' + esc(unit) + '</td><td class="num">' + esc(total) + '</td></tr>' +
+    '<tr class="tot"><td>TOTAL</td><td></td><td></td><td></td><td class="num">' + esc(total) + '</td></tr></table>';
+
+  const imputacion = (imp, letras, subpartida, recurso) =>
+    '<p class="art" style="line-height:1.4;"><span class="art-l">ARTICULO 3º:</span> Imputar la erogación por un importe total de <b>' + esc(imp) + '</b> ' + letras + ', y posterior emisión de la orden de pago respectiva, a la Jurisdicción 67, Unidad de Organización 965- Recursos disponibles con los que cuenta el servicio-Finalidad/Función 314, Programa 19, Act. /Ob. 01 - Partida 200 – <b>Subpartida ' + subpartida + '</b>' + recurso + ', con cargo al <b>Presupuesto 2026</b>.-</p>';
 
   if(p.tipo === "anteojos"){
-    // Art 1
-    body += '<p class="just" style="margin-top:8pt;"><b><u>ARTICULO 1º</u></b> : Aprobar la compra de Anteojos, a favor de la firma <b>' + esc(prov) + '</b> que se detalla a continuación:</p>';
-    body += '<table><tr><th>FIRMA</th><th>INSUMO</th><th>CANTIDAD</th><th>PRECIO UNITARIO</th><th>PRECIO TOTAL</th></tr>' +
-      '<tr><td>' + esc(prov) + '</td><td>' + esc(insumoDesc) + '</td><td>' + esc(p.cantidad||"1") + '</td><td>' + esc(pu) + '</td><td>' + esc(pt) + '</td></tr>' +
-      '<tr><td colspan="4" class="tdtot">TOTAL</td><td class="tdtot">' + esc(pt) + '</td></tr></table>';
-    // Art 2
-    body += '<p class="just"><b><u>ARTICULO 2º</u></b> : Autorizar la compra al proveedor <b>' + esc(prov) + '</b> , por el importe de <b>' + esc(im_num) + ' ' + esc(p.importeLetras) + '</b> , y posterior emisión de la orden de pago respectiva.</p>';
-    // Art 3
-    body += '<p class="just"><b><u>ARTICULO 3º:</u></b> Imputar la erogación por un importe total de <b>' + esc(im_num) + ' ' + esc(p.importeLetras) + '</b> , y posterior emisión de la orden de pago respectiva, a la Jurisdicción 67, Unidad de Organización 965- Recursos disponibles con los que cuenta el servicio-Finalidad/Función 314, Programa 19, Act. /Ob. 01 - Partida 200 – <b>Subpartida 299</b>, con cargo al <b>Presupuesto 2026</b>.-</p>';
+    body += '<p class="art"><span class="art-l">ARTICULO 1º:</span> Aprobar la compra de Anteojos, a favor de la firma <b>' + esc(prov) + '</b> que se detalla a continuación:</p>';
+    body += tabla(prov, "1- " + insumoDesc, p.cantidad||"1", pu, pt);
+    body += '<div class="salto"></div>';
+    body += '<p class="art" style="margin-top:30pt;"><span class="art-l">ARTICULO 2º</span>: Autorizar la compra al proveedor <b>' + esc(prov) + '</b>, por el importe de <b>' + esc(im_num) + '</b> ' + esc(p.importeLetras) + ', y posterior emisión de la orden de pago respectiva.</p>';
+    body += imputacion(im_num, esc(p.importeLetras), "299", "– con Financiamiento del Recurso 10 Tesoro General de la Provincia");
   } else {
     const puA = "$ " + fmt(parseInt(p.precioUnit||0)) + ",00";
     const ptA = "$ " + fmt(parseInt(p.precioTotal||0)) + ",00";
-    const imA = "$ " + fmt(parseInt(p.precioTotal||0)) + ", 00";
-    body += '<p class="just" style="margin-top:8pt;"><b><u>ARTICULO 1º</u></b> : Aprobar la compra de Audífonos, a favor de la firma <b>' + esc(p.firmaGanadora) + '</b> que se detalla a continuación:</p>';
-    body += '<table><tr><th>FIRMA</th><th>INSUMO</th><th>CANTIDAD</th><th>PRECIO UNITARIO</th><th>PRECIO TOTAL</th></tr>' +
-      '<tr><td>' + esc(p.firmaGanadora) + '</td><td>Audífonos</td><td>' + esc(p.cantidad) + '</td><td>' + esc(puA) + '</td><td>' + esc(ptA) + '</td></tr>' +
-      '<tr><td colspan="4" class="tdtot">TOTAL</td><td class="tdtot">' + esc(ptA) + '</td></tr></table>';
-    body += '<p class="just"><b><u>ARTICULO 2º</u></b> : Autorizar la compra al proveedor <b>' + esc(p.firmaGanadora) + '</b> , por el importe de <b>' + esc(ptA) + ' (' + esc(p.importeLetras) + ')</b> , y posterior emisión de la orden de pago respectiva.</p>';
-    body += '<p class="just"><b><u>ARTICULO 3º:</u></b> Imputar la erogación por un importe total de <b>' + esc(ptA) + ' (' + esc(p.importeLetras) + ')</b>, y posterior emisión de la orden de pago respectiva, a la Jurisdicción 67, Unidad de Organización 965-Recursos disponibles con los que cuenta el servicio-Finalidad/Función 314, Programa 19, Act. /Ob. 01 - Partida 200 – <b>Subpartida 297</b>, con cargo al <b>Presupuesto 2026</b>.-</p>';
+    body += '<p class="art"><span class="art-l">ARTICULO 1º:</span> Aprobar la compra de Audífonos, a favor de la firma <b>' + esc(p.firmaGanadora) + '</b> que se detalla a continuación:</p>';
+    body += tabla(p.firmaGanadora, "Audífonos", p.cantidad, puA, ptA);
+    body += '<p class="art"><span class="art-l">ARTICULO 2º</span>: Autorizar la compra al proveedor <b>' + esc(p.firmaGanadora) + '</b>, por el importe de <b>' + esc(ptA) + '</b> (' + esc(p.importeLetras) + '), y posterior emisión de la orden de pago respectiva.</p>';
+    body += imputacion(ptA, '(' + esc(p.importeLetras) + ')', "297", "");
   }
 
-  body += '<p class="just"><b><u>ARTICULO 4º:</u></b> Pase a control de Ley del Honorable Tribunal de Cuentas.</p>';
-  body += '<p class="just"><b><u>ARTICULO 5º:</u></b> Comunicar y archivar. -</p>';
+  body += '<p class="art" style="margin-top:20pt;"><span class="art-l">ARTICULO 4º:</span> Pase a control de Ley del Honorable Tribunal de Cuentas.</p>';
+  body += '<p class="art"><span class="art-l">ARTICULO 5º:</span> Comunicar y archivar. -</p>';
 
-  // Firma
-  body += '<p class="bold firma">Firmado digitalmente:</p>';
-  body += '<p class="bold">C.P.N Mariela Agustina Castillo</p>';
-  body += '<p class="bold">Gerente Administrativo</p>';
-  body += '<p class="bold">Dirección Gral. Prog. Integrado de Salud</p>';
-  body += '<p class="bold">SI.PRO.SA</p>';
+  // Firma + leyenda del año (como en el modelo)
+  body += '<div style="margin-top:150pt;">';
+  body += '<p class="firma">Firmado digitalmente:</p>';
+  body += '<p class="firma">C.P.N Mariela Agustina Castillo</p>';
+  body += '<p class="firma">Gerente Administrativo</p>';
+  body += '<p class="firma">Dirección Gral. Prog. Integrado de Salud</p>';
+  body += '<p class="firma">SI.PRO.SA</p>';
+  body += '</div>';
+  body += '<div class="pie">“2026 Año de la Memoria por: Golpe de Estado Cívico Militar de 1976, Cierre Masivo de los Ingenios en 1966 y Cierre de los Talleres Ferroviarios de Tafí Viejo en 1980"</div>';
 
   return '<!DOCTYPE html><html><head><meta charset="utf-8"><style>' + css + '</style></head><body>' + body + '</body></html>';
 }
@@ -1926,8 +1940,9 @@ async function reprocesarLote(fileList){
 
   function nombreArchivo(pl){
     var limpio = function(s){ return String(s||"").replace(/[\\\/:*?"<>|]+/g,"-").replace(/\s+/g," ").trim(); };
-    var apellido = String(pl.paciente||"").split(",")[0].trim();
-    return limpio("RES "+pl.nroRes+" - "+pl.nroExp+" - "+apellido);
+    // Nombre completo del paciente (Windows no admite "/", por eso el expediente va con "-")
+    var paciente = String(pl.paciente||"").replace(/\s*,\s*/g, ", ").trim();
+    return limpio("RES "+pl.nroRes+" - "+pl.nroExp+" - "+paciente);
   }
 
   function pdfDesdeApps(pl, titulo){
@@ -1945,8 +1960,20 @@ async function reprocesarLote(fileList){
     });
   }
   function esperar(ms){ return new Promise(function(r){ setTimeout(r, ms); }); }
-  function pdfConReintento(pl, titulo){
-    return pdfDesdeApps(pl, titulo).catch(function(){ return esperar(2000).then(function(){ return pdfDesdeApps(pl, titulo); }); });
+  // Apps Script corta cuando recibe muchos pedidos juntos (llega como "Failed to fetch").
+  // Reintenta hasta 4 veces esperando cada vez más (3s, 6s, 12s + un poco de azar).
+  function pdfConReintento(pl, titulo, intentos){
+    intentos = intentos || 4;
+    var n = 0;
+    var intentar = function(){
+      n++;
+      return pdfDesdeApps(pl, titulo).catch(function(err){
+        if(n >= intentos) throw err;
+        var ms = 3000*Math.pow(2, n-1) + Math.floor(Math.random()*1500);
+        return esperar(ms).then(intentar);
+      });
+    };
+    return intentar();
   }
 
   var JSZIP_CDN = "https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js";
@@ -1997,7 +2024,7 @@ async function reprocesarLote(fileList){
     try{
       await cargarJSZip();
       var zip = new window.JSZip();
-      var usados = {}, oks = [], fallos = [], hechos = 0, idx = 0;
+      var usados = {}, oks = [], fallos = [], pendientes = [], hechos = 0, idx = 0;
       var progreso = function(){
         var t = "⏳ Generando PDF "+hechos+" de "+listos.length+"…";
         setMsg("info", t); if(btn) btn.textContent = "⏳ "+hechos+" / "+listos.length;
@@ -2014,14 +2041,33 @@ async function reprocesarLote(fileList){
             zip.file(nom+".pdf", bytes);
             oks.push(pl);
           }catch(ex){
-            fallos.push(pl.nroExp+" ("+ex.message+")");
+            pendientes.push({ pl: pl, nom: nom });
           }
           hechos++; progreso();
+          await esperar(400);
         }
       };
       var hilos = [];
-      for(var h=0; h<Math.min(3, listos.length); h++) hilos.push(trabajador());
+      for(var h=0; h<Math.min(2, listos.length); h++){
+        hilos.push(trabajador());
+        await esperar(700);
+      }
       await Promise.all(hilos);
+
+      // Segunda pasada: las que fallaron se reintentan de a una, con pausa, antes de armar el ZIP.
+      for(var r=0; r<pendientes.length; r++){
+        var it = pendientes[r];
+        setMsg("info","🔁 Reintentando las que fallaron: "+(r+1)+" de "+pendientes.length+" ("+it.pl.nroExp+")…");
+        if(btn) btn.textContent = "🔁 "+(r+1)+" / "+pendientes.length;
+        await esperar(5000);
+        try{
+          var b2 = await pdfConReintento(it.pl, it.nom, 3);
+          zip.file(it.nom+".pdf", b2);
+          oks.push(it.pl);
+        }catch(ex2){
+          fallos.push(it.pl.nroExp+" ("+(ex2.message === "Failed to fetch" ? "Apps Script no respondió" : ex2.message)+")");
+        }
+      }
 
       if(!oks.length){ setMsg("er","❌ No se pudo generar ningún PDF. "+fallos.slice(0,4).join("; ")); return; }
       setMsg("info","📦 Armando el ZIP…");
