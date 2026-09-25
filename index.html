@@ -200,6 +200,7 @@ hr{border:none;border-top:1.5px solid #e2e8f0;margin:16px 0 14px}
         <input type="file" id="proc-file-anteojos" accept=".xlsx,.xls" style="display:none" onchange="subirNumerosExcel('anteojos', this.files)">
         <button class="btn-proceso" id="btn-subir-proc-anteojos" style="width:auto;flex:0 0 auto;min-width:240px" onclick="document.getElementById('proc-file-anteojos').click()">⬆️ Subir Excel con los Nº</button>
         <button class="btn-zip" id="btn-zip-proc-anteojos" onclick="descargarTodasPDFZip('anteojos')">📦 Descargar todas en PDF (ZIP)</button>
+        <button class="btn-vaciar" id="btn-vaciar-proc-anteojos" onclick="eliminarTodosBorradores('anteojos')">🗑️ Eliminar todas</button>
       </div>
       <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:0 0 10px">
         <label for="proc-fecha-anteojos" style="font-size:12.5px;color:#475569;font-weight:600">Fecha para todas:</label>
@@ -295,6 +296,7 @@ hr{border:none;border-top:1.5px solid #e2e8f0;margin:16px 0 14px}
         <input type="file" id="proc-file-audio" accept=".xlsx,.xls" style="display:none" onchange="subirNumerosExcel('audio', this.files)">
         <button class="btn-proceso" id="btn-subir-proc-audio" style="width:auto;flex:0 0 auto;min-width:240px" onclick="document.getElementById('proc-file-audio').click()">⬆️ Subir Excel con los Nº</button>
         <button class="btn-zip" id="btn-zip-proc-audio" onclick="descargarTodasPDFZip('audio')">📦 Descargar todas en PDF (ZIP)</button>
+        <button class="btn-vaciar" id="btn-vaciar-proc-audio" onclick="eliminarTodosBorradores('audio')">🗑️ Eliminar todas</button>
       </div>
       <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:0 0 10px">
         <label for="proc-fecha-audio" style="font-size:12.5px;color:#475569;font-weight:600">Fecha para todas:</label>
@@ -1475,6 +1477,9 @@ async function reprocesarLote(fileList){
 .btn-zip{background:#7c3aed;color:#fff;border:none;border-radius:10px;padding:14px 16px;font-size:15px;font-weight:700;cursor:pointer;min-width:240px}
 .btn-zip:hover{background:#6d28d9}
 .btn-zip:disabled{background:#a78bfa;cursor:wait}
+.btn-vaciar{background:#fef2f2;color:#b91c1c;border:1.5px solid #fecaca;border-radius:10px;padding:14px 16px;font-size:15px;font-weight:700;cursor:pointer;min-width:180px}
+.btn-vaciar:hover{background:#fee2e2}
+.btn-vaciar:disabled{opacity:.6;cursor:wait}
 .msg.info{background:#eff6ff;color:#1e40af;border:1px solid #bfdbfe;display:block}
 .eb-overlay{position:fixed;inset:0;background:rgba(15,23,42,.55);display:none;align-items:flex-start;justify-content:center;z-index:9999;overflow-y:auto;padding:30px 12px}
 .eb-overlay.open{display:flex}
@@ -1584,6 +1589,20 @@ async function reprocesarLote(fileList){
     }).catch(function(err){ console.warn("No se pudo editar el borrador:", err); return {ok:false}; });
   };
   Store.listar = function(tipo){ return filasDe(tipo).slice(); };
+  // Borra de una vez todos los borradores de un tipo (en lotes de 400, límite de Firestore = 500).
+  Store.eliminarTodos = function(tipo){
+    return authReady.then(function(ok){
+      if(!ok || !db) return { ok:false, n:0 };
+      var ids = filasDe(tipo).map(function(p){ return p._id; }).filter(Boolean);
+      var lotes = [];
+      for(var i=0; i<ids.length; i+=400){
+        var b = db.batch();
+        ids.slice(i, i+400).forEach(function(id){ b.delete(db.collection(COL).doc(id)); });
+        lotes.push(b.commit());
+      }
+      return Promise.all(lotes).then(function(){ return { ok:true, n:ids.length }; });
+    }).catch(function(err){ console.warn("No se pudieron eliminar los borradores:", err); return { ok:false, n:0 }; });
+  };
   window.BorradoresStore = Store;
 
   render();
@@ -1745,6 +1764,23 @@ async function reprocesarLote(fileList){
     var p = buscar(id); if(!p) return;
     if(!confirm("¿Eliminar de «En proceso» "+(p.nroExp||p.paciente||"esta resolución")+"? Esta acción no se puede deshacer.")) return;
     Store.eliminar(id);
+  };
+
+  window.eliminarTodosBorradores = function(tipo){
+    var suf = (tipo === "anteojos") ? "anteojos" : "audio";
+    var n = filasDe(tipo).length;
+    var pm = document.getElementById("proc-msg-"+suf);
+    var btn = document.getElementById("btn-vaciar-proc-"+suf);
+    if(!n){ if(pm){ pm.className = "msg"; pm.textContent = "No hay resoluciones en proceso para eliminar."; } return; }
+    var nombre = (tipo === "anteojos") ? "Anteojos" : "Audífonos";
+    if(!confirm("¿Eliminar las "+n+" resoluciones en proceso de "+nombre+"?\n\nEl Listado de expedientes NO se toca.\nEsta acción no se puede deshacer.")) return;
+    if(btn){ btn.disabled = true; btn.textContent = "⏳ Eliminando…"; }
+    Store.eliminarTodos(tipo).then(function(r){
+      if(btn){ btn.disabled = false; btn.textContent = "🗑️ Eliminar todas"; }
+      if(!pm) return;
+      if(r.ok){ pm.className = "msg ok"; pm.textContent = "✅ Se eliminaron "+r.n+" resoluciones en proceso. Listo para cargar nuevos expedientes."; }
+      else { pm.className = "msg er"; pm.textContent = "No se pudieron eliminar. Revisá la conexión / reglas de Firestore (genres_borradores)."; }
+    });
   };
 
   /* ================= EDITAR borrador (ventana emergente, sin salir de «En proceso») ================= */
