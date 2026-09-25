@@ -735,7 +735,7 @@ function construirHtmlResolucion(p) {
     body += tabla(prov, "1- " + insumoDesc, p.cantidad||"1", pu, pt);
     body += '<div class="salto"></div>';
     body += '<p class="art" style="margin-top:30pt;"><span class="art-l">ARTICULO 2º</span>: Autorizar la compra al proveedor <b>' + esc(prov) + '</b>, por el importe de <b>' + esc(im_num) + '</b> ' + esc(p.importeLetras) + ', y posterior emisión de la orden de pago respectiva.</p>';
-    body += imputacion(im_num, esc(p.importeLetras), "299", "– con Financiamiento del Recurso 10 Tesoro General de la Provincia");
+    body += imputacion(im_num, esc(p.importeLetras), "299", "");
   } else {
     const puA = "$ " + fmt(parseInt(p.precioUnit||0)) + ",00";
     const ptA = "$ " + fmt(parseInt(p.precioTotal||0)) + ",00";
