@@ -609,6 +609,13 @@ function getEditedPayload(){
   return p;
 }
 
+// Nombre de archivo igual al de la generación masiva: "RES 5076 - 9863-410-R-2026 - RODRIGUEZ, JUAN JOSE"
+function nombreResolucion(p){
+  const limpio = s => String(s||"").replace(/[\\\/:*?"<>|]+/g,"-").replace(/\s+/g," ").trim();
+  const paciente = String(p.paciente||"").replace(/\s*,\s*/g, ", ").trim();
+  return limpio("RES "+p.nroRes+" - "+p.nroExp+" - "+paciente);
+}
+
 async function descargarWord(){
   const payload=getEditedPayload();
   const msgEl=e("dl-msg");
@@ -619,8 +626,7 @@ async function descargarWord(){
     const resp=await fetch("/api/generar",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)});
     if(!resp.ok){const er=await resp.json();throw new Error(er.error);}
     const blob=await resp.blob();
-    const apellido=payload.paciente.split(",")[0].trim().replace(/ /g,"_");
-    const nombre="Resolucion_"+payload.nroRes+"_"+apellido+".docx";
+    const nombre=nombreResolucion(payload)+".docx";
     const url=URL.createObjectURL(blob);
     const a=document.createElement("a");a.href=url;a.download=nombre;a.click();
     URL.revokeObjectURL(url);
@@ -770,8 +776,7 @@ async function descargarPDF(){
   btn.disabled = true; btn.textContent = "Generando PDF...";
   try {
     const htmlContent = construirHtmlResolucion(payload);
-    const apellido = payload.paciente.split(",")[0].trim().replace(/ /g,"_");
-    const titulo = "Resolucion_" + payload.nroRes + "_" + apellido;
+    const titulo = nombreResolucion(payload);
     const resp = await fetch(APPS_SCRIPT_URL, {
       method: "POST",
       body: JSON.stringify({ clave: APPS_CLAVE, accion: "htmlAPdf", titulo: titulo, html: htmlContent })
