@@ -616,6 +616,38 @@ function nombreResolucion(p){
   return limpio("RES "+p.nroRes+" - "+p.nroExp+" - "+paciente);
 }
 
+// ── Lectura segura de respuestas + reintento ─────────────────────────────
+// Si el servidor (Vercel o Apps Script) devuelve una página HTML de error en vez de JSON,
+// en lugar de "Unexpected token '<'" se muestra un mensaje entendible y se reintenta.
+async function leerJson(resp, origen){
+  const txt = await resp.text();
+  try { return JSON.parse(txt); }
+  catch(_){
+    const cuerpo = txt
+      .replace(/<style[\s\S]*?<\/style>|<script[\s\S]*?<\/script>/gi," ")
+      .replace(/<[^>]+>/g," ").replace(/&nbsp;/g," ").replace(/\s+/g," ").trim();
+    const err = new Error(origen+" no respondió bien (HTTP "+resp.status+")"+(cuerpo ? ": "+cuerpo.slice(0,160) : ""));
+    err.transitorio = true;
+    throw err;
+  }
+}
+function esperarMs(ms){ return new Promise(function(r){ setTimeout(r, ms); }); }
+async function conReintento(fn, intentos, alReintentar){
+  for(let n=1;;n++){
+    try{ return await fn(); }
+    catch(err){
+      if(n>=intentos || err.definitivo) throw err;
+      if(alReintentar) alReintentar(n+1, intentos);
+      await esperarMs(2000*Math.pow(2,n-1) + Math.floor(Math.random()*1000));
+    }
+  }
+}
+function mensajeFalla(ex){
+  const m = String((ex && ex.message) || ex);
+  if(m === "Failed to fetch") return "No hubo conexión con el servidor (reintentá en unos segundos).";
+  return m;
+}
+
 async function descargarWord(){
   const payload=getEditedPayload();
   const msgEl=e("dl-msg");
@@ -623,16 +655,23 @@ async function descargarWord(){
   const btn=document.querySelector('.btn-word');
   btn.disabled=true;btn.textContent="Generando...";
   try{
-    const resp=await fetch("/api/generar",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)});
-    if(!resp.ok){const er=await resp.json();throw new Error(er.error);}
-    const blob=await resp.blob();
+    const blob=await conReintento(async function(){
+      const resp=await fetch("/api/generar",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)});
+      if(!resp.ok){
+        const er=await leerJson(resp,"El servidor del Word");
+        const err=new Error((er&&er.error)||("HTTP "+resp.status));
+        err.definitivo=!!(er&&er.error); // error de datos devuelto por generar.py: reintentar no sirve
+        throw err;
+      }
+      return await resp.blob();
+    },3,function(n,t){btn.textContent="Reintentando ("+n+"/"+t+")...";});
     const nombre=nombreResolucion(payload)+".docx";
     const url=URL.createObjectURL(blob);
     const a=document.createElement("a");a.href=url;a.download=nombre;a.click();
     URL.revokeObjectURL(url);
     msgEl.className="msg ok";msgEl.textContent="✅ Word descargado: "+nombre;
     registrarExpediente(payload);
-  }catch(ex){msgEl.className="msg er";msgEl.textContent="Error: "+ex.message;}
+  }catch(ex){msgEl.className="msg er";msgEl.textContent="Error: "+mensajeFalla(ex);}
   btn.disabled=false;btn.textContent="📄 Descargar Word";
 }
 
@@ -777,12 +816,15 @@ async function descargarPDF(){
   try {
     const htmlContent = construirHtmlResolucion(payload);
     const titulo = nombreResolucion(payload);
-    const resp = await fetch(APPS_SCRIPT_URL, {
-      method: "POST",
-      body: JSON.stringify({ clave: APPS_CLAVE, accion: "htmlAPdf", titulo: titulo, html: htmlContent })
-    });
-    const data = await resp.json();
-    if (!data.ok) throw new Error(data.error);
+    const data = await conReintento(async function(){
+      const resp = await fetch(APPS_SCRIPT_URL, {
+        method: "POST",
+        body: JSON.stringify({ clave: APPS_CLAVE, accion: "htmlAPdf", titulo: titulo, html: htmlContent })
+      });
+      const d = await leerJson(resp, "Apps Script (PDF)");
+      if (!d || !d.ok || !d.pdfBase64) throw new Error((d && d.error) || "respuesta vacía de Apps Script");
+      return d;
+    }, 4, function(n,t){ btn.textContent = "Reintentando PDF ("+n+"/"+t+")..."; });
     // Descargar PDF desde base64
     const bytes = atob(data.pdfBase64);
     const arr = new Uint8Array(bytes.length);
@@ -794,7 +836,7 @@ async function descargarPDF(){
     msgEl.className = "msg ok"; msgEl.textContent = "✅ PDF descargado: " + titulo + ".pdf";
     registrarExpediente(payload);
   } catch(ex) {
-    msgEl.className = "msg er"; msgEl.textContent = "Error: " + ex.message;
+    msgEl.className = "msg er"; msgEl.textContent = "Error: " + mensajeFalla(ex);
   }
   btn.disabled = false; btn.textContent = "🖨️ Descargar PDF";
 }
@@ -1991,8 +2033,7 @@ async function reprocesarLote(fileList){
       method: "POST",
       body: JSON.stringify({ clave: APPS_CLAVE, accion: "htmlAPdf", titulo: titulo, html: construirHtmlResolucion(pl) })
     }).then(function(resp){
-      if(!resp.ok) throw new Error("HTTP "+resp.status);
-      return resp.json();
+      return leerJson(resp, "Apps Script");
     }).then(function(data){
       if(!data || !data.ok || !data.pdfBase64) throw new Error((data && data.error) || "respuesta vacía");
       var bin = atob(data.pdfBase64), arr = new Uint8Array(bin.length);
