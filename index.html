@@ -124,12 +124,11 @@ hr{border:none;border-top:1.5px solid #e2e8f0;margin:16px 0 14px}
 .splash-btn:hover{background:#0d6460}
 .splash-foot{margin-top:18px;font-size:11px;color:#94a3b8;letter-spacing:.3px}
 @media print{#splash{display:none!important}}
-/* Botón flotante "volver al inicio" */
-#btn-inicio{position:fixed;right:24px;bottom:24px;z-index:900;display:flex;align-items:center;gap:6px;padding:11px 16px;border:none;border-radius:999px;background:#1a56a0;color:#fff;font:600 14px/1 inherit;font-family:inherit;box-shadow:0 6px 18px rgba(15,58,112,.35);cursor:pointer;opacity:0;visibility:hidden;transform:translateY(12px);transition:opacity .2s,transform .2s,visibility .2s,background .15s}
-#btn-inicio.visible{opacity:1;visibility:visible;transform:translateY(0)}
-#btn-inicio:hover{background:#0f3a70}
-#btn-inicio:focus-visible{outline:3px solid #93c5fd;outline-offset:2px}
-@media print{#btn-inicio{display:none!important}}
+/* Botón flotante "Volver al inicio" (vuelve a la pantalla de ingreso) */
+#btn-volver{position:fixed;right:24px;bottom:24px;z-index:900;display:flex;align-items:center;gap:6px;padding:11px 16px;border:none;border-radius:999px;background:#1a56a0;color:#fff;font-size:14px;font-weight:600;font-family:inherit;line-height:1;box-shadow:0 6px 18px rgba(15,58,112,.35);cursor:pointer;transition:background .15s}
+#btn-volver:hover{background:#0f3a70}
+#btn-volver:focus-visible{outline:3px solid #93c5fd;outline-offset:2px}
+@media print{#btn-volver{display:none!important}}
 </style>
 </head>
 <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
@@ -451,10 +450,30 @@ const LOGO2="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAgwAAACDCAYAAADh/0MrA
   var p=document.getElementById('splash-logo-pris'); if(p) p.src=LOGO1;
   var g=document.getElementById('splash-logo-gob');  if(g) g.src=LOGO2;
 })();
-function ingresar(){
+function mostrarApp(){
   var s=document.getElementById('splash');   if(s) s.style.display='none';
   var m=document.getElementById('app-main');  if(m) m.style.display='';
 }
+function mostrarInicio(){
+  var m=document.getElementById('app-main');  if(m) m.style.display='none';
+  var s=document.getElementById('splash');   if(s) s.style.display='';
+  window.scrollTo(0,0);
+}
+function ingresar(){
+  mostrarApp();
+  // Deja un paso en el historial: el botón "atrás" del navegador también vuelve al inicio.
+  try { if(!(history.state && history.state.genApp)) history.pushState({genApp:true}, ''); } catch(e){}
+}
+// Volver a la pantalla de inicio. No se pierde nada: lo cargado queda en el formulario.
+function volverInicio(){
+  try {
+    if(history.state && history.state.genApp){ history.back(); return; } // popstate muestra el inicio
+  } catch(e){}
+  mostrarInicio();
+}
+window.addEventListener('popstate', function(e){
+  if(e.state && e.state.genApp) mostrarApp(); else mostrarInicio();
+});
 
 let currentTipo = '';
 let currentPayload = {};
@@ -2260,21 +2279,7 @@ async function reprocesarLote(fileList){
   };
 })();
 </script>
-<!-- Botón flotante "volver al inicio": aparece al bajar, sube suave al principio -->
-<button type="button" id="btn-inicio" title="Volver al inicio de la pantalla" aria-label="Volver al inicio de la pantalla">&#11014; Inicio</button>
-<script>
-(function(){
-  var b = document.getElementById("btn-inicio");
-  if(!b) return;
-  function pos(){ return window.pageYOffset || document.documentElement.scrollTop || document.body.scrollTop || 0; }
-  function actualizar(){ if(pos() > 300) b.classList.add("visible"); else b.classList.remove("visible"); }
-  b.addEventListener("click", function(){
-    try { window.scrollTo({ top: 0, behavior: "smooth" }); } catch(e) { window.scrollTo(0, 0); }
-  });
-  window.addEventListener("scroll", actualizar, { passive: true });
-  window.addEventListener("resize", actualizar);
-  actualizar();
-})();
-</script>
+<!-- Botón flotante "Volver al inicio": vuelve a la pantalla de ingreso -->
+<button type="button" id="btn-volver" onclick="volverInicio()" title="Volver a la pantalla de inicio" aria-label="Volver a la pantalla de inicio">&#8592; Volver al inicio</button>
 </body>
 </html>
