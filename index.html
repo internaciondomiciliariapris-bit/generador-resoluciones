@@ -369,6 +369,8 @@ hr{border:none;border-top:1.5px solid #e2e8f0;margin:16px 0 14px}
       <button id="btn-corregir" style="width:auto;flex:0 0 auto;background:#fef3c7;color:#92400e;border:1px solid #fbbf24;border-radius:8px;padding:10px 14px;font-size:13px;font-weight:600;cursor:pointer" onclick="corregirDatosViejos()">🔧 Corregir datos viejos (una vez)</button>
       <button id="btn-reprocesar" style="width:auto;flex:0 0 auto;background:#ede9fe;color:#5b21b6;border:1px solid #a78bfa;border-radius:8px;padding:10px 14px;font-size:13px;font-weight:600;cursor:pointer" onclick="document.getElementById('rep-file').click()">🔁 Reprocesar precios (x100)</button>
       <input id="rep-file" type="file" accept="application/pdf" multiple style="display:none" onchange="reprocesarLote(this.files)">
+      <button id="btn-cargar-oc" style="width:auto;flex:0 0 auto;background:#dcfce7;color:#166534;border:1px solid #4ade80;border-radius:8px;padding:10px 14px;font-size:13px;font-weight:600;cursor:pointer" onclick="document.getElementById('oc-file').click()">📎 Cargar Nº de Orden (PDFs de OC)</button>
+      <input id="oc-file" type="file" accept="application/pdf,.pdf" multiple style="display:none" onchange="cargarOrdenesDesdePDF(this.files); this.value='';">
       <button id="btn-fecha-orden" style="width:auto;flex:0 0 auto;background:#dbeafe;color:#1e40af;border:1px solid #60a5fa;border-radius:8px;padding:10px 14px;font-size:13px;font-weight:600;cursor:pointer" onclick="ponerFechaOrdenATodos()">📅 Fecha de orden a todos</button>
       <button id="btn-vaciar-anteojos" style="width:auto;flex:0 0 auto;background:#fee2e2;color:#b91c1c;border:1px solid #fca5a5;border-radius:8px;padding:10px 14px;font-size:13px;font-weight:600;cursor:pointer" onclick="vaciarLista('anteojos')">🗑️ Vaciar Anteojos</button>
       <button id="btn-vaciar-audio" style="width:auto;flex:0 0 auto;background:#fee2e2;color:#b91c1c;border:1px solid #fca5a5;border-radius:8px;padding:10px 14px;font-size:13px;font-weight:600;cursor:pointer" onclick="vaciarLista('audio')">🗑️ Vaciar Audífonos</button>
@@ -942,6 +944,80 @@ function setOrden(nroExp, valor){
     else { arr[i].ordenFecha = ""; }
     listadoGuardar(arr);
     renderListado();
+  }
+}
+
+// ── Carga masiva de Nº de Orden desde los PDF de OC ──────────────────────
+// Lee SOLO el nombre del archivo (ej. "10175-410 MERCADO KARINA DEL VALLE OC 20318.pdf"):
+// el PDF no se sube a ningún lado. Empareja por Nº de expediente (10175 + 410) y
+// confirma con el apellido/nombre del paciente. No pisa un Nº de orden distinto ya cargado.
+function _normNom(t){
+  return String(t||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toUpperCase()
+    .replace(/[^A-Z0-9 ]+/g," ").replace(/\s+/g," ").trim();
+}
+function _numsExp(nro){
+  const m = String(nro||"").match(/\d+/g) || [];
+  return m.map(function(x){ return String(parseInt(x,10)); });
+}
+function _parseNombreOC(nombre){
+  const base = String(nombre||"").replace(/\.pdf$/i,"").trim();
+  const m = base.match(/^\s*(\d+)\s*[-_\/]\s*(\d+)\s+(.*?)\s+O\.?\s*C\.?\s*(?:N[º°o]?\.?\s*)?(\d{3,})\b/i);
+  if(!m) return null;
+  return { n1: String(parseInt(m[1],10)), n2: String(parseInt(m[2],10)), nombre: _normNom(m[3]), oc: m[4] };
+}
+function _coincidenNombres(a, b){
+  const ta = _normNom(a).split(" ").filter(function(w){ return w.length >= 3; });
+  const tb = _normNom(b).split(" ").filter(function(w){ return w.length >= 3; });
+  if(ta.length === 0 || tb.length === 0) return 0;
+  return ta.filter(function(w){ return tb.indexOf(w) >= 0; }).length;
+}
+function _fechaArchivo(f){
+  if(!f || !f.lastModified) return _hoy();
+  const d = new Date(f.lastModified);
+  const p = function(n){ return String(n).padStart(2,"0"); };
+  return p(d.getDate())+"/"+p(d.getMonth()+1)+"/"+d.getFullYear();
+}
+function cargarOrdenesDesdePDF(files){
+  const msgEl = document.getElementById("lst-msg");
+  const lista = Array.prototype.slice.call(files || []);
+  if(lista.length === 0) return;
+  const arr = listadoLeer();
+  const cargados = [], yaEstaban = [], conflictos = [], sinExp = [], dudosos = [], ilegibles = [];
+
+  lista.forEach(function(f){
+    const d = _parseNombreOC(f.name);
+    if(!d){ ilegibles.push(f.name); return; }
+    // candidatos por Nº de expediente (primer y segundo número)
+    let cand = arr.map(function(r, i){ return { r: r, i: i, nums: _numsExp(r.nroExp) }; })
+                  .filter(function(c){ return c.nums[0] === d.n1 && c.nums[1] === d.n2; });
+    if(cand.length === 0){ sinExp.push(d.n1+"-"+d.n2+" "+d.nombre+" (OC "+d.oc+")"); return; }
+    // confirmar con el nombre del paciente
+    cand = cand.map(function(c){ c.score = _coincidenNombres(c.r.paciente, d.nombre); return c; })
+               .sort(function(a,b){ return b.score - a.score; });
+    const mejor = cand[0];
+    if(mejor.score === 0){ dudosos.push(mejor.r.nroExp+": listado dice "+mejor.r.paciente+", el PDF dice "+d.nombre+" (OC "+d.oc+")"); return; }
+    const actual = String(mejor.r.orden||"").trim();
+    if(actual === d.oc){ yaEstaban.push(mejor.r.nroExp); return; }
+    if(actual && actual !== d.oc){ conflictos.push(mejor.r.nroExp+": ya tenía "+actual+", el PDF dice "+d.oc); return; }
+    arr[mejor.i].orden = d.oc;
+    if(!arr[mejor.i].ordenFecha) arr[mejor.i].ordenFecha = _fechaArchivo(f);
+    cargados.push(mejor.r.nroExp+" → OC "+d.oc);
+  });
+
+  if(cargados.length) listadoGuardar(arr);
+  renderListado();
+
+  const lineas = [];
+  lineas.push("✅ Nº de orden cargados: "+cargados.length+" de "+lista.length+" PDF(s).");
+  if(yaEstaban.length) lineas.push("• Ya estaban cargados (sin cambios): "+yaEstaban.length+".");
+  if(conflictos.length) lineas.push("⚠️ No se pisaron (tenían otro Nº de orden, revisalos a mano):\n   "+conflictos.join("\n   "));
+  if(dudosos.length) lineas.push("⚠️ Mismo expediente pero el nombre no coincide (no se cargó):\n   "+dudosos.join("\n   "));
+  if(sinExp.length) lineas.push("• Sin expediente en el listado de esta PC ("+sinExp.length+"):\n   "+sinExp.join("\n   "));
+  if(ilegibles.length) lineas.push("• Nombre de archivo sin formato \"EXP-410 NOMBRE OC 12345\" ("+ilegibles.length+"):\n   "+ilegibles.join("\n   "));
+  if(msgEl){
+    msgEl.className = "msg " + ((conflictos.length || dudosos.length || cargados.length === 0) ? "er" : "ok");
+    msgEl.style.whiteSpace = "pre-line";
+    msgEl.textContent = lineas.join("\n");
   }
 }
 
