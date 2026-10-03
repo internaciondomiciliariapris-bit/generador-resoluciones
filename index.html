@@ -1640,6 +1640,12 @@ async function reprocesarLote(fileList){
 .eb-save{background:#0f766e;color:#fff;border:none}
 .eb-save:hover{background:#0d6460}
 .eb-cancel{background:#f1f5f9;color:#374151;border:1px solid #e2e8f0}
+.btn-proceso:disabled{opacity:.65;cursor:wait}
+.aviso-toast{position:fixed;left:50%;top:22px;transform:translate(-50%,-20px);opacity:0;z-index:10050;max-width:min(520px,92vw);padding:16px 22px;border-radius:12px;font-size:15px;font-weight:700;box-shadow:0 12px 34px rgba(15,23,42,.28);transition:opacity .25s,transform .25s;pointer-events:none;text-align:center;line-height:1.4}
+.aviso-toast.show{opacity:1;transform:translate(-50%,0)}
+.aviso-toast.ok{background:#166534;color:#fff;border:none}
+.aviso-toast.er{background:#b91c1c;color:#fff;border:none}
+.aviso-toast small{display:block;font-weight:500;font-size:13px;opacity:.9;margin-top:3px}
 .eb-calc{font-size:12px;color:#0f766e;background:#f0fdfa;border:1px solid #99f6e4;border-radius:7px;padding:8px 11px;margin:-2px 0 13px}
 </style>
 <script>
@@ -1879,17 +1885,48 @@ async function reprocesarLote(fileList){
     if(tp) tp.classList.toggle("active", which==="proc");
   };
 
+  // Cartel flotante (visible aunque el formulario esté scrolleado)
+  var _avisoTimer = null;
+  function mostrarAviso(tipo, titulo, detalle){
+    var t = document.getElementById("aviso-toast");
+    if(!t){ t = document.createElement("div"); t.id = "aviso-toast"; document.body.appendChild(t); }
+    t.className = "aviso-toast " + tipo;
+    t.innerHTML = esc(titulo) + (detalle ? "<small>" + esc(detalle) + "</small>" : "");
+    void t.offsetWidth;
+    t.classList.add("show");
+    clearTimeout(_avisoTimer);
+    _avisoTimer = setTimeout(function(){ t.classList.remove("show"); }, tipo === "ok" ? 3500 : 6000);
+  }
+  window.mostrarAviso = mostrarAviso;
+
   window.guardarEnProceso = function(tipo){
     var reg = (tipo==="anteojos") ? leerAnteojos() : leerAudio();
     var msg = document.getElementById((tipo==="anteojos") ? "a-msg" : "b-msg");
+    var btn = document.querySelector('button.btn-proceso[onclick="guardarEnProceso(\'' + tipo + '\')"]');
+    var txtBtn = "💾 Guardar en proceso";
+    if(msg){ msg.className = "msg"; msg.textContent = ""; }   // limpia el aviso anterior para que se note el nuevo
     if(!reg.nroExp && !reg.paciente){
       if(msg){ msg.className = "msg er"; msg.textContent = "Cargá al menos el Nº de Expediente o el Paciente para dejarla en proceso."; }
+      mostrarAviso("er", "No se guardó", "Cargá al menos el Nº de Expediente o el Paciente.");
       return;
     }
-    Store.guardar(reg).then(function(ok){
-      if(!msg) return;
-      if(ok){ msg.className = "msg ok"; msg.textContent = "✅ Guardada en proceso. La encontrás en la subpestaña «⏳ En proceso»."; }
-      else  { msg.className = "msg er"; msg.textContent = "No se pudo guardar en la base. Revisá conexión / reglas de Firestore (genres_borradores)."; }
+    if(btn){ if(btn.disabled) return; btn.disabled = true; btn.textContent = "⏳ Guardando…"; }
+    var quien = reg.nroExp || reg.paciente;
+    var limite = new Promise(function(res){ setTimeout(function(){ res("timeout"); }, 15000); });
+    Promise.race([Store.guardar(reg), limite]).then(function(ok){
+      var hora = new Date().toLocaleTimeString("es-AR", { hour:"2-digit", minute:"2-digit", second:"2-digit" });
+      if(ok === true){
+        if(msg){ msg.className = "msg ok"; msg.textContent = "✅ Guardada en proceso: " + quien + " (" + hora + "). La encontrás en la subpestaña «⏳ En proceso»."; }
+        mostrarAviso("ok", "✅ Guardado", quien + " quedó en «⏳ En proceso»");
+        if(btn){ btn.textContent = "✅ Guardado"; setTimeout(function(){ btn.disabled = false; btn.textContent = txtBtn; }, 1500); }
+        return;
+      }
+      var txt = (ok === "timeout")
+        ? "La base no respondió a tiempo. Revisá la conexión a internet y volvé a tocar Guardar."
+        : "No se pudo guardar en la base. Revisá conexión / reglas de Firestore (genres_borradores).";
+      if(msg){ msg.className = "msg er"; msg.textContent = "❌ " + txt; }
+      mostrarAviso("er", "❌ No se guardó", txt);
+      if(btn){ btn.disabled = false; btn.textContent = txtBtn; }
     });
   };
 
