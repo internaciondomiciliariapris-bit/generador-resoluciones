@@ -247,6 +247,7 @@ hr{border:none;border-top:1.5px solid #e2e8f0;margin:16px 0 14px}
 .rg-btn{flex-shrink:0;padding:12px 26px;border:none;border-radius:12px;background:#1e3a5f;color:#fff;font-size:15px;font-weight:800;cursor:pointer;box-shadow:0 4px 12px rgba(30,58,95,.3)}
 .rg-btn:hover{background:#14284b}
 @media (max-width:600px){.rg-title{font-size:19px}.rg-head,.rg-search,.rg-body,.rg-foot{padding-left:14px;padding-right:14px}.rg-search span{left:26px}.rg-foot{flex-direction:column;align-items:stretch}}
+.rg-lis{font-size:12.5px;color:#475569;margin:4px 0 2px 4px;line-height:1.6}
 </style>
 </head>
 <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
@@ -579,9 +580,9 @@ hr{border:none;border-top:1.5px solid #e2e8f0;margin:16px 0 14px}
     <div id="ent-admin-msg" class="msg"></div>
 
     <hr>
-    <div class="stitle">2 · Cruzar datos</div>
-    <div class="hint" style="margin-bottom:10px">Une cada orden de compra con el expediente de su paciente (por N° de expediente y, si no coincide, por nombre). Se hace solo al guardar cada carga; con este botón lo repetís y ves el resumen.</div>
-    <button type="button" class="ent-btn ent-btn-verde" id="ent-cruzar" onclick="EntUI.cruzar()">🔄 Cruzar datos y ver resumen</button>
+    <div class="stitle">2 · Cruzar y revisar el registro</div>
+    <div class="hint" style="margin-bottom:10px">Une cada OC con el expediente de su paciente y controla lo ya guardado: <b>cada OC es única</b>, así que si alguna quedó pegada a otro paciente la separa, y te lista los expedientes que figuran en pacientes distintos para revisar con Compras. Se hace solo al abrir esta pantalla y al guardar cada carga.</div>
+    <button type="button" class="ent-btn ent-btn-verde" id="ent-cruzar" onclick="EntUI.cruzar()">🩺 Cruzar y revisar el registro</button>
     <div id="ent-cruce"></div>
 
     <hr>
@@ -2699,32 +2700,70 @@ var EntCore = (function(){
   function clave(num, cod){ return (num && cod) ? (soloNum(num)+"/"+soloNum(cod)) : ""; }
 
   /* Agrupa archivos analizados en entregas (OC + expediente del mismo paciente). */
+  /* Agrupa los PDF leídos en pacientes. REGLAS (cada OC es única para su expediente y su paciente):
+     1) Mismo N° de OC = mismo PDF repetido → se cuenta una sola vez.
+     2) Dos OC con N° distinto NUNCA van juntas, aunque digan el mismo expediente.
+     3) Mismo N° de expediente pero OTRO paciente → registros separados y aviso de conflicto
+        (ej. la OC 20304 de CARRIZO figura con el expediente 9585/410 de VALENZUELA).
+     4) Expediente y OC se unen por N° de expediente + paciente; si el N° no coincide, por nombre
+        (único) con aviso. */
   function agrupar(items){
-    var grupos = [], porClave = {};
+    function tiene(g, rol){ return g.items.some(function(i){ return i.rol === rol; }); }
+    function ocDe(g){ var x = g.items.filter(function(i){ return i.rol === "oc" && i.oc; })[0]; return x ? x.oc : ""; }
+    function pacDe(g){ var x = g.items.filter(function(i){ return i.rol === "oc" && i.paciente; })[0] || g.items.filter(function(i){ return i.paciente; })[0]; return x ? x.paciente : ""; }
+    // 1) PDF repetidos de la misma OC
+    var vistos = {}, lista = [];
     items.forEach(function(it){
-      var k = clave(it.num, it.cod);
-      var g = k && porClave[k];
-      if(!g){ g = { clave:k, items:[], alertas:[] }; grupos.push(g); if(k) porClave[k] = g; }
+      if(it.rol === "oc" && it.oc){ if(vistos[it.oc]){ vistos[it.oc].repetidos = (vistos[it.oc].repetidos || 0) + 1; return; } vistos[it.oc] = it; }
+      lista.push(it);
+    });
+    var grupos = [];
+    lista.forEach(function(it){
+      var k = clave(it.num, it.cod), g = null;
+      if(k){
+        g = grupos.filter(function(h){
+          if(h.clave !== k) return false;
+          if(it.rol === "oc" && it.oc && ocDe(h) && ocDe(h) !== it.oc) return false;   // 2)
+          if(it.rol === "oc" && tiene(h, "oc")) return false;
+          if(it.rol === "expediente" && tiene(h, "expediente")) return false;
+          var p = pacDe(h);
+          return !p || !it.paciente || mismaPersona(p, it.paciente);                    // 3)
+        })[0] || null;
+      }
+      if(!g){ g = { clave: k, items: [], alertas: [] }; grupos.push(g); }
       g.items.push(it);
     });
-    // Grupos incompletos (solo OC o solo expediente): se busca la pareja por NOMBRE del paciente.
-    function tiene(g, rol){ return g.items.some(function(i){ return i.rol === rol; }); }
+    // 4) Grupos incompletos: pareja por NOMBRE (única)
     for(var i = 0; i < grupos.length; i++){
       var g = grupos[i]; if(!g) continue;
       var falta = tiene(g,"oc") && !tiene(g,"expediente") ? "expediente" : (!tiene(g,"oc") && tiene(g,"expediente") ? "oc" : "");
       if(!falta) continue;
-      var pac = (g.items[0] || {}).paciente;
+      var pac = pacDe(g);
+      var cands = [];
       for(var j = 0; j < grupos.length; j++){
         var h = grupos[j]; if(!h || h === g) continue;
         if(!tiene(h, falta) || tiene(h, falta === "oc" ? "expediente" : "oc")) continue;
-        if(!mismaPersona(pac, (h.items[0]||{}).paciente)) continue;
-        var ki = g.clave, kj = h.clave;
-        g.alertas.push("Se asociaron por nombre: el expediente figura como "+(falta==="oc" ? ki : kj)+" y la OC como "+(falta==="oc" ? kj : ki)+". Revis\u00e1 cu\u00e1l es el correcto.");
-        g.items = g.items.concat(h.items); grupos[j] = null;
-        break;
+        if(mismaPersona(pac, pacDe(h))) cands.push(j);
       }
+      if(cands.length !== 1) continue;
+      var hh = grupos[cands[0]];
+      if(g.clave !== hh.clave){
+        var kExp = falta === "oc" ? g.clave : hh.clave, kOc = falta === "oc" ? hh.clave : g.clave;
+        g.alertas.push("Se asociaron por nombre: el expediente figura como " + kExp + " y la OC como " + kOc + ". Revis\u00e1 cu\u00e1l es el correcto.");
+      }
+      g.items = g.items.concat(hh.items); grupos[cands[0]] = null;
     }
-    return grupos.filter(Boolean).map(function(g){
+    grupos = grupos.filter(Boolean);
+    // 3) Avisos de conflicto: el mismo expediente en pacientes distintos
+    grupos.forEach(function(g){
+      if(!g.clave) return;
+      grupos.forEach(function(h){
+        if(h === g || h.clave !== g.clave) return;
+        var otro = pacDe(h), oco = ocDe(h);
+        g.alertas.push("El expediente " + g.clave + " tambi\u00e9n figura para " + (otro || "otro paciente") + (oco ? " (OC " + oco + ")" : "") + ". Cada OC es \u00fanica: revis\u00e1 con Compras cu\u00e1l es el expediente correcto.");
+      });
+    });
+    return grupos.map(function(g){
       var get = function(rol, k){ var it = g.items.filter(function(x){ return x.rol === rol && x[k]; })[0]; return it ? it[k] : ""; };
       var exp = g.items.filter(function(x){ return x.rol === "expediente"; })[0] || {};
       var oc = g.items.filter(function(x){ return x.rol === "oc"; })[0] || {};
@@ -2733,10 +2772,12 @@ var EntCore = (function(){
         letra: exp.letra || oc.letra || "", anio: exp.anio || oc.anio || "",
         oc: get("oc","oc"), paciente: oc.paciente || exp.paciente || (g.items[0]||{}).paciente || "",
         tipo: exp.tipo || oc.tipo || "", cantidad: oc.cantidad || exp.cantidad || null, extra: exp.extra || oc.extra || "",
-        fechaOC: oc.fechaOC || "", proveedor: oc.proveedor || ""
+        fechaOC: oc.fechaOC || "", proveedor: oc.proveedor || "",
+        // Todos los N° de expediente con que figura (si la OC y la carátula no coinciden, se encuentra por los dos)
+        claves: g.items.map(function(x){ return clave(x.num, x.cod); }).filter(function(k, ix, arr){ return k && arr.indexOf(k) === ix; })
       };
-      g.items.forEach(function(it){ (it.alertas||[]).forEach(function(a){ g.alertas.push(a); }); });
-      if(g.items.filter(function(x){return x.rol==="oc";}).length > 1) g.alertas.push("Hay m\u00e1s de una OC para este expediente.");
+      g.items.forEach(function(it){ (it.alertas||[]).forEach(function(a){ if(g.alertas.indexOf(a) < 0) g.alertas.push(a); }); });
+      g.repetidos = g.items.reduce(function(s, it){ return s + (it.repetidos || 0); }, 0);
       if(!tiene(g,"oc")) g.alertas.push("Falta la orden de compra.");
       if(!tiene(g,"expediente")) g.alertas.push("Falta el PDF del expediente.");
       return g;
@@ -2800,6 +2841,9 @@ var EntConsulta = (function(){
   /* Puntaje de un registro para la consulta (0 = no coincide). */
   function puntaje(rec, q){
     var num = sinCeros(rec.num), cod = sinCeros(rec.cod);
+    // Expedientes alternativos (OC y carátula con N° distinto): "9585/410", "9589/410"…
+    var alt = (rec.claves || []).map(function(k){ var p = String(k).split("/"); return { num: sinCeros(p[0]), cod: sinCeros(p[1] || "") }; });
+    if(!alt.some(function(x){ return x.num === num && x.cod === cod; })) alt.unshift({ num: num, cod: cod });
     var ocs = (rec.ocs && rec.ocs.length ? rec.ocs : (rec.oc ? [rec.oc] : [])).map(sinCeros);
     var nomW = fold(rec.pacienteNorm || rec.paciente).split(/[^A-Z]+/).filter(Boolean);
     var p = 0, i;
@@ -2810,17 +2854,19 @@ var EntConsulta = (function(){
     }
     for(i = 0; i < q.exp.length; i++){
       var e = q.exp[i];
-      if(e.num !== num) return 0;
-      if(e.cod && e.cod !== cod) return 0;
-      if(e.letra && rec.letra && e.letra !== String(rec.letra).toUpperCase()) return 0;
-      if(e.anio && rec.anio && e.anio !== String(rec.anio)) return 0;
-      p += 90;
+      var hit = alt.filter(function(x){ return x.num === e.num && (!e.cod || e.cod === x.cod); });
+      if(!hit.length) return 0;
+      var principal = hit.some(function(x){ return x.num === num && x.cod === cod; });
+      if(principal && e.letra && rec.letra && e.letra !== String(rec.letra).toUpperCase()) return 0;
+      if(principal && e.anio && rec.anio && e.anio !== String(rec.anio)) return 0;
+      p += principal ? 90 : 60;
     }
     for(i = 0; i < q.nums.length; i++){
       var n = q.nums[i];
       if(ocs.indexOf(n) >= 0) p += 80;
       else if(n === num) p += 70;
       else if(cod && n === num + cod) p += 70;              // "8871410"
+      else if(alt.some(function(x){ return x.num === n || (x.cod && n === x.num + x.cod); })) p += 50;
       else if(n.length >= 4 && ocs.some(function(x){ return x.indexOf(n) === 0; })) p += 30;
       else if(n.length >= 3 && num.indexOf(n) === 0) p += 20;
       else return 0;
@@ -2881,6 +2927,7 @@ if(typeof module !== "undefined" && module.exports) module.exports = EntConsulta
   function $(id){ return document.getElementById(id); }
   function hoyTxt(){ var d = new Date(); return String(d.getDate()).padStart(2,"0")+"/"+String(d.getMonth()+1).padStart(2,"0")+"/"+d.getFullYear(); }
   function idRegistro(d){
+    if(d.oc) return "r_oc_" + C.soloNum(d.oc);
     var base = (d.num && d.cod) ? (C.soloNum(d.num)+"_"+C.soloNum(d.cod)+"_"+(d.anio || new Date().getFullYear())) : ("pac_" + C.normNombre(d.paciente).replace(/\s+/g,"_"));
     return "r_" + base.replace(/[\/#\?\[\]\*\.]+/g,"_");
   }
@@ -2943,17 +2990,37 @@ if(typeof module !== "undefined" && module.exports) module.exports = EntConsulta
         }, function(err){ console.warn("Registro OC onSnapshot:", err); estado = "sin-acceso"; UI.render(); });
       });
     },
+    /* Busca a qué registro ya guardado corresponde lo leído. Reglas: la misma OC es siempre el
+       mismo registro; un registro que ya tiene OTRA OC nunca recibe una segunda; mismo expediente
+       con otro paciente NO se une (es un conflicto que se avisa). */
     buscarExistente: function(d){
+      var ocsDe = function(r){ return (r.ocs && r.ocs.length) ? r.ocs : (r.oc ? [r.oc] : []); };
+      if(d.oc){
+        var mismaOc = cache.filter(function(r){ return ocsDe(r).indexOf(d.oc) >= 0; });
+        if(mismaOc.length) return { rec: mismaOc[0], porNombre: false };
+      }
+      var libre = function(r){ return !d.oc || !ocsDe(r).length; };   // no tiene ya otra OC
       var k = C.clave(d.num, d.cod);
       if(k){
-        var porClave = cache.filter(function(r){ return C.clave(r.num, r.cod) === k && (!d.anio || !r.anio || String(r.anio) === String(d.anio)); });
+        var porClave = cache.filter(function(r){
+          return C.clave(r.num, r.cod) === k && (!d.anio || !r.anio || String(r.anio) === String(d.anio)) &&
+                 libre(r) && (!d.paciente || !r.paciente || C.mismaPersona(r.paciente, d.paciente));
+        });
         if(porClave.length) return { rec: porClave[0], porNombre: false };
       }
       if(d.paciente){
-        var porNom = cache.filter(function(r){ return C.mismaPersona(r.paciente, d.paciente) && (!d.tipo || !r.tipo || r.tipo === d.tipo) && !(r.ocs && r.ocs.length); });
+        var porNom = cache.filter(function(r){
+          return C.mismaPersona(r.paciente, d.paciente) && (!d.tipo || !r.tipo || r.tipo === d.tipo) &&
+                 (d.oc ? !ocsDe(r).length : !r.tieneExp);
+        });
         if(porNom.length === 1) return { rec: porNom[0], porNombre: true };
       }
       return null;
+    },
+    // Otros registros guardados con el mismo N° de expediente pero de OTRO paciente.
+    conflictos: function(d, excluir){
+      var k = C.clave(d.num, d.cod); if(!k) return [];
+      return cache.filter(function(r){ return r !== excluir && C.clave(r.num, r.cod) === k && r.paciente && d.paciente && !C.mismaPersona(r.paciente, d.paciente); });
     },
     // Cada resolución generada (Word o PDF) deja el paciente registrado; la OC se suma al cargar su PDF.
     desdeGenerador: function(p){
@@ -2978,6 +3045,8 @@ if(typeof module !== "undefined" && module.exports) module.exports = EntConsulta
     guardarGrupo: async function(g){
       var ok = await authReady; if(!ok || !db) throw new Error("Sin acceso a la base");
       var d = g.datos, rec = g.destino || null;
+      var ocsRec = rec ? ((rec.ocs && rec.ocs.length) ? rec.ocs : (rec.oc ? [rec.oc] : [])) : [];
+      if(rec && d.oc && ocsRec.length && ocsRec.indexOf(d.oc) < 0) rec = null;   // cada OC es única: va a su propio registro
       var datos = {
         num: (rec && rec.num) || d.num || "", cod: (rec && rec.cod) || d.cod || "",
         letra: (rec && rec.letra) || d.letra || "", anio: (rec && rec.anio) || d.anio || "",
@@ -2990,13 +3059,14 @@ if(typeof module !== "undefined" && module.exports) module.exports = EntConsulta
       datos.tieneExp = !!((rec && rec.tieneExp) || g.items.some(function(i){ return i.rol === "expediente"; }));
       datos.pacienteNorm = C.normNombre(datos.paciente);
       datos.nroExp = (rec && rec.nroExp) || C.expedienteTexto(datos);
+      datos.claves = unir(rec && rec.claves, unir([C.clave(datos.num, datos.cod)], d.claves || []).filter(Boolean));
       if(d.oc) datos.oc = d.oc;
       if(d.fechaOC) datos.fechaOC = d.fechaOC;
       if(d.proveedor) datos.proveedor = d.proveedor;
       if(d.extra && !(rec && rec.extra)) datos.extra = d.extra;
       if(d.cantidad && !(rec && rec.cantidad)) datos.cantidad = d.cantidad;
       if(!rec){ datos.creadoMs = Date.now(); datos.creadoTxt = hoyTxt(); datos.origen = "pdf"; }
-      await db.collection(COL).doc(rec ? rec._id : idRegistro(datos)).set(datos, { merge: true });
+      await db.collection(COL).doc(rec ? rec._id : idRegistro({ oc: d.oc, num: datos.num, cod: datos.cod, anio: datos.anio, paciente: datos.paciente })).set(datos, { merge: true });
     },
     eliminar: function(rec){ return db.collection(COL).doc(rec._id).delete(); },
     // Entrega de la OC al paciente: fecha y hora del momento en que se tilda.
@@ -3018,7 +3088,7 @@ if(typeof module !== "undefined" && module.exports) module.exports = EntConsulta
       var unidos = [], dudosos = [], usados = {};
       for(var i = 0; i < soloOc.length; i++){
         var b = soloOc[i];
-        var cands = sinOc.filter(function(a){ return !usados[a._id] && C.clave(a.num, a.cod) === C.clave(b.num, b.cod) && C.clave(a.num, a.cod); });
+        var cands = sinOc.filter(function(a){ return !usados[a._id] && C.clave(a.num, a.cod) && C.clave(a.num, a.cod) === C.clave(b.num, b.cod) && C.mismaPersona(a.paciente, b.paciente); });
         var porNombre = false;
         if(!cands.length){
           cands = sinOc.filter(function(a){ return !usados[a._id] && C.mismaPersona(a.paciente, b.paciente) && (!a.tipo || !b.tipo || a.tipo === b.tipo); });
@@ -3030,7 +3100,8 @@ if(typeof module !== "undefined" && module.exports) module.exports = EntConsulta
           ? ["Unidos al cruzar datos: el expediente figura como " + (a.nroExp || C.expedienteTexto(a)) + " y la OC " + (b.ocs || []).join("/") + " como " + C.clave(b.num, b.cod) + ". Revisá cuál es el correcto."] : [];
         var datos = {
           ocs: unir(a.ocs, b.ocs), archivos: unir(a.archivos, b.archivos), alertas: unir(unir(a.alertas, b.alertas), aviso),
-          tieneExp: true, actualizadoMs: Date.now()
+          tieneExp: true, actualizadoMs: Date.now(),
+          claves: unir(unir(a.claves, b.claves), [C.clave(a.num, a.cod), C.clave(b.num, b.cod)].filter(Boolean))
         };
         if(b.oc) datos.oc = b.oc;
         if(b.fechaOC) datos.fechaOC = b.fechaOC;
@@ -3042,6 +3113,72 @@ if(typeof module !== "undefined" && module.exports) module.exports = EntConsulta
         unidos.push(a.paciente);
       }
       return { unidos: unidos, dudosos: dudosos };
+    },
+    /* Revisa TODO lo ya guardado con las reglas nuevas:
+       • un registro con más de una OC se separa: cada OC vuelve a su paciente, según el nombre del
+         PDF de esa OC (ej. la 20304 era de CARRIZO, no de VALENZUELA);
+       • se borra el aviso viejo "Hay más de una OC…";
+       • informa expedientes que figuran en pacientes distintos y OC repetidas en dos registros. */
+    revisar: async function(){
+      var ok = await authReady; if(!ok || !db) throw new Error("Sin acceso a la base");
+      var ocsDe = function(r){ return (r.ocs && r.ocs.length) ? r.ocs.slice() : (r.oc ? [r.oc] : []); };
+      var ocDeArchivo = function(n){ var x = C.leerNombreArchivo(n); return x.rol === "oc" ? x : null; };
+      var res = { separados: [], sinResolver: [], limpiados: 0 };
+      var lista = cache.slice();
+      for(var i = 0; i < lista.length; i++){
+        var rec = lista[i], ocs = ocsDe(rec), upd = null;
+        var alertas = (rec.alertas || []).filter(function(a){ return !/^Hay m\u00e1s de una OC/.test(a); });
+        if(ocs.length > 1){
+          var duenos = {};
+          (rec.archivos || []).forEach(function(n){ var x = ocDeArchivo(n); if(x && x.oc) duenos[x.oc] = { x: x, archivo: n }; });
+          var quedan = [], separadas = [];
+          for(var k = 0; k < ocs.length; k++){
+            var oc = ocs[k], du = duenos[oc];
+            if(du && du.x.paciente && rec.paciente && !C.mismaPersona(du.x.paciente, rec.paciente)){
+              var nuevo = {
+                num: du.x.num || rec.num || "", cod: du.x.cod || rec.cod || "", letra: "", anio: "",
+                tipo: rec.tipo || "", paciente: du.x.paciente, pacienteNorm: C.normNombre(du.x.paciente),
+                ocs: [oc], oc: oc, archivos: [du.archivo], tieneExp: false,
+                alertas: ["El expediente " + C.clave(du.x.num || rec.num, du.x.cod || rec.cod) + " tambi\u00e9n figura para " + rec.paciente + ". Cada OC es \u00fanica: revis\u00e1 con Compras cu\u00e1l es el expediente correcto."],
+                creadoMs: rec.creadoMs || Date.now(), creadoTxt: rec.creadoTxt || hoyTxt(), origen: "revision", actualizadoMs: Date.now()
+              };
+              nuevo.nroExp = C.expedienteTexto(nuevo);
+              await db.collection(COL).doc("r_oc_" + C.soloNum(oc)).set(nuevo, { merge: true });
+              separadas.push(oc);
+              res.separados.push("OC " + oc + " \u2192 " + du.x.paciente + " (estaba en " + rec.paciente + ")");
+            } else quedan.push(oc);
+          }
+          if(separadas.length){
+            alertas.push("La OC " + separadas.join("/") + " (de otro paciente) figuraba con este expediente y se separ\u00f3. Revis\u00e1 con Compras cu\u00e1l es el expediente correcto.");
+            upd = {
+              ocs: quedan, oc: quedan[quedan.length - 1] || "", alertas: alertas, actualizadoMs: Date.now(),
+              archivos: (rec.archivos || []).filter(function(n){ var x = ocDeArchivo(n); return !(x && separadas.indexOf(x.oc) >= 0); })
+            };
+            if(rec.oc && separadas.indexOf(rec.oc) >= 0) upd.fechaOC = "";   // la fecha era de la OC separada
+          }
+          if(quedan.length > 1){
+            res.sinResolver.push(rec.paciente + ": OC " + quedan.join(" y ") + " (no se pudo saber de qui\u00e9n es cada una; volv\u00e9 a cargar esas OC)");
+            var av = "Figura con m\u00e1s de una OC (" + quedan.join(", ") + "): cada OC es \u00fanica, revis\u00e1 cu\u00e1l corresponde.";
+            if(alertas.indexOf(av) < 0) alertas.push(av);
+            upd = upd || { alertas: alertas, actualizadoMs: Date.now() };
+          }
+        }
+        if(!upd && alertas.length !== (rec.alertas || []).length) upd = { alertas: alertas, actualizadoMs: Date.now() };
+        if(upd){ await db.collection(COL).doc(rec._id).set(upd, { merge: true }); res.limpiados++; }
+      }
+      await new Promise(function(r){ setTimeout(r, 500); });
+      // Controles sobre el registro ya corregido
+      var porClave = {}, porOc = {};
+      cache.forEach(function(r){
+        var k = C.clave(r.num, r.cod); if(k) (porClave[k] = porClave[k] || []).push(r);
+        ocsDe(r).forEach(function(o){ (porOc[o] = porOc[o] || []).push(r); });
+      });
+      res.expCompartidos = Object.keys(porClave).filter(function(k){
+        var g = porClave[k]; return g.some(function(a){ return g.some(function(b){ return a !== b && a.paciente && b.paciente && !C.mismaPersona(a.paciente, b.paciente); }); });
+      }).map(function(k){ return k + ": " + porClave[k].map(function(r){ return r.paciente + (ocsDe(r).length ? " (OC " + ocsDe(r).join("/") + ")" : ""); }).join(" \u00b7 "); });
+      res.ocRepetidas = Object.keys(porOc).filter(function(o){ return porOc[o].length > 1; })
+        .map(function(o){ return "OC " + o + ": " + porOc[o].map(function(r){ return r.paciente; }).join(" \u00b7 "); });
+      return res;
     },
     resumen: function(){
       var comp = 0, sinOc = [], sinExp = [];
@@ -3173,7 +3310,17 @@ if(typeof module !== "undefined" && module.exports) module.exports = EntConsulta
         // Para el registro alcanza con la OC (trae expediente, paciente y N°): no falta nada si no está la carátula.
         // "Falta la OC" no es un error cuando se carga por etapas: se muestra como estado, no como aviso.
         g.alertas = g.alertas.filter(function(a){ return !/^Falta el PDF del expediente/.test(a) && !/^Falta la orden de compra/.test(a); });
-        g.llave = g.clave || C.normNombre(g.datos.paciente);
+        Store.conflictos(g.datos, g.destino).forEach(function(r){
+          var a = "El expediente " + C.clave(g.datos.num, g.datos.cod) + " ya est\u00e1 en el registro para " + r.paciente + ((r.ocs && r.ocs.length) ? " (OC " + r.ocs.join("/") + ")" : "") + ". Cada OC es \u00fanica: revis\u00e1 con Compras cu\u00e1l es el correcto.";
+          if(g.alertas.indexOf(a) < 0) g.alertas.push(a);
+        });
+        // ¿Aporta algo nuevo?
+        var dst = g.destino, ocsD = dst ? ((dst.ocs && dst.ocs.length) ? dst.ocs : (dst.oc ? [dst.oc] : [])) : [];
+        var aportaOc = g.datos.oc && ocsD.indexOf(g.datos.oc) < 0;
+        var aportaExp = g.items.some(function(it){ return it.rol === "expediente"; }) && !(dst && dst.tieneExp);
+        var aportaDatos = !!dst && ((g.datos.fechaOC && !dst.fechaOC) || (g.datos.proveedor && !dst.proveedor));
+        g.estado = !dst ? "nuevo" : (aportaOc || aportaExp || aportaDatos ? "completa" : "igual");
+        g.llave = g.datos.oc ? "oc" + g.datos.oc : (g.clave || C.normNombre(g.datos.paciente));
         g.incluir = !destildados[g.llave];
         return g;
       });
@@ -3182,7 +3329,10 @@ if(typeof module !== "undefined" && module.exports) module.exports = EntConsulta
     renderPropuesta: function(){
       var box = $("ent-prop"); if(!box) return;
       if(!propuesta.length){ box.innerHTML = ""; return; }
-      var nuevos = propuesta.filter(function(g){ return !g.destino; }).length, compl = propuesta.length - nuevos;
+      var nuevos = propuesta.filter(function(g){ return g.estado === "nuevo"; }).length,
+          compl = propuesta.filter(function(g){ return g.estado === "completa"; }).length,
+          iguales = propuesta.filter(function(g){ return g.estado === "igual"; }).length,
+          repes = propuesta.reduce(function(s, g){ return s + (g.repetidos || 0); }, 0);
       var conAlerta = propuesta.filter(function(g){ return g.alertas.length; });
       var fila = function(g, i, conCheck){
         var d = g.datos;
@@ -3193,11 +3343,12 @@ if(typeof module !== "undefined" && module.exports) module.exports = EntConsulta
           "<td>" + esc(d.oc || "—") + "</td>" +
           "<td>" + esc(d.fechaOC || "—") + "</td>" +
           "<td>" + esc(d.proveedor || "—") + "</td>" +
-          "<td>" + (g.alertas.length ? g.alertas.map(function(a){ return "⚠️ " + esc(a); }).join("<br>") : (g.destino ? "Completa uno existente" : "Nuevo") + (d.oc ? "" : ' <span style="color:#64748b">(sin OC todavía)</span>')) + "</td></tr>";
+          "<td>" + (g.alertas.length ? g.alertas.map(function(a){ return "⚠️ " + esc(a); }).join("<br>") : (g.estado === "igual" ? "Ya estaba en el registro" : g.estado === "completa" ? "Completa uno existente" : "Nuevo") + (d.oc ? "" : ' <span style="color:#64748b">(sin OC todavía)</span>')) + "</td></tr>";
       };
       var cab = function(conCheck){ return "<thead><tr>" + (conCheck ? "<th></th>" : "") + "<th>Paciente</th><th>Expediente</th><th>N° OC</th><th>Fecha OC</th><th>Proveedor</th><th>Control</th></tr></thead>"; };
       box.innerHTML =
-        '<div class="ent-cruce-res">📥 En espera de guardar: <b>' + enEspera.length + "</b> PDF → <b>" + propuesta.length + "</b> paciente(s): <b>" + nuevos + "</b> nuevo(s) y <b>" + compl + "</b> que completan uno ya cargado." +
+        '<div class="ent-cruce-res">📥 En espera de guardar: <b>' + enEspera.length + "</b> PDF → <b>" + propuesta.length + "</b> paciente(s): <b>" + nuevos + "</b> nuevo(s), <b>" + compl + "</b> que completan uno ya cargado y <b>" + iguales + "</b> que ya estaban (no cambian nada)." +
+          (repes ? "<br>♻️ " + repes + " PDF repetido(s) de la misma OC: se cuentan una sola vez." : "") +
           (conAlerta.length ? "<br>⚠️ <b>" + conAlerta.length + "</b> con algo para revisar (abajo)." : "<br>✔ Sin diferencias para revisar.") + "</div>" +
         (conAlerta.length ? '<div class="ent-scroll"><table class="ent-tabla">' + cab(false) + "<tbody>" + conAlerta.map(function(g){ return fila(g, propuesta.indexOf(g), false); }).join("") + "</tbody></table></div>" : "") +
         '<details class="ent-det"><summary>Ver el detalle de los ' + propuesta.length + " (y destildar los que no quieras guardar)</summary>" +
@@ -3214,8 +3365,8 @@ if(typeof module !== "undefined" && module.exports) module.exports = EntConsulta
       var av = $("ent-leyendo"); if(av) av.textContent = "";
     },
     subir: async function(){
-      var sel = propuesta.filter(function(g){ return g.incluir; });
-      if(!sel.length) return;
+      var sel = propuesta.filter(function(g){ return g.incluir && g.estado !== "igual"; });
+      if(!sel.length){ enEspera = []; destildados = {}; propuesta = []; UI.renderPropuesta(); var m0 = $("ent-admin-msg"); if(m0){ m0.className = "msg ok"; m0.textContent = "✔ No había nada nuevo para guardar: todo ya estaba en el registro."; } return; }
       var btn = $("ent-subir"), msg = $("ent-admin-msg"), ok = 0, err = [];
       if(btn) btn.disabled = true;
       for(var i = 0; i < sel.length; i++){
@@ -3226,7 +3377,7 @@ if(typeof module !== "undefined" && module.exports) module.exports = EntConsulta
       enEspera = []; destildados = {}; propuesta = []; UI.renderPropuesta();
       var av = $("ent-leyendo"); if(av) av.textContent = "";
       await new Promise(function(r){ setTimeout(r, 400); }); // que llegue el snapshot con lo recién guardado
-      var cr = null; try{ cr = await Store.cruzar(); }catch(_){ }
+      var cr = null; try{ await Store.revisar(); cr = await Store.cruzar(); }catch(_){ }
       if(msg){
         msg.className = err.length ? "msg er" : "msg ok";
         msg.textContent = "✅ " + ok + " paciente(s) guardado(s) en el registro." + (cr && cr.unidos.length ? " 🔄 Cruce: " + cr.unidos.length + " unido(s)." : "") + (err.length ? " ❌ Con error: " + err.join("; ") : "");
@@ -3234,20 +3385,27 @@ if(typeof module !== "undefined" && module.exports) module.exports = EntConsulta
     },
     cruzar: async function(){
       var btn = $("ent-cruzar"), box = $("ent-cruce"), t0 = btn ? btn.textContent : "";
-      if(btn){ btn.disabled = true; btn.textContent = "⏳ Cruzando…"; }
+      if(btn){ btn.disabled = true; btn.textContent = "⏳ Revisando…"; }
       try{
+        var rv = await Store.revisar();
         var cr = await Store.cruzar();
         await new Promise(function(r){ setTimeout(r, 400); });
-        var rs = Store.resumen(), lis = function(arr){ return arr.length ? "<br><span style=\"color:#64748b\">" + arr.slice(0, 40).map(esc).join(" · ") + (arr.length > 40 ? " …" : "") + "</span>" : ""; };
+        var rs = Store.resumen();
+        var lis = function(arr, n){ return arr.length ? '<div class="rg-lis">' + arr.slice(0, n || 40).map(function(x){ return "• " + esc(x); }).join("<br>") + (arr.length > (n || 40) ? "<br>…" : "") + "</div>" : ""; };
+        var problemas = rv.expCompartidos.length + rv.ocRepetidas.length + rv.sinResolver.length;
         box.innerHTML =
           '<div class="ent-cruce-res">' +
-          "<div>🔄 Unidos en este cruce: <b>" + cr.unidos.length + "</b>" + lis(cr.unidos) + "</div>" +
-          "<div>✅ Completos (expediente + OC): <b>" + rs.comp + "</b></div>" +
-          "<div>⏳ Con expediente, sin OC todavía: <b>" + rs.sinOc.length + "</b>" + lis(rs.sinOc) + "</div>" +
-          "<div>📄 Con OC y sin expediente: <b>" + rs.sinExp.length + "</b>" + lis(rs.sinExp) + "</div>" +
+          (rv.separados.length ? "<div>✂️ <b>Corregidos:</b> " + rv.separados.length + " OC estaban pegadas a otro paciente y se separaron." + lis(rv.separados) + "</div>" : "<div>✔ Ningún paciente tiene OC ajenas pegadas.</div>") +
+          (cr.unidos.length ? "<div>🔄 Unidos en este cruce: <b>" + cr.unidos.length + "</b>" + lis(cr.unidos) + "</div>" : "") +
+          "<div>✅ Completos (expediente + OC): <b>" + rs.comp + "</b> · ⏳ sin OC todavía: <b>" + rs.sinOc.length + "</b> · 📄 solo con OC: <b>" + rs.sinExp.length + "</b></div>" +
+          (problemas ? '<div class="ent-alerta"><b>Para revisar con Compras (' + problemas + "):</b>" +
+              (rv.expCompartidos.length ? "<div style=\"margin-top:6px\">Mismo N° de expediente en pacientes distintos:</div>" + lis(rv.expCompartidos) : "") +
+              (rv.ocRepetidas.length ? "<div style=\"margin-top:6px\">La misma OC en dos registros:</div>" + lis(rv.ocRepetidas) : "") +
+              (rv.sinResolver.length ? "<div style=\"margin-top:6px\">Con más de una OC y sin poder separarlas:</div>" + lis(rv.sinResolver) : "") +
+            "</div>" : "<div>✔ No hay expedientes repetidos ni OC duplicadas.</div>") +
           (cr.dudosos.length ? '<div class="ent-alerta">⚠️ No se unieron porque el nombre coincide con más de un expediente: ' + cr.dudosos.map(esc).join(" · ") + "</div>" : "") +
           "</div>";
-      }catch(e){ box.innerHTML = '<div class="ent-alerta">No se pudo cruzar: ' + esc(e && e.message || e) + "</div>"; }
+      }catch(e){ box.innerHTML = '<div class="ent-alerta">No se pudo revisar: ' + esc(e && e.message || e) + "</div>"; }
       finally{ if(btn){ btn.disabled = false; btn.textContent = t0; } }
     },
     eliminarRango: async function(){
@@ -3295,8 +3453,13 @@ if(typeof module !== "undefined" && module.exports) module.exports = EntConsulta
     if(s) s.style.display = "none"; if(m) m.style.display = "none"; if(v) v.style.display = "";
     Store.escuchar(); UI.render(); window.scrollTo(0, 0);
   }
+  var revisadoEnSesion = false;
   window.abrirEntregas = function(){
     mostrarRegistro();
+    if(!revisadoEnSesion){
+      revisadoEnSesion = true;
+      authReady.then(function(){ setTimeout(function(){ if(estado === "ok") UI.cruzar(); }, 800); });
+    }
     try{ if(!(history.state && history.state.genEnt)) history.pushState({ genEnt: true }, ""); }catch(_){}
   };
   var _mostrarInicio = window.mostrarInicio, _mostrarApp = window.mostrarApp, _volverInicio = window.volverInicio;
