@@ -174,6 +174,35 @@ hr{border:none;border-top:1.5px solid #e2e8f0;margin:16px 0 14px}
 .btn-ent-hdr:hover{background:rgba(255,255,255,.25)}
 @media print{#entregas-view{display:none!important}}
 .ent-cruce-res{margin-top:10px;font-size:13px;line-height:1.7;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:10px 12px}
+
+/* Mini pantalla de búsqueda del registro */
+.reg-ov{position:fixed;inset:0;background:rgba(15,23,42,.55);z-index:10000;display:flex;align-items:flex-start;justify-content:center;padding:6vh 14px 14px}
+.reg-box{background:#fff;width:100%;max-width:640px;max-height:86vh;border-radius:14px;box-shadow:0 20px 60px rgba(0,0,0,.35);display:flex;flex-direction:column;overflow:hidden}
+.reg-top{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;padding:14px 16px;background:linear-gradient(135deg,#1a56a0,#0f3a6e);color:#fff}
+.reg-top b{font-size:15px}
+.reg-subt{font-size:12px;opacity:.85;margin-top:2px}
+.reg-x{background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.4);color:#fff;border-radius:8px;width:32px;height:32px;cursor:pointer;font-size:15px}
+.reg-x:hover{background:rgba(255,255,255,.3)}
+.reg-body{padding:14px 16px 6px;overflow:auto;flex:1}
+.reg-filtro{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:8px}
+.reg-filtro select{padding:6px 9px;border:1px solid #cbd5e1;border-radius:7px;font-size:12px;background:#fff}
+.reg-filtro .ent-estado{margin:0}
+.reg-res{padding-bottom:8px}
+.reg-vacio{font-size:13px;color:#64748b;padding:10px 2px}
+.reg-ficha{border:1.5px solid #e2e8f0;border-radius:10px;padding:10px 12px;margin-bottom:9px}
+.reg-cab{display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:8px}
+.reg-pac{font-size:15px;font-weight:700;color:#1a2b4a}
+.reg-acc{display:flex;gap:5px;flex-shrink:0}
+.reg-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px 14px}
+.reg-campo span{display:block;font-size:10px;text-transform:uppercase;letter-spacing:.4px;color:#64748b;font-weight:700}
+.reg-campo b{font-size:13px;color:#1a2b4a;font-weight:600}
+.reg-campo b.num{font-family:Consolas,"Courier New",monospace;font-weight:700;color:#1a56a0;font-size:14px}
+.reg-ficha .warn{font-size:11px;color:#92400e;background:#fffbeb;border:1px solid #fde68a;border-radius:5px;padding:4px 7px;margin-top:8px}
+.reg-ficha .sub{font-size:11px;color:#64748b;font-weight:400}
+.reg-pie{padding:10px 16px;border-top:1px solid #e2e8f0;background:#f8fafc;text-align:right}
+.ent-det{margin-top:8px}
+.ent-det summary{cursor:pointer;font-size:12px;color:#1a56a0;font-weight:600}
+@media print{#reg-modal{display:none!important}}
 </style>
 </head>
 <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
@@ -191,7 +220,7 @@ hr{border:none;border-top:1.5px solid #e2e8f0;margin:16px 0 14px}
     <div class="splash-title">📋 Generador de Resoluciones</div>
     <div class="splash-sub">Programa Integrado de Salud<br>Ministerio de Salud Pública de Tucumán</div>
     <button class="splash-btn" onclick="ingresar()">Ingresar</button>
-    <button class="splash-btn splash-btn-ent" onclick="abrirEntregas()">🔎 Buscar expediente / orden de compra</button>
+    <button class="splash-btn splash-btn-ent" onclick="abrirBuscadorRegistro()">🔎 Buscar expediente / orden de compra</button>
     <div class="splash-foot">Internación Domiciliaria · PRIS · SI.PRO.SA.</div>
   </div>
 </div>
@@ -199,7 +228,7 @@ hr{border:none;border-top:1.5px solid #e2e8f0;margin:16px 0 14px}
 <div class="app" id="app-main" style="display:none">
 <div class="card" id="form-card">
   <div class="header" style="position:relative">
-    <button type="button" class="btn-ent-hdr" onclick="abrirEntregas()" title="Registro de órdenes de compra">🔎 Registro OC</button>
+    <button type="button" class="btn-ent-hdr" onclick="abrirBuscadorRegistro()" title="Buscar expediente / orden de compra">🔎 Buscar OC</button>
     <h1>📋 Generador de Resoluciones</h1>
     <p>Programa Integrado de Salud — Ministerio de Salud Pública de Tucumán</p>
   </div>
@@ -455,60 +484,70 @@ hr{border:none;border-top:1.5px solid #e2e8f0;margin:16px 0 14px}
 </div>
 </div>
 
-<!-- ===== REGISTRO DE ÓRDENES (anteojos / audífonos): buscar N° de expediente y de OC ===== -->
+<!-- ===== REGISTRO DE ÓRDENES (anteojos / audífonos) ===== -->
+<!-- Mini pantalla de búsqueda -->
+<div class="reg-ov" id="reg-modal" style="display:none" onclick="if(event.target===this) cerrarBuscadorRegistro()">
+  <div class="reg-box" role="dialog" aria-label="Buscar expediente u orden de compra">
+    <div class="reg-top">
+      <div><b>🔎 Buscar expediente / orden de compra</b><div class="reg-subt">Anteojos y audífonos</div></div>
+      <button type="button" class="reg-x" onclick="cerrarBuscadorRegistro()" title="Cerrar (Esc)">✕</button>
+    </div>
+    <div class="reg-body">
+      <div class="ent-buscar">
+        <span>🔍</span>
+        <input id="ent-q" type="text" autocomplete="off" oninput="EntUI.render()" placeholder="Apellido y nombre, N° de expediente (8871/410) o N° de OC">
+      </div>
+      <div class="reg-filtro">
+        <select id="ent-f-tipo" onchange="EntUI.render()">
+          <option value="">Anteojos y audífonos</option>
+          <option value="anteojos">👓 Solo anteojos</option>
+          <option value="audio">🎧 Solo audífonos</option>
+        </select>
+        <span id="ent-estado" class="ent-estado">Conectando…</span>
+      </div>
+      <div id="ent-lista" class="reg-res"></div>
+    </div>
+    <div class="reg-pie">
+      <button type="button" class="ent-mini" onclick="abrirEntregas()">⚙️ Cargar PDFs y administrar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Administración del registro -->
 <div class="ent-wrap" id="entregas-view" style="display:none">
 <div class="card">
   <div class="header">
-    <h1>🔎 Registro de órdenes — Anteojos y Audífonos</h1>
-    <p>Buscá al paciente y obtené su N° de expediente y de orden de compra</p>
+    <h1>⚙️ Registro de órdenes — Anteojos y Audífonos</h1>
+    <p>Cargar PDFs, cruzar datos y administrar el registro</p>
   </div>
   <div class="body">
-    <div class="ent-buscar">
-      <span>🔍</span>
-      <input id="ent-q" type="text" autocomplete="off" oninput="EntUI.render()" placeholder="Apellido y nombre, N° de expediente (8871/410) o N° de orden de compra">
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:6px">
+      <div id="ent-resumen" class="ent-estado" style="margin:0">Conectando…</div>
+      <button type="button" class="ent-btn ent-btn-azul" onclick="abrirBuscadorRegistro()">🔎 Buscar en el registro</button>
     </div>
-    <div class="ent-filtros">
-      <select id="ent-f-tipo" onchange="EntUI.render()">
-        <option value="">Anteojos y audífonos</option>
-        <option value="anteojos">👓 Solo anteojos</option>
-        <option value="audio">🎧 Solo audífonos</option>
-      </select>
-      <select id="ent-f-cruce" onchange="EntUI.render()">
-        <option value="">Todos</option>
-        <option value="comp">✅ Completos (expediente + OC)</option>
-        <option value="sinoc">⏳ Sin OC todavía</option>
-        <option value="sinexp">📄 Solo con OC</option>
-      </select>
+
+    <div class="stitle" style="margin-top:14px">1 · Cargar PDFs (de a una carpeta por vez)</div>
+    <div class="hint" style="margin-bottom:10px">Cargá primero la carpeta de <b>expedientes</b>, guardá, y después la de <b>órdenes de compra</b> (el orden no importa). Los PDF <b>no</b> se guardan: solo los datos.</div>
+    <input id="ent-files" type="file" accept="application/pdf,.pdf" multiple style="display:none" onchange="EntUI.analizar(this.files); this.value='';">
+    <button type="button" class="ent-btn ent-btn-azul" onclick="document.getElementById('ent-files').click()">📂 Elegir PDFs…</button>
+    <div id="ent-prop"></div>
+    <div id="ent-admin-msg" class="msg"></div>
+
+    <hr>
+    <div class="stitle">2 · Cruzar datos</div>
+    <div class="hint" style="margin-bottom:10px">Une cada orden de compra con el expediente de su paciente (por N° de expediente y, si no coincide, por nombre). Se hace solo al guardar cada carga; con este botón lo repetís y ves el resumen.</div>
+    <button type="button" class="ent-btn ent-btn-verde" id="ent-cruzar" onclick="EntUI.cruzar()">🔄 Cruzar datos y ver resumen</button>
+    <div id="ent-cruce"></div>
+
+    <hr>
+    <div class="stitle">3 · Eliminar del registro por fecha de carga</div>
+    <div class="ent-del">
+      <label>Desde <input id="ent-del-desde" type="date"></label>
+      <label>Hasta <input id="ent-del-hasta" type="date"></label>
+      <button type="button" class="ent-btn ent-btn-rojo" onclick="EntUI.eliminarRango()">🗑️ Eliminar las del rango</button>
+      <button type="button" class="ent-btn ent-btn-rojo-claro" onclick="EntUI.eliminarTodas()">🗑️ Eliminar todo el registro</button>
     </div>
-    <div id="ent-estado" class="ent-estado">Conectando…</div>
-    <div class="ent-scroll"><div id="ent-lista"></div></div>
-
-    <details class="ent-admin" id="ent-admin">
-      <summary>⚙️ Cargar PDFs y administrar el registro</summary>
-      <div class="ent-admin-body">
-        <div class="stitle">1 · Cargar PDFs (de a una carpeta por vez)</div>
-        <div class="hint" style="margin-bottom:10px">Cargá primero la carpeta de <b>expedientes</b>, guardá, y después la carpeta de <b>órdenes de compra</b> (o al revés: el orden no importa). En cada carga el sistema lee los documentos y te muestra lo que encontró antes de guardar. Los PDF <b>no</b> se guardan: solo los datos.</div>
-        <input id="ent-files" type="file" accept="application/pdf,.pdf" multiple style="display:none" onchange="EntUI.analizar(this.files); this.value='';">
-        <button type="button" class="ent-btn ent-btn-azul" onclick="document.getElementById('ent-files').click()">📂 Elegir PDFs…</button>
-        <div id="ent-prop"></div>
-
-        <hr>
-        <div class="stitle">2 · Cruzar datos</div>
-        <div class="hint" style="margin-bottom:10px">Une cada orden de compra con el expediente de su paciente (por N° de expediente y, si no coincide, por nombre). Se hace solo al guardar cada carga; con este botón lo repetís y ves el resumen.</div>
-        <button type="button" class="ent-btn ent-btn-verde" id="ent-cruzar" onclick="EntUI.cruzar()">🔄 Cruzar datos y ver resumen</button>
-        <div id="ent-cruce"></div>
-
-        <hr>
-        <div class="stitle">3 · Eliminar del registro por fecha de carga</div>
-        <div class="ent-del">
-          <label>Desde <input id="ent-del-desde" type="date"></label>
-          <label>Hasta <input id="ent-del-hasta" type="date"></label>
-          <button type="button" class="ent-btn ent-btn-rojo" onclick="EntUI.eliminarRango()">🗑️ Eliminar las del rango</button>
-          <button type="button" class="ent-btn ent-btn-rojo-claro" onclick="EntUI.eliminarTodas()">🗑️ Eliminar todo el registro</button>
-        </div>
-        <div id="ent-admin-msg" class="msg"></div>
-      </div>
-    </details>
+    <div class="hint" style="margin-top:8px">Para eliminar un paciente solo, buscalo y tocá 🗑️ en su ficha.</div>
   </div>
 </div>
 </div>
@@ -2509,6 +2548,13 @@ var EntCore = (function(){
   /* Nombre de archivo:
      OC:  "8871-410 URAGA ALEXIS MIGUEL OC 20552"  (a veces con texto extra al final)
      EXP: "EXPEDIENTE 8871 - 410 LETRA U AÑO 2026 URAGA ALEXIS MIGUEL ANTEOJOS X2 ALTA GRADUACION" */
+  // Calificativos que a veces quedan pegados al nombre en el archivo ("PEREA MARIA ISABEL BAJA Y
+  // LABORATORIO", "… ALTA GRADUACION", "… PROGRAMA CONTEXTO DE ENCIERRO"): van a "extra", no al nombre.
+  var RE_CALIF = /\s+\b(?:ALTA\s+GRADUACION|BAJA\s+GRADUACION|ALTA\s+Y\b|BAJA\s+Y\b|LABORATORIO|PROGRAMA|CONTEXTO\s+DE\s+ENCIERRO|BIFOCAL(?:ES)?|MULTIFOCAL(?:ES)?)\b.*$/;
+  function separarCalif(pac){
+    var p = String(pac || ""), m = p.match(RE_CALIF);
+    return m ? { pac: p.slice(0, m.index).trim(), calif: m[0].trim() } : { pac: p.trim(), calif: "" };
+  }
   function leerNombreArchivo(nombre){
     var s = String(nombre||"").replace(/\.pdf$/i,"").replace(/_/g," ").replace(/\s+/g," ").trim();
     var u = sinTildes(s).toUpperCase();
@@ -2516,11 +2562,13 @@ var EntCore = (function(){
     if(m){
       var resto = m[5], t = resto.match(RE_TIPO), pac = t ? resto.slice(0, t.index) : resto, desp = t ? resto.slice(t.index + t[0].length) : "";
       var x = desp.match(/\bX\s*(\d{1,2})\b/);
-      return { rol:"expediente", num:soloNum(m[1]), cod:soloNum(m[2]), letra:m[3], anio:m[4], paciente:normNombre(pac),
-               tipo: t ? tipoDe(t[0]) : "", cantidad: x ? parseInt(x[1],10) : null, extra: desp.replace(/\bX\s*\d{1,2}\b/,"").trim() };
+      var sc = separarCalif(normNombre(pac));
+      return { rol:"expediente", num:soloNum(m[1]), cod:soloNum(m[2]), letra:m[3], anio:m[4], paciente:sc.pac,
+               tipo: t ? tipoDe(t[0]) : "", cantidad: x ? parseInt(x[1],10) : null,
+               extra: [sc.calif, desp.replace(/\bX\s*\d{1,2}\b/,"").trim()].filter(Boolean).join(" ") };
     }
     m = u.match(/^(\d{1,6})\s*-\s*(\d{2,4})\s+(.+?)\s+O\.?\s*C\.?\s*(?:N[°ºO]?\.?\s*)?(\d{4,6})\b\s*(.*)$/);
-    if(m) return { rol:"oc", num:soloNum(m[1]), cod:soloNum(m[2]), paciente:normNombre(m[3]), oc:m[4], extra:m[5].trim() };
+    if(m){ var so = separarCalif(normNombre(m[3])); return { rol:"oc", num:soloNum(m[1]), cod:soloNum(m[2]), paciente:so.pac, oc:m[4], extra:[so.calif, m[5].trim()].filter(Boolean).join(" ") }; }
     return { rol:"", paciente:"" };
   }
 
@@ -2639,7 +2687,7 @@ var EntCore = (function(){
         num: exp.num || oc.num || "", cod: exp.cod || oc.cod || "",
         letra: exp.letra || oc.letra || "", anio: exp.anio || oc.anio || "",
         oc: get("oc","oc"), paciente: oc.paciente || exp.paciente || (g.items[0]||{}).paciente || "",
-        tipo: exp.tipo || oc.tipo || "", cantidad: oc.cantidad || exp.cantidad || null, extra: exp.extra || "",
+        tipo: exp.tipo || oc.tipo || "", cantidad: oc.cantidad || exp.cantidad || null, extra: exp.extra || oc.extra || "",
         fechaOC: oc.fechaOC || "", proveedor: oc.proveedor || ""
       };
       g.items.forEach(function(it){ (it.alertas||[]).forEach(function(a){ g.alertas.push(a); }); });
@@ -2882,30 +2930,42 @@ if(typeof module !== "undefined" && module.exports) module.exports = EntCore;
       });
     },
     render: function(){
+      // Resumen (pantalla de administración)
+      var rsBox = $("ent-resumen");
+      if(rsBox){
+        if(estado === "sin-acceso") rsBox.innerHTML = '<div class="ent-alerta">Sin acceso a la base. Revisá la regla de Firestore para <b>genres_registro_oc</b> (y que el login anónimo esté habilitado).</div>';
+        else if(estado === "conectando") rsBox.textContent = "Conectando…";
+        else { var rs0 = Store.resumen(); rsBox.textContent = cache.length + " paciente(s) en el registro · " + rs0.comp + " con expediente y OC · " + rs0.sinOc.length + " sin OC todavía · " + rs0.sinExp.length + " solo con OC"; }
+      }
+      // Resultados (mini pantalla de búsqueda)
       var cont = $("ent-lista"), st = $("ent-estado");
-      if(!cont) return;
-      if(estado === "sin-acceso"){ st.innerHTML = ""; cont.innerHTML = '<div class="ent-alerta">Sin acceso a la base. Revisá la regla de Firestore para <b>genres_registro_oc</b> (y que el login anónimo esté habilitado).</div>'; return; }
-      if(estado === "conectando"){ st.textContent = "Conectando…"; return; }
-      var lista = UI.filtrar(), q = (($("ent-q") || {}).value || "").trim();
-      var rs = Store.resumen();
-      st.textContent = cache.length + " paciente(s) en el registro · " + rs.comp + " con expediente y OC · " + rs.sinOc.length + " sin OC todavía · " + rs.sinExp.length + " solo con OC" + (q ? " · " + lista.length + " resultado(s) para \u201c" + q + "\u201d" : "");
-      if(!lista.length){ cont.innerHTML = '<div class="hint" style="font-size:13px;color:#64748b;padding:8px 2px">' + (cache.length ? "No hay coincidencias." : "El registro está vacío. Se completa solo al generar resoluciones, o cargando los PDF en \u201cCargar PDFs y administrar el registro\u201d.") + "</div>"; return; }
-      var filas = lista.slice(0, 200).map(function(r){
-        var ocs = (r.ocs && r.ocs.length) ? r.ocs : (r.oc ? [r.oc] : []);
-        var tipo = r.tipo === "audio" ? "🎧 Audífonos" : r.tipo === "anteojos" ? "👓 Anteojos" : "—";
-        var alertas = (r.alertas || []).map(function(a){ return '<div class="warn">⚠️ ' + esc(a) + "</div>"; }).join("");
-        return "<tr>" +
-          '<td><div class="pac">' + esc(r.paciente || "(sin nombre)") + "</div>" + (r.extra ? '<div class="sub">' + esc(r.extra) + "</div>" : "") + alertas + "</td>" +
-          "<td>" + tipo + (r.cantidad ? " ×" + r.cantidad : "") + "</td>" +
-          '<td><span class="num">' + esc(r.nroExp || C.expedienteTexto(r) || "—") + "</span></td>" +
-          "<td>" + (ocs.length ? ocs.map(function(o){ return '<span class="num">' + esc(o) + "</span>"; }).join("<br>") : '<span class="sub">sin OC todavía</span>') + (r.fechaOC ? '<div class="sub">' + esc(r.fechaOC) + "</div>" : "") + "</td>" +
-          "<td>" + esc(r.proveedor || "") + "</td>" +
-          '<td class="sub">' + esc(r.creadoTxt || "") + "</td>" +
-          '<td class="acc"><button type="button" class="ent-mini" title="Copiar expediente y OC" onclick="EntUI.copiar(\'' + r._id + '\', this)">📋 Copiar</button> ' +
-          '<button type="button" class="ent-mini rojo" title="Eliminar del registro" onclick="EntUI.eliminar(\'' + r._id + '\')">🗑️</button></td></tr>';
-      }).join("");
-      cont.innerHTML = '<table class="ent-reg"><thead><tr><th>Paciente</th><th>Tipo</th><th>Expediente</th><th>N° OC</th><th>Proveedor</th><th>Cargado</th><th></th></tr></thead><tbody>' + filas + "</tbody></table>" +
-        (lista.length > 200 ? '<div class="hint">Se muestran los primeros 200. Afiná la búsqueda.</div>' : "");
+      if(!cont || !st) return;
+      if(estado === "sin-acceso"){ st.textContent = ""; cont.innerHTML = '<div class="ent-alerta">Sin acceso a la base del registro.</div>'; return; }
+      if(estado === "conectando"){ st.textContent = "Conectando…"; cont.innerHTML = ""; return; }
+      var q = (($("ent-q") || {}).value || "").trim();
+      if(q.length < 2){ st.textContent = cache.length + " paciente(s) en el registro. Escribí apellido, N° de expediente o N° de OC."; cont.innerHTML = ""; return; }
+      var lista = UI.filtrar();
+      st.textContent = lista.length ? lista.length + " resultado(s)" : "";
+      if(!lista.length){ cont.innerHTML = '<div class="reg-vacio">No se encontró \u201c' + esc(q) + '\u201d en el registro.</div>'; return; }
+      cont.innerHTML = lista.slice(0, 15).map(UI.ficha).join("") +
+        (lista.length > 15 ? '<div class="reg-vacio">Hay ' + lista.length + " coincidencias: escribí más para afinar.</div>" : "");
+    },
+    ficha: function(r){
+      var ocs = (r.ocs && r.ocs.length) ? r.ocs : (r.oc ? [r.oc] : []);
+      var tipo = r.tipo === "audio" ? "🎧 Audífonos" : r.tipo === "anteojos" ? "👓 Anteojos" : "—";
+      var campo = function(et, val, num){ return '<div class="reg-campo"><span>' + et + "</span><b" + (num ? ' class="num"' : "") + ">" + val + "</b></div>"; };
+      var alertas = (r.alertas || []).map(function(a){ return '<div class="warn">⚠️ ' + esc(a) + "</div>"; }).join("");
+      return '<div class="reg-ficha">' +
+        '<div class="reg-cab"><div class="reg-pac">' + esc(r.paciente || "(sin nombre)") + "</div>" +
+          '<div class="reg-acc"><button type="button" class="ent-mini" title="Copiar paciente, expediente y OC" onclick="EntUI.copiar(\'' + r._id + '\', this)">📋 Copiar</button>' +
+          '<button type="button" class="ent-mini rojo" title="Eliminar del registro" onclick="EntUI.eliminar(\'' + r._id + '\')">🗑️</button></div></div>' +
+        '<div class="reg-grid">' +
+          campo("Expediente", esc(r.nroExp || C.expedienteTexto(r) || "—"), true) +
+          campo("N° de orden de compra", ocs.length ? ocs.map(esc).join(" / ") : '<i class="sub">sin OC todavía</i>', true) +
+          campo("Fecha de la OC", esc(r.fechaOC || "—")) +
+          campo("Proveedor", esc(r.proveedor || "—")) +
+          campo("Tipo", tipo + (r.cantidad ? " ×" + r.cantidad : "") + (r.extra ? ' <span class="sub">· ' + esc(r.extra) + "</span>" : "")) +
+        "</div>" + alertas + "</div>";
     },
     rec: function(id){ return cache.filter(function(r){ return r._id === id; })[0]; },
     copiar: function(id, btn){
@@ -2944,19 +3004,28 @@ if(typeof module !== "undefined" && module.exports) module.exports = EntCore;
     renderPropuesta: function(){
       var box = $("ent-prop"); if(!box) return;
       if(!propuesta.length){ box.innerHTML = ""; return; }
-      var conAlerta = propuesta.filter(function(g){ return g.alertas.length; }).length;
-      var filas = propuesta.map(function(g, i){
+      var nuevos = propuesta.filter(function(g){ return !g.destino; }).length, compl = propuesta.length - nuevos;
+      var conAlerta = propuesta.filter(function(g){ return g.alertas.length; });
+      var fila = function(g, i, conCheck){
         var d = g.datos;
-        return '<tr class="' + (g.alertas.length ? "warn" : "") + '"><td><input type="checkbox" ' + (g.incluir ? "checked" : "") + ' onchange="EntUI.toggleProp(' + i + ',this.checked)"></td>' +
+        return "<tr" + (g.alertas.length ? ' class="warn"' : "") + ">" +
+          (conCheck ? '<td><input type="checkbox" ' + (g.incluir ? "checked" : "") + ' onchange="EntUI.toggleProp(' + i + ',this.checked)"></td>' : "") +
           "<td><b>" + esc(g.destino ? g.destino.paciente : d.paciente) + "</b></td>" +
-          "<td>" + esc(C.expedienteTexto(d) || "—") + "</td><td>" + esc(d.oc || "—") + (d.fechaOC ? "<br>" + esc(d.fechaOC) : "") + "</td>" +
-          "<td>" + esc(d.proveedor || "") + "</td><td>" + (g.destino ? "Completa uno existente" : "Nuevo") + "</td>" +
-          "<td>" + (g.alertas.length ? g.alertas.map(function(a){ return "⚠️ " + esc(a); }).join("<br>") : "✔") + "</td></tr>";
-      }).join("");
-      box.innerHTML = '<table class="ent-tabla"><thead><tr><th></th><th>Paciente</th><th>Expediente</th><th>N° OC</th><th>Proveedor</th><th>Registro</th><th>Control</th></tr></thead><tbody>' + filas + "</tbody></table>" +
+          "<td>" + esc(C.expedienteTexto(d) || "—") + "</td>" +
+          "<td>" + esc(d.oc || "—") + "</td>" +
+          "<td>" + esc(d.fechaOC || "—") + "</td>" +
+          "<td>" + esc(d.proveedor || "—") + "</td>" +
+          "<td>" + (g.alertas.length ? g.alertas.map(function(a){ return "⚠️ " + esc(a); }).join("<br>") : (g.destino ? "Completa uno existente" : "Nuevo")) + "</td></tr>";
+      };
+      var cab = function(conCheck){ return "<thead><tr>" + (conCheck ? "<th></th>" : "") + "<th>Paciente</th><th>Expediente</th><th>N° OC</th><th>Fecha OC</th><th>Proveedor</th><th>Control</th></tr></thead>"; };
+      box.innerHTML =
+        '<div class="ent-cruce-res">📄 Se leyeron <b>' + propuesta.length + "</b> paciente(s): <b>" + nuevos + "</b> nuevo(s) y <b>" + compl + "</b> que completan uno ya cargado." +
+          (conAlerta.length ? "<br>⚠️ <b>" + conAlerta.length + "</b> con algo para revisar (abajo)." : "<br>✔ Sin diferencias para revisar.") + "</div>" +
+        (conAlerta.length ? '<div class="ent-scroll"><table class="ent-tabla">' + cab(false) + "<tbody>" + conAlerta.map(function(g){ return fila(g, propuesta.indexOf(g), false); }).join("") + "</tbody></table></div>" : "") +
+        '<details class="ent-det"><summary>Ver el detalle de los ' + propuesta.length + " (y destildar los que no quieras guardar)</summary>" +
+          '<div class="ent-scroll"><table class="ent-tabla">' + cab(true) + "<tbody>" + propuesta.map(function(g, i){ return fila(g, i, true); }).join("") + "</tbody></table></div></details>" +
         '<div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap"><button type="button" class="ent-btn ent-btn-verde" id="ent-subir" onclick="EntUI.subir()">💾 Guardar en el registro</button>' +
-        '<button type="button" class="ent-btn ent-btn-gris" onclick="EntUI.cancelarProp()">Cancelar</button></div>' +
-        '<div class="hint" style="margin-top:6px">' + propuesta.length + " paciente(s) · " + conAlerta + " con algo para revisar (en amarillo). Destildá los que no quieras guardar.</div>";
+        '<button type="button" class="ent-btn ent-btn-gris" onclick="EntUI.cancelarProp()">Cancelar</button></div>';
     },
     toggleProp: function(i, v){ if(propuesta[i]) propuesta[i].incluir = v; },
     cancelarProp: function(){ propuesta = []; UI.renderPropuesta(); },
@@ -3018,12 +3087,28 @@ if(typeof module !== "undefined" && module.exports) module.exports = EntCore;
   };
   window.EntUI = UI;
 
-  /* ---------- Navegación ---------- */
+  /* ---------- Navegación ----------
+     • Buscador: mini pantalla (ventana emergente) sobre lo que esté abierto.
+     • Administración (cargar PDFs, cruzar, eliminar): pantalla propia. */
+  window.abrirBuscadorRegistro = function(){
+    var m = $("reg-modal"); if(!m) return;
+    m.style.display = "flex"; document.body.style.overflow = "hidden";
+    Store.escuchar(); UI.render();
+    setTimeout(function(){ var q = $("ent-q"); if(q){ q.focus(); q.select(); } }, 30);
+  };
+  window.cerrarBuscadorRegistro = function(){
+    var m = $("reg-modal"); if(m) m.style.display = "none";
+    document.body.style.overflow = "";
+  };
+  document.addEventListener("keydown", function(e){
+    var m = $("reg-modal");
+    if(e.key === "Escape" && m && m.style.display !== "none") window.cerrarBuscadorRegistro();
+  });
   function mostrarRegistro(){
+    window.cerrarBuscadorRegistro();
     var s = $("splash"), m = $("app-main"), v = $("entregas-view");
     if(s) s.style.display = "none"; if(m) m.style.display = "none"; if(v) v.style.display = "";
     Store.escuchar(); UI.render(); window.scrollTo(0, 0);
-    setTimeout(function(){ var q = $("ent-q"); if(q) q.focus(); }, 50);
   }
   window.abrirEntregas = function(){
     mostrarRegistro();
