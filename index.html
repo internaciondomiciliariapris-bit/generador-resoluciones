@@ -173,6 +173,7 @@ hr{border:none;border-top:1.5px solid #e2e8f0;margin:16px 0 14px}
 .btn-ent-hdr{position:absolute;right:20px;top:50%;transform:translateY(-50%);padding:8px 12px;border:1px solid rgba(255,255,255,.5);border-radius:8px;background:rgba(255,255,255,.12);color:#fff;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit}
 .btn-ent-hdr:hover{background:rgba(255,255,255,.25)}
 @media print{#entregas-view{display:none!important}}
+.ent-cruce-res{margin-top:10px;font-size:13px;line-height:1.7;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:10px 12px}
 </style>
 </head>
 <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
@@ -472,6 +473,12 @@ hr{border:none;border-top:1.5px solid #e2e8f0;margin:16px 0 14px}
         <option value="anteojos">👓 Solo anteojos</option>
         <option value="audio">🎧 Solo audífonos</option>
       </select>
+      <select id="ent-f-cruce" onchange="EntUI.render()">
+        <option value="">Todos</option>
+        <option value="comp">✅ Completos (expediente + OC)</option>
+        <option value="sinoc">⏳ Sin OC todavía</option>
+        <option value="sinexp">📄 Solo con OC</option>
+      </select>
     </div>
     <div id="ent-estado" class="ent-estado">Conectando…</div>
     <div class="ent-scroll"><div id="ent-lista"></div></div>
@@ -479,14 +486,20 @@ hr{border:none;border-top:1.5px solid #e2e8f0;margin:16px 0 14px}
     <details class="ent-admin" id="ent-admin">
       <summary>⚙️ Cargar PDFs y administrar el registro</summary>
       <div class="ent-admin-body">
-        <div class="stitle">1 · Cargar órdenes de compra y expedientes</div>
-        <div class="hint" style="margin-bottom:10px">Elegí juntos todos los PDF (las OC y los expedientes, de las dos carpetas). El sistema lee cada documento, arma el registro (paciente, expediente, N° de OC, fecha, proveedor) y te lo muestra antes de guardar. Los PDF <b>no</b> se guardan: solo los datos.</div>
+        <div class="stitle">1 · Cargar PDFs (de a una carpeta por vez)</div>
+        <div class="hint" style="margin-bottom:10px">Cargá primero la carpeta de <b>expedientes</b>, guardá, y después la carpeta de <b>órdenes de compra</b> (o al revés: el orden no importa). En cada carga el sistema lee los documentos y te muestra lo que encontró antes de guardar. Los PDF <b>no</b> se guardan: solo los datos.</div>
         <input id="ent-files" type="file" accept="application/pdf,.pdf" multiple style="display:none" onchange="EntUI.analizar(this.files); this.value='';">
         <button type="button" class="ent-btn ent-btn-azul" onclick="document.getElementById('ent-files').click()">📂 Elegir PDFs…</button>
         <div id="ent-prop"></div>
 
         <hr>
-        <div class="stitle">2 · Eliminar del registro por fecha de carga</div>
+        <div class="stitle">2 · Cruzar datos</div>
+        <div class="hint" style="margin-bottom:10px">Une cada orden de compra con el expediente de su paciente (por N° de expediente y, si no coincide, por nombre). Se hace solo al guardar cada carga; con este botón lo repetís y ves el resumen.</div>
+        <button type="button" class="ent-btn ent-btn-verde" id="ent-cruzar" onclick="EntUI.cruzar()">🔄 Cruzar datos y ver resumen</button>
+        <div id="ent-cruce"></div>
+
+        <hr>
+        <div class="stitle">3 · Eliminar del registro por fecha de carga</div>
         <div class="ent-del">
           <label>Desde <input id="ent-del-desde" type="date"></label>
           <label>Hasta <input id="ent-del-hasta" type="date"></label>
@@ -2772,6 +2785,7 @@ if(typeof module !== "undefined" && module.exports) module.exports = EntCore;
           paciente: d.paciente, pacienteNorm: C.normNombre(d.paciente), nroRes: p.nroRes || "", fechaRes: p.fecha || "", actualizadoMs: Date.now()
         };
         if(cant) datos.cantidad = cant;
+        datos.tieneExp = true; // el generador ya conoce el expediente
         if(!mismo){ datos.creadoMs = Date.now(); datos.creadoTxt = hoyTxt(); datos.origen = "generador"; datos.ocs = []; }
         return db.collection(COL).doc(mismo ? ex.rec._id : idRegistro(d)).set(datos, { merge: true })
           .then(function(){ return true; }).catch(function(e){ console.warn("Registro OC (generador):", e); return false; });
@@ -2789,6 +2803,7 @@ if(typeof module !== "undefined" && module.exports) module.exports = EntCore;
         // Se guardan solo las diferencias encontradas (no los "falta…", que dejan de valer al completar).
         alertas: unir(rec && rec.alertas, (g.alertas || []).filter(function(a){ return !/^Falta /.test(a); })), actualizadoMs: Date.now()
       };
+      datos.tieneExp = !!((rec && rec.tieneExp) || g.items.some(function(i){ return i.rol === "expediente"; }));
       datos.pacienteNorm = C.normNombre(datos.paciente);
       datos.nroExp = (rec && rec.nroExp) || C.expedienteTexto(datos);
       if(d.oc) datos.oc = d.oc;
@@ -2799,7 +2814,51 @@ if(typeof module !== "undefined" && module.exports) module.exports = EntCore;
       if(!rec){ datos.creadoMs = Date.now(); datos.creadoTxt = hoyTxt(); datos.origen = "pdf"; }
       await db.collection(COL).doc(rec ? rec._id : idRegistro(datos)).set(datos, { merge: true });
     },
-    eliminar: function(rec){ return db.collection(COL).doc(rec._id).delete(); }
+    eliminar: function(rec){ return db.collection(COL).doc(rec._id).delete(); },
+    /* Cruza los datos cargados en tandas separadas (primero expedientes, después OC, o al revés):
+       une cada registro que tiene SOLO la OC con el que tiene SOLO el expediente del mismo paciente
+       (por N° de expediente o, si el N° no coincide, por nombre — con aviso). Si el nombre
+       coincide con más de un expediente, no adivina: lo deja marcado para revisar a mano. */
+    cruzar: async function(){
+      var ok = await authReady; if(!ok || !db) throw new Error("Sin acceso a la base");
+      var sinOc = cache.filter(function(r){ return r.tieneExp && !(r.ocs && r.ocs.length); });
+      var soloOc = cache.filter(function(r){ return (r.ocs && r.ocs.length) && !r.tieneExp; });
+      var unidos = [], dudosos = [], usados = {};
+      for(var i = 0; i < soloOc.length; i++){
+        var b = soloOc[i];
+        var cands = sinOc.filter(function(a){ return !usados[a._id] && C.clave(a.num, a.cod) === C.clave(b.num, b.cod) && C.clave(a.num, a.cod); });
+        var porNombre = false;
+        if(!cands.length){
+          cands = sinOc.filter(function(a){ return !usados[a._id] && C.mismaPersona(a.paciente, b.paciente) && (!a.tipo || !b.tipo || a.tipo === b.tipo); });
+          porNombre = true;
+        }
+        if(cands.length !== 1){ if(cands.length > 1) dudosos.push(b.paciente + " (coincide con " + cands.length + " expedientes)"); continue; }
+        var a = cands[0]; usados[a._id] = true;
+        var aviso = porNombre && C.clave(a.num, a.cod) !== C.clave(b.num, b.cod)
+          ? ["Unidos al cruzar datos: el expediente figura como " + (a.nroExp || C.expedienteTexto(a)) + " y la OC " + (b.ocs || []).join("/") + " como " + C.clave(b.num, b.cod) + ". Revisá cuál es el correcto."] : [];
+        var datos = {
+          ocs: unir(a.ocs, b.ocs), archivos: unir(a.archivos, b.archivos), alertas: unir(unir(a.alertas, b.alertas), aviso),
+          tieneExp: true, actualizadoMs: Date.now()
+        };
+        if(b.oc) datos.oc = b.oc;
+        if(b.fechaOC) datos.fechaOC = b.fechaOC;
+        if(b.proveedor) datos.proveedor = b.proveedor;
+        if(b.cantidad && !a.cantidad) datos.cantidad = b.cantidad;
+        if(!a.tipo && b.tipo) datos.tipo = b.tipo;
+        await db.collection(COL).doc(a._id).set(datos, { merge: true });
+        await db.collection(COL).doc(b._id).delete();
+        unidos.push(a.paciente);
+      }
+      return { unidos: unidos, dudosos: dudosos };
+    },
+    resumen: function(){
+      var comp = 0, sinOc = [], sinExp = [];
+      cache.forEach(function(r){
+        var tOc = !!(r.ocs && r.ocs.length);
+        if(tOc && r.tieneExp) comp++; else if(!tOc) sinOc.push(r.paciente); else sinExp.push(r.paciente);
+      });
+      return { comp: comp, sinOc: sinOc, sinExp: sinExp };
+    }
   };
   window.RegistroOCStore = Store;
 
@@ -2811,6 +2870,10 @@ if(typeof module !== "undefined" && module.exports) module.exports = EntCore;
       var tokens = qRaw.split(/\s+/).filter(Boolean);
       return cache.filter(function(r){
         if(tipo && r.tipo !== tipo) return false;
+        var est = ($("ent-f-cruce") || {}).value || "", tOc = !!(r.ocs && r.ocs.length);
+        if(est === "comp" && !(tOc && r.tieneExp)) return false;
+        if(est === "sinoc" && tOc) return false;
+        if(est === "sinexp" && !(tOc && !r.tieneExp)) return false;
         if(!tokens.length) return true;
         var num = C.soloNum(r.num), cod = C.soloNum(r.cod);
         var pila = [r.pacienteNorm || C.normNombre(r.paciente), num, num + "/" + cod, num + "-" + cod, String(r.nroExp || "").toUpperCase(), (r.ocs || []).join(" "), r.oc || ""].join(" | ");
@@ -2824,7 +2887,8 @@ if(typeof module !== "undefined" && module.exports) module.exports = EntCore;
       if(estado === "sin-acceso"){ st.innerHTML = ""; cont.innerHTML = '<div class="ent-alerta">Sin acceso a la base. Revisá la regla de Firestore para <b>genres_registro_oc</b> (y que el login anónimo esté habilitado).</div>'; return; }
       if(estado === "conectando"){ st.textContent = "Conectando…"; return; }
       var lista = UI.filtrar(), q = (($("ent-q") || {}).value || "").trim();
-      st.textContent = cache.length + " paciente(s) en el registro" + (q ? " · " + lista.length + " resultado(s) para \u201c" + q + "\u201d" : "");
+      var rs = Store.resumen();
+      st.textContent = cache.length + " paciente(s) en el registro · " + rs.comp + " con expediente y OC · " + rs.sinOc.length + " sin OC todavía · " + rs.sinExp.length + " solo con OC" + (q ? " · " + lista.length + " resultado(s) para \u201c" + q + "\u201d" : "");
       if(!lista.length){ cont.innerHTML = '<div class="hint" style="font-size:13px;color:#64748b;padding:8px 2px">' + (cache.length ? "No hay coincidencias." : "El registro está vacío. Se completa solo al generar resoluciones, o cargando los PDF en \u201cCargar PDFs y administrar el registro\u201d.") + "</div>"; return; }
       var filas = lista.slice(0, 200).map(function(r){
         var ocs = (r.ocs && r.ocs.length) ? r.ocs : (r.oc ? [r.oc] : []);
@@ -2907,7 +2971,30 @@ if(typeof module !== "undefined" && module.exports) module.exports = EntCore;
         catch(e){ err.push((sel[i].datos.paciente || "?") + ": " + (e && e.message || e)); }
       }
       propuesta = []; UI.renderPropuesta();
-      if(msg){ msg.className = err.length ? "msg er" : "msg ok"; msg.textContent = "✅ " + ok + " paciente(s) guardado(s) en el registro." + (err.length ? " ❌ Con error: " + err.join("; ") : ""); }
+      await new Promise(function(r){ setTimeout(r, 400); }); // que llegue el snapshot con lo recién guardado
+      var cr = null; try{ cr = await Store.cruzar(); }catch(_){ }
+      if(msg){
+        msg.className = err.length ? "msg er" : "msg ok";
+        msg.textContent = "✅ " + ok + " paciente(s) guardado(s) en el registro." + (cr && cr.unidos.length ? " 🔄 Cruce: " + cr.unidos.length + " unido(s)." : "") + (err.length ? " ❌ Con error: " + err.join("; ") : "");
+      }
+    },
+    cruzar: async function(){
+      var btn = $("ent-cruzar"), box = $("ent-cruce"), t0 = btn ? btn.textContent : "";
+      if(btn){ btn.disabled = true; btn.textContent = "⏳ Cruzando…"; }
+      try{
+        var cr = await Store.cruzar();
+        await new Promise(function(r){ setTimeout(r, 400); });
+        var rs = Store.resumen(), lis = function(arr){ return arr.length ? "<br><span style=\"color:#64748b\">" + arr.slice(0, 40).map(esc).join(" · ") + (arr.length > 40 ? " …" : "") + "</span>" : ""; };
+        box.innerHTML =
+          '<div class="ent-cruce-res">' +
+          "<div>🔄 Unidos en este cruce: <b>" + cr.unidos.length + "</b>" + lis(cr.unidos) + "</div>" +
+          "<div>✅ Completos (expediente + OC): <b>" + rs.comp + "</b></div>" +
+          "<div>⏳ Con expediente, sin OC todavía: <b>" + rs.sinOc.length + "</b>" + lis(rs.sinOc) + "</div>" +
+          "<div>📄 Con OC y sin expediente: <b>" + rs.sinExp.length + "</b>" + lis(rs.sinExp) + "</div>" +
+          (cr.dudosos.length ? '<div class="ent-alerta">⚠️ No se unieron porque el nombre coincide con más de un expediente: ' + cr.dudosos.map(esc).join(" · ") + "</div>" : "") +
+          "</div>";
+      }catch(e){ box.innerHTML = '<div class="ent-alerta">No se pudo cruzar: ' + esc(e && e.message || e) + "</div>"; }
+      finally{ if(btn){ btn.disabled = false; btn.textContent = t0; } }
     },
     eliminarRango: async function(){
       var d = ($("ent-del-desde") || {}).value, h = ($("ent-del-hasta") || {}).value, msg = $("ent-admin-msg");
