@@ -129,6 +129,50 @@ hr{border:none;border-top:1.5px solid #e2e8f0;margin:16px 0 14px}
 #btn-volver:hover{background:#0f3a70}
 #btn-volver:focus-visible{outline:3px solid #93c5fd;outline-offset:2px}
 @media print{#btn-volver{display:none!important}}
+/* ===== REGISTRO DE ÓRDENES ===== */
+.ent-wrap{max-width:980px;margin:0 auto}
+.ent-buscar{position:relative;margin-bottom:10px}
+.ent-buscar span{position:absolute;left:12px;top:50%;transform:translateY(-50%);color:#94a3b8;font-size:15px}
+.ent-buscar input{width:100%;padding:11px 12px 11px 36px;border:1.5px solid #cbd5e1;border-radius:8px;font-size:14px;outline:none}
+.ent-buscar input:focus{border-color:#1a56a0;box-shadow:0 0 0 3px rgba(26,86,160,.1)}
+.ent-filtros{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:8px}
+.ent-filtros select{padding:7px 10px;border:1px solid #cbd5e1;border-radius:7px;font-size:13px;background:#fff}
+.ent-estado{font-size:12px;color:#64748b;margin:4px 0 10px}
+.ent-scroll{overflow-x:auto}
+.ent-reg{width:100%;border-collapse:collapse;font-size:13px}
+.ent-reg th{background:#f8fafc;color:#475569;text-align:left;padding:8px;border-bottom:2px solid #e2e8f0;font-size:11px;text-transform:uppercase;letter-spacing:.4px;white-space:nowrap}
+.ent-reg td{padding:8px;border-bottom:1px solid #f1f5f9;vertical-align:top}
+.ent-reg tr:hover td{background:#f8fafc}
+.ent-reg .pac{font-weight:700;color:#1a2b4a}
+.ent-reg .num{font-family:Consolas,"Courier New",monospace;font-weight:700;color:#1a56a0;white-space:nowrap}
+.ent-reg .sub{font-size:11px;color:#64748b;margin-top:2px}
+.ent-reg .warn{font-size:11px;color:#92400e;background:#fffbeb;border:1px solid #fde68a;border-radius:5px;padding:3px 6px;margin-top:4px}
+.ent-reg .acc{white-space:nowrap;text-align:right}
+.ent-mini{padding:5px 8px;border:1px solid #e2e8f0;border-radius:6px;background:#f8fafc;cursor:pointer;font-size:12px;font-family:inherit}
+.ent-mini:hover{background:#e2e8f0}
+.ent-mini.rojo{color:#b91c1c;border-color:#fecaca;background:#fef2f2}
+.ent-alerta{margin-top:8px;font-size:12px;color:#92400e;background:#fffbeb;border:1px solid #fde68a;border-radius:7px;padding:6px 9px}
+.ent-btn{padding:8px 12px;border:none;border-radius:7px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit}
+.ent-btn:disabled{opacity:.5;cursor:default}
+.ent-btn-verde{background:#0f766e;color:#fff}.ent-btn-verde:hover:not(:disabled){background:#0d6460}
+.ent-btn-azul{background:#1a56a0;color:#fff}.ent-btn-azul:hover:not(:disabled){background:#154482}
+.ent-btn-gris{background:#f1f5f9;color:#374151}.ent-btn-gris:hover:not(:disabled){background:#e2e8f0}
+.ent-btn-rojo{background:#dc2626;color:#fff}.ent-btn-rojo:hover:not(:disabled){background:#b91c1c}
+.ent-btn-rojo-claro{background:#fef2f2;color:#b91c1c;border:1px solid #fecaca}
+.ent-admin{margin-top:18px;border:1.5px solid #e2e8f0;border-radius:10px}
+.ent-admin summary{cursor:pointer;padding:11px 14px;font-weight:700;font-size:14px;color:#1a56a0}
+.ent-admin-body{padding:4px 14px 14px}
+.ent-tabla{width:100%;border-collapse:collapse;font-size:12px;margin-top:10px}
+.ent-tabla th{background:#f8fafc;color:#475569;text-align:left;padding:6px;border-bottom:1px solid #e2e8f0;font-size:11px}
+.ent-tabla td{padding:6px;border-bottom:1px solid #f1f5f9;vertical-align:top}
+.ent-tabla tr.warn td{background:#fffbeb}
+.ent-del{display:flex;flex-wrap:wrap;gap:8px;align-items:flex-end}
+.ent-del label{margin:0;font-size:12px}
+.ent-del input{display:block;padding:6px 8px;border:1px solid #cbd5e1;border-radius:6px;font-size:13px;margin-top:3px}
+.splash-btn-ent{margin-top:10px;background:#1a56a0}.splash-btn-ent:hover{background:#154482}
+.btn-ent-hdr{position:absolute;right:20px;top:50%;transform:translateY(-50%);padding:8px 12px;border:1px solid rgba(255,255,255,.5);border-radius:8px;background:rgba(255,255,255,.12);color:#fff;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit}
+.btn-ent-hdr:hover{background:rgba(255,255,255,.25)}
+@media print{#entregas-view{display:none!important}}
 </style>
 </head>
 <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
@@ -146,13 +190,15 @@ hr{border:none;border-top:1.5px solid #e2e8f0;margin:16px 0 14px}
     <div class="splash-title">📋 Generador de Resoluciones</div>
     <div class="splash-sub">Programa Integrado de Salud<br>Ministerio de Salud Pública de Tucumán</div>
     <button class="splash-btn" onclick="ingresar()">Ingresar</button>
+    <button class="splash-btn splash-btn-ent" onclick="abrirEntregas()">🔎 Buscar expediente / orden de compra</button>
     <div class="splash-foot">Internación Domiciliaria · PRIS · SI.PRO.SA.</div>
   </div>
 </div>
 
 <div class="app" id="app-main" style="display:none">
 <div class="card" id="form-card">
-  <div class="header">
+  <div class="header" style="position:relative">
+    <button type="button" class="btn-ent-hdr" onclick="abrirEntregas()" title="Registro de órdenes de compra">🔎 Registro OC</button>
     <h1>📋 Generador de Resoluciones</h1>
     <p>Programa Integrado de Salud — Ministerio de Salud Pública de Tucumán</p>
   </div>
@@ -404,6 +450,52 @@ hr{border:none;border-top:1.5px solid #e2e8f0;margin:16px 0 14px}
     </div>
     <button class="btn-back" onclick="volverForm()">← Volver al formulario</button>
     <div class="msg" id="dl-msg"></div>
+  </div>
+</div>
+</div>
+
+<!-- ===== REGISTRO DE ÓRDENES (anteojos / audífonos): buscar N° de expediente y de OC ===== -->
+<div class="ent-wrap" id="entregas-view" style="display:none">
+<div class="card">
+  <div class="header">
+    <h1>🔎 Registro de órdenes — Anteojos y Audífonos</h1>
+    <p>Buscá al paciente y obtené su N° de expediente y de orden de compra</p>
+  </div>
+  <div class="body">
+    <div class="ent-buscar">
+      <span>🔍</span>
+      <input id="ent-q" type="text" autocomplete="off" oninput="EntUI.render()" placeholder="Apellido y nombre, N° de expediente (8871/410) o N° de orden de compra">
+    </div>
+    <div class="ent-filtros">
+      <select id="ent-f-tipo" onchange="EntUI.render()">
+        <option value="">Anteojos y audífonos</option>
+        <option value="anteojos">👓 Solo anteojos</option>
+        <option value="audio">🎧 Solo audífonos</option>
+      </select>
+    </div>
+    <div id="ent-estado" class="ent-estado">Conectando…</div>
+    <div class="ent-scroll"><div id="ent-lista"></div></div>
+
+    <details class="ent-admin" id="ent-admin">
+      <summary>⚙️ Cargar PDFs y administrar el registro</summary>
+      <div class="ent-admin-body">
+        <div class="stitle">1 · Cargar órdenes de compra y expedientes</div>
+        <div class="hint" style="margin-bottom:10px">Elegí juntos todos los PDF (las OC y los expedientes, de las dos carpetas). El sistema lee cada documento, arma el registro (paciente, expediente, N° de OC, fecha, proveedor) y te lo muestra antes de guardar. Los PDF <b>no</b> se guardan: solo los datos.</div>
+        <input id="ent-files" type="file" accept="application/pdf,.pdf" multiple style="display:none" onchange="EntUI.analizar(this.files); this.value='';">
+        <button type="button" class="ent-btn ent-btn-azul" onclick="document.getElementById('ent-files').click()">📂 Elegir PDFs…</button>
+        <div id="ent-prop"></div>
+
+        <hr>
+        <div class="stitle">2 · Eliminar del registro por fecha de carga</div>
+        <div class="ent-del">
+          <label>Desde <input id="ent-del-desde" type="date"></label>
+          <label>Hasta <input id="ent-del-hasta" type="date"></label>
+          <button type="button" class="ent-btn ent-btn-rojo" onclick="EntUI.eliminarRango()">🗑️ Eliminar las del rango</button>
+          <button type="button" class="ent-btn ent-btn-rojo-claro" onclick="EntUI.eliminarTodas()">🗑️ Eliminar todo el registro</button>
+        </div>
+        <div id="ent-admin-msg" class="msg"></div>
+      </div>
+    </details>
   </div>
 </div>
 </div>
@@ -2388,6 +2480,489 @@ async function reprocesarLote(fileList){
     }
   };
 })();
+</script>
+<script>
+/* ===== Núcleo del Registro de órdenes (lógica pura, sin DOM): lectura de nombres de archivo y contenido ===== */
+var EntCore = (function(){
+  "use strict";
+  // Saca tildes pero CONSERVA la Ñ (ACUÑAS sigue siendo ACUÑAS).
+  function sinTildes(s){ return String(s==null?"":s).replace(/ñ/g,"\u0001").replace(/Ñ/g,"\u0002").normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/\u0001/g,"ñ").replace(/\u0002/g,"Ñ"); }
+  function normNombre(s){ return sinTildes(s).toUpperCase().replace(/[^A-ZÑ ]+/g," ").replace(/\s+/g," ").trim(); }
+  function soloNum(s){ var m = String(s==null?"":s).match(/\d+/); return m ? String(parseInt(m[0],10)) : ""; }
+  var MESES = ["enero","febrero","marzo","abril","mayo","junio","julio","agosto","septiembre","octubre","noviembre","diciembre"];
+  var RE_TIPO = /\b(ANTE?OJOS?|ANTEJOS?|ANTOJOS?|AUD[IÍ]FONOS?|AUDIFONOS?|AUDIOFONOS?)\b/i;
+  function tipoDe(s){ var m = sinTildes(s).toUpperCase().match(RE_TIPO); if(!m) return ""; return /^AUD/.test(m[1]) ? "audio" : "anteojos"; }
+
+  /* Nombre de archivo:
+     OC:  "8871-410 URAGA ALEXIS MIGUEL OC 20552"  (a veces con texto extra al final)
+     EXP: "EXPEDIENTE 8871 - 410 LETRA U AÑO 2026 URAGA ALEXIS MIGUEL ANTEOJOS X2 ALTA GRADUACION" */
+  function leerNombreArchivo(nombre){
+    var s = String(nombre||"").replace(/\.pdf$/i,"").replace(/_/g," ").replace(/\s+/g," ").trim();
+    var u = sinTildes(s).toUpperCase();
+    var m = u.match(/EXPEDIENTE\s+(\d{1,6})\s*[-\/]\s*(\d{2,4})\s+LETRA\s+([A-Z])\s+A(?:Ñ|N|NI)?O\s+(\d{4})\d?\s+(.+)$/);
+    if(m){
+      var resto = m[5], t = resto.match(RE_TIPO), pac = t ? resto.slice(0, t.index) : resto, desp = t ? resto.slice(t.index + t[0].length) : "";
+      var x = desp.match(/\bX\s*(\d{1,2})\b/);
+      return { rol:"expediente", num:soloNum(m[1]), cod:soloNum(m[2]), letra:m[3], anio:m[4], paciente:normNombre(pac),
+               tipo: t ? tipoDe(t[0]) : "", cantidad: x ? parseInt(x[1],10) : null, extra: desp.replace(/\bX\s*\d{1,2}\b/,"").trim() };
+    }
+    m = u.match(/^(\d{1,6})\s*-\s*(\d{2,4})\s+(.+?)\s+O\.?\s*C\.?\s*(?:N[°ºO]?\.?\s*)?(\d{4,6})\b\s*(.*)$/);
+    if(m) return { rol:"oc", num:soloNum(m[1]), cod:soloNum(m[2]), paciente:normNombre(m[3]), oc:m[4], extra:m[5].trim() };
+    return { rol:"", paciente:"" };
+  }
+
+  /* Contenido (capa de texto del PDF; vacío si es escaneado). */
+  function leerContenido(texto){
+    var t = sinTildes(String(texto||"")).toUpperCase();
+    if(!t.trim()) return { rol:"" };
+    var r = { rol:"" }, m;
+    if(/ORDEN\s+DE\s+COMPRA/.test(t) && /EXPTE/.test(t)){
+      r.rol = "oc";
+      m = t.match(/EXPTE\.?\s*:?\s*(\d{1,6})\s*\/\s*(\d{2,4})\s*\/\s*([A-Z])\s*\/\s*(\d{4})/);
+      if(m){ r.num = soloNum(m[1]); r.cod = soloNum(m[2]); r.letra = m[3]; r.anio = m[4]; }
+      m = t.match(/PACIENTE\s*:?\s*([A-ZÑ ,.'-]{4,80}?)\s*(?:\n|$|\.\s)/);
+      if(m) r.paciente = normNombre(m[1]);
+      // N° de OC: el número suelto que el sistema imprime junto a "Nro:" del encabezado, antes de "ORDEN DE COMPRA".
+      var cab = t.slice(0, Math.max(0, t.indexOf("ORDEN DE COMPRA")) + 400);
+      var c = cab.match(/LIBRAMIENTO\s*:?\s*\d+\s+(\d{4,6})\b/) || cab.match(/\bNRO\s*:?\s*(\d{5,6})\b/) || cab.match(/^\s*(\d{5,6})\s*$/m);
+      if(c) r.oc = c[1];
+      // Fecha de la OC: "SAN MIGUEL DE TUCUMAN, 6 de Octubre de 2026"
+      m = t.match(/SAN\s+MIGUEL\s+DE\s+TUCUMAN\s*,\s*(\d{1,2})\s+DE\s+([A-Z]+)\s+DE\s+(20\d{2})/);
+      if(m){ var mes = MESES.indexOf(m[2].toLowerCase()); if(mes >= 0) r.fechaOC = String(m[1]).padStart(2,"0") + "/" + String(mes + 1).padStart(2,"0") + "/" + m[3]; }
+      // Proveedor: el sistema lo imprime dos veces (Proveedor y Nombre Fantasía); es el renglón
+      // de razón social que se repite.
+      var cuenta = {};
+      t.split(/\n/).map(function(l){ return l.trim(); }).forEach(function(l){
+        if(l.length >= 4 && l.length <= 60 && /^[A-Z0-9Ñ .,&'-]+$/.test(l) && /[A-Z]{3}/.test(l) && !/^(TUCUMAN|ORIGINAL|INMEDIATA|CHEQUE|TRANSFERENCIAS|ORDEN DE COMPRA)$/.test(l)) cuenta[l] = (cuenta[l] || 0) + 1;
+      });
+      var rep = Object.keys(cuenta).filter(function(l){ return cuenta[l] >= 2; });
+      var conSoc = rep.filter(function(l){ return /\b(S\.?R\.?L|S\.?A|SAS|SOCIEDAD|OPTICA|GRUPO)\b/.test(l); });
+      if(conSoc.length || rep.length) r.proveedor = (conSoc[0] || rep[0]).replace(/\s+/g, " ");
+      m = t.match(/SOLICITUD\s+DE\s+(\d{1,2})\s*-?\s*(?:ANTE|AUD)/);
+      if(m) r.cantidad = parseInt(m[1],10);
+      r.tipo = tipoDe(t);
+      return r;
+    }
+    if(/EXPEDIENTE/.test(t) && /LETRA/.test(t)){
+      r.rol = "expediente";
+      var lin = (t.split(/\n/).filter(function(l){ return /EXPEDIENTE/.test(l) && /LETRA/.test(l); })[0]) || "";
+      if(lin){
+        var lm = lin.match(/LETRA\s+([A-Z])\b/); if(lm) r.letra = lm[1];
+        var cm = lin.match(/\/\s*(\d{2,4})\b/); if(cm) r.cod = soloNum(cm[1]);
+        // pdf.js a veces desordena el renglón ("EXPEDIENTE 2026 / 410 LETRA U AÑO 8871"):
+        // el año es el 20xx, el código va después de "/", el número es el que queda.
+        var nums = (lin.match(/\d+/g) || []).filter(function(n){ return n !== (cm ? cm[1] : null); });
+        var anios = nums.filter(function(n){ return /^20\d{2}$/.test(n); });
+        if(anios.length){ r.anio = anios[anios.length === 1 ? 0 : anios.length - 1]; }
+        var resto = nums.filter(function(n){ return n !== r.anio; });
+        if(!resto.length && anios.length > 1) resto = [anios[0]];
+        if(resto.length) r.num = soloNum(resto[0]);
+      }
+      m = t.match(/CAUSANTE\s+(.+?)\s*(?:\n|ASUNTO)/); if(m) r.paciente = normNombre(m[1]);
+      m = t.match(/ASUNTO\s+(.+?)\s*(?:\n|SELLOS|$)/); if(m){ r.asunto = m[1].trim(); r.tipo = tipoDe(m[1]); }
+      return r;
+    }
+    return r;
+  }
+
+  /* Une nombre de archivo + contenido. Manda el CONTENIDO (es lo que dice el documento);
+     si el nombre del archivo dice otra cosa, queda una alerta. */
+  function combinar(nombreArchivo, texto){
+    var a = leerNombreArchivo(nombreArchivo), c = leerContenido(texto), r = {}, alertas = [];
+    r.rol = c.rol || a.rol || "otro";
+    ["num","cod","letra","anio","oc","tipo","cantidad","paciente","fechaOC","proveedor"].forEach(function(k){
+      var vc = c[k], va = a[k];
+      r[k] = (vc != null && vc !== "") ? vc : (va != null && va !== "" ? va : (k==="cantidad" ? null : ""));
+      if(vc && va && String(vc) !== String(va)){
+        if(k === "paciente"){ if(!mismaPersona(vc, va)) alertas.push("El nombre del archivo dice \u201c"+va+"\u201d y el documento \u201c"+vc+"\u201d."); }
+        else if(k === "num" || k === "cod" || k === "oc" || k === "anio") alertas.push("El nombre del archivo dice "+etq(k)+" "+va+" y el documento "+vc+".");
+      }
+    });
+    if(a.extra) r.extra = a.extra;
+    r.leidoDe = c.rol ? "contenido" : (a.rol ? "nombre" : "nada");
+    r.alertas = alertas;
+    return r;
+  }
+  function etq(k){ return k==="num" ? "N\u00b0 de expediente" : k==="cod" ? "c\u00f3digo" : k==="oc" ? "N\u00b0 de OC" : k==="anio" ? "a\u00f1o" : k; }
+  function mismaPersona(a, b){
+    var x = normNombre(a).split(" ").filter(Boolean), y = normNombre(b).split(" ").filter(Boolean);
+    if(!x.length || !y.length) return false;
+    var comunes = x.filter(function(w){ return w.length > 1 && y.indexOf(w) >= 0; }).length;
+    return comunes >= Math.min(2, Math.min(x.length, y.length));
+  }
+  function clave(num, cod){ return (num && cod) ? (soloNum(num)+"/"+soloNum(cod)) : ""; }
+
+  /* Agrupa archivos analizados en entregas (OC + expediente del mismo paciente). */
+  function agrupar(items){
+    var grupos = [], porClave = {};
+    items.forEach(function(it){
+      var k = clave(it.num, it.cod);
+      var g = k && porClave[k];
+      if(!g){ g = { clave:k, items:[], alertas:[] }; grupos.push(g); if(k) porClave[k] = g; }
+      g.items.push(it);
+    });
+    // Grupos incompletos (solo OC o solo expediente): se busca la pareja por NOMBRE del paciente.
+    function tiene(g, rol){ return g.items.some(function(i){ return i.rol === rol; }); }
+    for(var i = 0; i < grupos.length; i++){
+      var g = grupos[i]; if(!g) continue;
+      var falta = tiene(g,"oc") && !tiene(g,"expediente") ? "expediente" : (!tiene(g,"oc") && tiene(g,"expediente") ? "oc" : "");
+      if(!falta) continue;
+      var pac = (g.items[0] || {}).paciente;
+      for(var j = 0; j < grupos.length; j++){
+        var h = grupos[j]; if(!h || h === g) continue;
+        if(!tiene(h, falta) || tiene(h, falta === "oc" ? "expediente" : "oc")) continue;
+        if(!mismaPersona(pac, (h.items[0]||{}).paciente)) continue;
+        var ki = g.clave, kj = h.clave;
+        g.alertas.push("Se asociaron por nombre: el expediente figura como "+(falta==="oc" ? ki : kj)+" y la OC como "+(falta==="oc" ? kj : ki)+". Revis\u00e1 cu\u00e1l es el correcto.");
+        g.items = g.items.concat(h.items); grupos[j] = null;
+        break;
+      }
+    }
+    return grupos.filter(Boolean).map(function(g){
+      var get = function(rol, k){ var it = g.items.filter(function(x){ return x.rol === rol && x[k]; })[0]; return it ? it[k] : ""; };
+      var exp = g.items.filter(function(x){ return x.rol === "expediente"; })[0] || {};
+      var oc = g.items.filter(function(x){ return x.rol === "oc"; })[0] || {};
+      g.datos = {
+        num: exp.num || oc.num || "", cod: exp.cod || oc.cod || "",
+        letra: exp.letra || oc.letra || "", anio: exp.anio || oc.anio || "",
+        oc: get("oc","oc"), paciente: oc.paciente || exp.paciente || (g.items[0]||{}).paciente || "",
+        tipo: exp.tipo || oc.tipo || "", cantidad: oc.cantidad || exp.cantidad || null, extra: exp.extra || "",
+        fechaOC: oc.fechaOC || "", proveedor: oc.proveedor || ""
+      };
+      g.items.forEach(function(it){ (it.alertas||[]).forEach(function(a){ g.alertas.push(a); }); });
+      if(g.items.filter(function(x){return x.rol==="oc";}).length > 1) g.alertas.push("Hay m\u00e1s de una OC para este expediente.");
+      if(!tiene(g,"oc")) g.alertas.push("Falta la orden de compra.");
+      if(!tiene(g,"expediente")) g.alertas.push("Falta el PDF del expediente.");
+      return g;
+    });
+  }
+
+  function expedienteTexto(d){
+    if(!d || !d.num) return "";
+    return d.num + "/" + (d.cod||"") + (d.letra ? "/"+d.letra : "") + (d.anio ? "/"+d.anio : "");
+  }
+  /* "8871/410/U/2026" (formato del generador) → partes */
+  function partirExpediente(s){
+    var m = sinTildes(String(s||"")).toUpperCase().match(/(\d{1,6})\s*[\/\-]\s*(\d{2,4})(?:\s*[\/\-]\s*([A-Z]))?(?:\s*[\/\-]\s*(\d{4}))?/);
+    return m ? { num:soloNum(m[1]), cod:soloNum(m[2]), letra:m[3]||"", anio:m[4]||"" } : null;
+  }
+  return { normNombre:normNombre, leerNombreArchivo:leerNombreArchivo, leerContenido:leerContenido, combinar:combinar,
+           agrupar:agrupar, mismaPersona:mismaPersona, clave:clave, expedienteTexto:expedienteTexto,
+           partirExpediente:partirExpediente, tipoDe:tipoDe, soloNum:soloNum };
+})();
+if(typeof module !== "undefined" && module.exports) module.exports = EntCore;
+
+/* ===== REGISTRO DE ÓRDENES — anteojos y audífonos (Firestore, proyecto visitas-siprosa) =====
+   Guarda SOLO DATOS (paciente, expediente, N° de OC, fecha de la OC, proveedor). Los PDF se leen
+   en el navegador y NO se suben. Colección nueva: genres_registro_oc
+   Regla Firestore necesaria (al lado de las de genres_pendientes / genres_borradores):
+     match /genres_registro_oc/{id} { allow read, write: if request.auth != null; } */
+(function(){
+  "use strict";
+  var COL = "genres_registro_oc";
+  var firebaseConfig = {
+    apiKey: "AIzaSyCDFcb5B7swNnetMOxXhVNQWaDxa1LVRF4",
+    authDomain: "visitas-siprosa.firebaseapp.com",
+    projectId: "visitas-siprosa",
+    storageBucket: "visitas-siprosa.firebasestorage.app",
+    messagingSenderId: "957519453967",
+    appId: "1:957519453967:web:e6c2bfac7a4da10fed287a",
+    measurementId: "G-GHDRCXE81C"
+  };
+  var C = EntCore;
+  var db = null, cache = [], estado = "conectando", escuchando = false, propuesta = [];
+  var authReady = new Promise(function(resolve){
+    try{
+      if(!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+      db = firebase.firestore();
+      firebase.auth().signInAnonymously()
+        .then(function(){ resolve(true); })
+        .catch(function(err){ console.warn("Auth anónima falló (registro OC):", err); resolve(false); });
+    }catch(err){ console.warn("Firebase no disponible (registro OC):", err); resolve(false); }
+  });
+
+  function esc(t){ return String(t==null?"":t).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;"); }
+  function $(id){ return document.getElementById(id); }
+  function hoyTxt(){ var d = new Date(); return String(d.getDate()).padStart(2,"0")+"/"+String(d.getMonth()+1).padStart(2,"0")+"/"+d.getFullYear(); }
+  function idRegistro(d){
+    var base = (d.num && d.cod) ? (C.soloNum(d.num)+"_"+C.soloNum(d.cod)+"_"+(d.anio || new Date().getFullYear())) : ("pac_" + C.normNombre(d.paciente).replace(/\s+/g,"_"));
+    return "r_" + base.replace(/[\/#\?\[\]\*\.]+/g,"_");
+  }
+  function unir(a, b){ var out = (a || []).slice(); (b || []).forEach(function(x){ if(x && out.indexOf(x) < 0) out.push(x); }); return out; }
+
+  /* ---------- Lectura del texto del PDF (pdf.js, se carga solo al usarlo) ---------- */
+  var _pdfjs = null;
+  function pdfjs(){
+    if(!_pdfjs){
+      _pdfjs = import(/* @vite-ignore */ "https://cdn.jsdelivr.net/npm/pdfjs-dist@4.7.76/build/pdf.min.mjs").then(function(m){
+        m.GlobalWorkerOptions.workerSrc = "https://cdn.jsdelivr.net/npm/pdfjs-dist@4.7.76/build/pdf.worker.min.mjs";
+        return m;
+      }).catch(function(e){ _pdfjs = null; throw e; });
+    }
+    return _pdfjs;
+  }
+  async function textoPdf(bytes){
+    var lib = await pdfjs();
+    var doc = await lib.getDocument({ data: bytes, isEvalSupported: false }).promise;
+    var texto = "";
+    for(var p = 1; p <= Math.min(doc.numPages, 3); p++){
+      var tc = await (await doc.getPage(p)).getTextContent();
+      texto += tc.items.map(function(i){ return i.str + (i.hasEOL ? "\n" : " "); }).join("") + "\n";
+    }
+    try{ doc.destroy(); }catch(_){}
+    return texto;
+  }
+  function leerBytes(f){
+    if(f && typeof f.arrayBuffer === "function") return f.arrayBuffer().then(function(b){ return new Uint8Array(b); });
+    return new Promise(function(resolve, reject){
+      var fr = new FileReader();
+      fr.onload = function(){ resolve(new Uint8Array(fr.result)); };
+      fr.onerror = function(){ reject(fr.error || new Error("No se pudo leer " + (f && f.name))); };
+      fr.readAsArrayBuffer(f);
+    });
+  }
+  async function analizarArchivos(files){
+    var items = [];
+    for(var i = 0; i < files.length; i++){
+      var f = files[i], texto = "";
+      try{ texto = await textoPdf(await leerBytes(f)); }catch(e){ console.warn("Sin texto (se lee por nombre):", f.name, e); }
+      var r = C.combinar(f.name, texto);
+      r.nombre = f.name;
+      items.push(r);
+    }
+    return items;
+  }
+
+  /* ---------- Store ---------- */
+  var Store = {
+    escuchar: function(){
+      if(escuchando) return; escuchando = true;
+      authReady.then(function(ok){
+        if(!ok || !db){ estado = "sin-acceso"; UI.render(); return; }
+        db.collection(COL).onSnapshot(function(snap){
+          cache = snap.docs.map(function(d){ var x = d.data(); x._id = d.id; return x; });
+          cache.sort(function(a,b){ return (b.creadoMs||0) - (a.creadoMs||0); });
+          estado = "ok"; UI.render();
+        }, function(err){ console.warn("Registro OC onSnapshot:", err); estado = "sin-acceso"; UI.render(); });
+      });
+    },
+    buscarExistente: function(d){
+      var k = C.clave(d.num, d.cod);
+      if(k){
+        var porClave = cache.filter(function(r){ return C.clave(r.num, r.cod) === k && (!d.anio || !r.anio || String(r.anio) === String(d.anio)); });
+        if(porClave.length) return { rec: porClave[0], porNombre: false };
+      }
+      if(d.paciente){
+        var porNom = cache.filter(function(r){ return C.mismaPersona(r.paciente, d.paciente) && (!d.tipo || !r.tipo || r.tipo === d.tipo) && !(r.ocs && r.ocs.length); });
+        if(porNom.length === 1) return { rec: porNom[0], porNombre: true };
+      }
+      return null;
+    },
+    // Cada resolución generada (Word o PDF) deja el paciente registrado; la OC se suma al cargar su PDF.
+    desdeGenerador: function(p){
+      var parts = C.partirExpediente(p && p.nroExp);
+      if(!parts) return Promise.resolve(false);
+      return authReady.then(function(ok){
+        if(!ok || !db) return false;
+        var d = { num: parts.num, cod: parts.cod, letra: parts.letra, anio: parts.anio, paciente: (p.paciente||"").trim(), tipo: p.tipo || "" };
+        var ex = Store.buscarExistente(d), mismo = ex && !ex.porNombre;
+        var cant = parseInt(String(p.cantidad||"").replace(/[^0-9]/g,""), 10) || null;
+        var datos = {
+          tipo: d.tipo, nroExp: String(p.nroExp).trim(), num: d.num, cod: d.cod, letra: d.letra, anio: d.anio,
+          paciente: d.paciente, pacienteNorm: C.normNombre(d.paciente), nroRes: p.nroRes || "", fechaRes: p.fecha || "", actualizadoMs: Date.now()
+        };
+        if(cant) datos.cantidad = cant;
+        if(!mismo){ datos.creadoMs = Date.now(); datos.creadoTxt = hoyTxt(); datos.origen = "generador"; datos.ocs = []; }
+        return db.collection(COL).doc(mismo ? ex.rec._id : idRegistro(d)).set(datos, { merge: true })
+          .then(function(){ return true; }).catch(function(e){ console.warn("Registro OC (generador):", e); return false; });
+      });
+    },
+    guardarGrupo: async function(g){
+      var ok = await authReady; if(!ok || !db) throw new Error("Sin acceso a la base");
+      var d = g.datos, rec = g.destino || null;
+      var datos = {
+        num: (rec && rec.num) || d.num || "", cod: (rec && rec.cod) || d.cod || "",
+        letra: (rec && rec.letra) || d.letra || "", anio: (rec && rec.anio) || d.anio || "",
+        tipo: (rec && rec.tipo) || d.tipo || "", paciente: (rec && rec.paciente) || d.paciente || "",
+        ocs: unir(rec && rec.ocs, g.items.filter(function(i){ return i.rol === "oc" && i.oc; }).map(function(i){ return i.oc; })),
+        archivos: unir(rec && rec.archivos, g.items.map(function(i){ return i.nombre; })),
+        // Se guardan solo las diferencias encontradas (no los "falta…", que dejan de valer al completar).
+        alertas: unir(rec && rec.alertas, (g.alertas || []).filter(function(a){ return !/^Falta /.test(a); })), actualizadoMs: Date.now()
+      };
+      datos.pacienteNorm = C.normNombre(datos.paciente);
+      datos.nroExp = (rec && rec.nroExp) || C.expedienteTexto(datos);
+      if(d.oc) datos.oc = d.oc;
+      if(d.fechaOC) datos.fechaOC = d.fechaOC;
+      if(d.proveedor) datos.proveedor = d.proveedor;
+      if(d.extra && !(rec && rec.extra)) datos.extra = d.extra;
+      if(d.cantidad && !(rec && rec.cantidad)) datos.cantidad = d.cantidad;
+      if(!rec){ datos.creadoMs = Date.now(); datos.creadoTxt = hoyTxt(); datos.origen = "pdf"; }
+      await db.collection(COL).doc(rec ? rec._id : idRegistro(datos)).set(datos, { merge: true });
+    },
+    eliminar: function(rec){ return db.collection(COL).doc(rec._id).delete(); }
+  };
+  window.RegistroOCStore = Store;
+
+  /* ---------- UI ---------- */
+  var UI = {
+    filtrar: function(){
+      var qRaw = String((($("ent-q") || {}).value || "")).toUpperCase().trim();
+      var tipo = ($("ent-f-tipo") || {}).value || "";
+      var tokens = qRaw.split(/\s+/).filter(Boolean);
+      return cache.filter(function(r){
+        if(tipo && r.tipo !== tipo) return false;
+        if(!tokens.length) return true;
+        var num = C.soloNum(r.num), cod = C.soloNum(r.cod);
+        var pila = [r.pacienteNorm || C.normNombre(r.paciente), num, num + "/" + cod, num + "-" + cod, String(r.nroExp || "").toUpperCase(), (r.ocs || []).join(" "), r.oc || ""].join(" | ");
+        var pilaN = pila.replace(/Ñ/g, "N");
+        return tokens.every(function(t){ var tn = (C.normNombre(t) || t).replace(/Ñ/g, "N"); return pila.indexOf(t) >= 0 || (tn && pilaN.indexOf(tn) >= 0); });
+      });
+    },
+    render: function(){
+      var cont = $("ent-lista"), st = $("ent-estado");
+      if(!cont) return;
+      if(estado === "sin-acceso"){ st.innerHTML = ""; cont.innerHTML = '<div class="ent-alerta">Sin acceso a la base. Revisá la regla de Firestore para <b>genres_registro_oc</b> (y que el login anónimo esté habilitado).</div>'; return; }
+      if(estado === "conectando"){ st.textContent = "Conectando…"; return; }
+      var lista = UI.filtrar(), q = (($("ent-q") || {}).value || "").trim();
+      st.textContent = cache.length + " paciente(s) en el registro" + (q ? " · " + lista.length + " resultado(s) para \u201c" + q + "\u201d" : "");
+      if(!lista.length){ cont.innerHTML = '<div class="hint" style="font-size:13px;color:#64748b;padding:8px 2px">' + (cache.length ? "No hay coincidencias." : "El registro está vacío. Se completa solo al generar resoluciones, o cargando los PDF en \u201cCargar PDFs y administrar el registro\u201d.") + "</div>"; return; }
+      var filas = lista.slice(0, 200).map(function(r){
+        var ocs = (r.ocs && r.ocs.length) ? r.ocs : (r.oc ? [r.oc] : []);
+        var tipo = r.tipo === "audio" ? "🎧 Audífonos" : r.tipo === "anteojos" ? "👓 Anteojos" : "—";
+        var alertas = (r.alertas || []).map(function(a){ return '<div class="warn">⚠️ ' + esc(a) + "</div>"; }).join("");
+        return "<tr>" +
+          '<td><div class="pac">' + esc(r.paciente || "(sin nombre)") + "</div>" + (r.extra ? '<div class="sub">' + esc(r.extra) + "</div>" : "") + alertas + "</td>" +
+          "<td>" + tipo + (r.cantidad ? " ×" + r.cantidad : "") + "</td>" +
+          '<td><span class="num">' + esc(r.nroExp || C.expedienteTexto(r) || "—") + "</span></td>" +
+          "<td>" + (ocs.length ? ocs.map(function(o){ return '<span class="num">' + esc(o) + "</span>"; }).join("<br>") : '<span class="sub">sin OC todavía</span>') + (r.fechaOC ? '<div class="sub">' + esc(r.fechaOC) + "</div>" : "") + "</td>" +
+          "<td>" + esc(r.proveedor || "") + "</td>" +
+          '<td class="sub">' + esc(r.creadoTxt || "") + "</td>" +
+          '<td class="acc"><button type="button" class="ent-mini" title="Copiar expediente y OC" onclick="EntUI.copiar(\'' + r._id + '\', this)">📋 Copiar</button> ' +
+          '<button type="button" class="ent-mini rojo" title="Eliminar del registro" onclick="EntUI.eliminar(\'' + r._id + '\')">🗑️</button></td></tr>';
+      }).join("");
+      cont.innerHTML = '<table class="ent-reg"><thead><tr><th>Paciente</th><th>Tipo</th><th>Expediente</th><th>N° OC</th><th>Proveedor</th><th>Cargado</th><th></th></tr></thead><tbody>' + filas + "</tbody></table>" +
+        (lista.length > 200 ? '<div class="hint">Se muestran los primeros 200. Afiná la búsqueda.</div>' : "");
+    },
+    rec: function(id){ return cache.filter(function(r){ return r._id === id; })[0]; },
+    copiar: function(id, btn){
+      var r = UI.rec(id); if(!r) return;
+      var ocs = (r.ocs && r.ocs.length) ? r.ocs : (r.oc ? [r.oc] : []);
+      var txt = (r.paciente || "") + " — Expte " + (r.nroExp || C.expedienteTexto(r)) + (ocs.length ? " — OC " + ocs.join(" / ") : "");
+      var listo = function(){ if(btn){ var t = btn.textContent; btn.textContent = "✅ Copiado"; setTimeout(function(){ btn.textContent = t; }, 1500); } };
+      try{
+        if(navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(txt).then(listo, function(){ prompt("Copiá el texto:", txt); });
+        else prompt("Copiá el texto:", txt);
+      }catch(_){ prompt("Copiá el texto:", txt); }
+    },
+    eliminar: function(id){
+      var r = UI.rec(id); if(!r) return;
+      if(!confirm("¿Eliminar del registro a " + r.paciente + "?")) return;
+      Store.eliminar(r).catch(function(e){ alert("No se pudo eliminar: " + (e && e.message || e)); });
+    },
+    analizar: async function(fileList){
+      var files = Array.prototype.slice.call(fileList || []).filter(function(f){ return /\.pdf$/i.test(f.name) || f.type === "application/pdf"; });
+      var box = $("ent-prop"); if(!box || !files.length) return;
+      box.innerHTML = '<div class="hint" style="margin-top:10px">⏳ Leyendo ' + files.length + " PDF…</div>";
+      try{
+        var items = await analizarArchivos(files);
+        propuesta = C.agrupar(items).map(function(g){
+          var ex = Store.buscarExistente(g.datos);
+          g.destino = ex ? ex.rec : null;
+          if(ex && ex.porNombre) g.alertas.push("Se une al registro existente de " + ex.rec.paciente + " por nombre (el N° de expediente no coincide).");
+          // Para el registro alcanza con la OC (trae expediente, paciente y N°): no falta nada si no está la carátula.
+          g.alertas = g.alertas.filter(function(a){ return !/^Falta el PDF del expediente/.test(a); });
+          g.incluir = true;
+          return g;
+        });
+        UI.renderPropuesta();
+      }catch(e){ box.innerHTML = '<div class="ent-alerta">No se pudieron leer los PDF: ' + esc(e && e.message || e) + "</div>"; }
+    },
+    renderPropuesta: function(){
+      var box = $("ent-prop"); if(!box) return;
+      if(!propuesta.length){ box.innerHTML = ""; return; }
+      var conAlerta = propuesta.filter(function(g){ return g.alertas.length; }).length;
+      var filas = propuesta.map(function(g, i){
+        var d = g.datos;
+        return '<tr class="' + (g.alertas.length ? "warn" : "") + '"><td><input type="checkbox" ' + (g.incluir ? "checked" : "") + ' onchange="EntUI.toggleProp(' + i + ',this.checked)"></td>' +
+          "<td><b>" + esc(g.destino ? g.destino.paciente : d.paciente) + "</b></td>" +
+          "<td>" + esc(C.expedienteTexto(d) || "—") + "</td><td>" + esc(d.oc || "—") + (d.fechaOC ? "<br>" + esc(d.fechaOC) : "") + "</td>" +
+          "<td>" + esc(d.proveedor || "") + "</td><td>" + (g.destino ? "Completa uno existente" : "Nuevo") + "</td>" +
+          "<td>" + (g.alertas.length ? g.alertas.map(function(a){ return "⚠️ " + esc(a); }).join("<br>") : "✔") + "</td></tr>";
+      }).join("");
+      box.innerHTML = '<table class="ent-tabla"><thead><tr><th></th><th>Paciente</th><th>Expediente</th><th>N° OC</th><th>Proveedor</th><th>Registro</th><th>Control</th></tr></thead><tbody>' + filas + "</tbody></table>" +
+        '<div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap"><button type="button" class="ent-btn ent-btn-verde" id="ent-subir" onclick="EntUI.subir()">💾 Guardar en el registro</button>' +
+        '<button type="button" class="ent-btn ent-btn-gris" onclick="EntUI.cancelarProp()">Cancelar</button></div>' +
+        '<div class="hint" style="margin-top:6px">' + propuesta.length + " paciente(s) · " + conAlerta + " con algo para revisar (en amarillo). Destildá los que no quieras guardar.</div>";
+    },
+    toggleProp: function(i, v){ if(propuesta[i]) propuesta[i].incluir = v; },
+    cancelarProp: function(){ propuesta = []; UI.renderPropuesta(); },
+    subir: async function(){
+      var sel = propuesta.filter(function(g){ return g.incluir; });
+      if(!sel.length) return;
+      var btn = $("ent-subir"), msg = $("ent-admin-msg"), ok = 0, err = [];
+      if(btn) btn.disabled = true;
+      for(var i = 0; i < sel.length; i++){
+        if(btn) btn.textContent = "⏳ Guardando " + (i + 1) + " de " + sel.length + "…";
+        try{ await Store.guardarGrupo(sel[i]); ok++; }
+        catch(e){ err.push((sel[i].datos.paciente || "?") + ": " + (e && e.message || e)); }
+      }
+      propuesta = []; UI.renderPropuesta();
+      if(msg){ msg.className = err.length ? "msg er" : "msg ok"; msg.textContent = "✅ " + ok + " paciente(s) guardado(s) en el registro." + (err.length ? " ❌ Con error: " + err.join("; ") : ""); }
+    },
+    eliminarRango: async function(){
+      var d = ($("ent-del-desde") || {}).value, h = ($("ent-del-hasta") || {}).value, msg = $("ent-admin-msg");
+      if(!d && !h){ alert("Elegí al menos una fecha (desde y/o hasta)."); return; }
+      var ini = d ? new Date(d + "T00:00:00").getTime() : 0, fin = h ? new Date(h + "T23:59:59").getTime() : Infinity;
+      var sel = cache.filter(function(r){ return (r.creadoMs || 0) >= ini && (r.creadoMs || 0) <= fin; });
+      if(!sel.length){ alert("No hay pacientes cargados en ese rango."); return; }
+      if(!confirm("Se van a eliminar " + sel.length + " paciente(s) cargados " + (d ? "desde el " + d.split("-").reverse().join("/") : "") + (h ? " hasta el " + h.split("-").reverse().join("/") : "") + ". ¿Seguro?")) return;
+      for(var i = 0; i < sel.length; i++){ try{ await Store.eliminar(sel[i]); }catch(_){ } }
+      if(msg){ msg.className = "msg ok"; msg.textContent = "🗑️ " + sel.length + " paciente(s) eliminado(s) del registro."; }
+    },
+    eliminarTodas: async function(){
+      var n = cache.length, msg = $("ent-admin-msg");
+      if(!n){ alert("El registro está vacío."); return; }
+      if(!confirm("¿Eliminar TODO el registro (" + n + " pacientes)?")) return;
+      if(prompt("Para confirmar escribí ELIMINAR") !== "ELIMINAR") return;
+      var todas = cache.slice();
+      for(var i = 0; i < todas.length; i++){ try{ await Store.eliminar(todas[i]); }catch(_){ } }
+      if(msg){ msg.className = "msg ok"; msg.textContent = "🗑️ Se eliminaron " + n + " paciente(s)."; }
+    }
+  };
+  window.EntUI = UI;
+
+  /* ---------- Navegación ---------- */
+  function mostrarRegistro(){
+    var s = $("splash"), m = $("app-main"), v = $("entregas-view");
+    if(s) s.style.display = "none"; if(m) m.style.display = "none"; if(v) v.style.display = "";
+    Store.escuchar(); UI.render(); window.scrollTo(0, 0);
+    setTimeout(function(){ var q = $("ent-q"); if(q) q.focus(); }, 50);
+  }
+  window.abrirEntregas = function(){
+    mostrarRegistro();
+    try{ if(!(history.state && history.state.genEnt)) history.pushState({ genEnt: true }, ""); }catch(_){}
+  };
+  var _mostrarInicio = window.mostrarInicio, _mostrarApp = window.mostrarApp, _volverInicio = window.volverInicio;
+  if(typeof _mostrarInicio === "function") window.mostrarInicio = function(){ var v = $("entregas-view"); if(v) v.style.display = "none"; return _mostrarInicio.apply(this, arguments); };
+  if(typeof _mostrarApp === "function") window.mostrarApp = function(){ var v = $("entregas-view"); if(v) v.style.display = "none"; return _mostrarApp.apply(this, arguments); };
+  if(typeof _volverInicio === "function") window.volverInicio = function(){
+    try{ if(history.state && history.state.genEnt){ history.back(); return; } }catch(_){}
+    return _volverInicio.apply(this, arguments);
+  };
+  window.addEventListener("popstate", function(e){ if(e.state && e.state.genEnt) mostrarRegistro(); });
+
+  /* ---------- Cada resolución generada queda registrada ---------- */
+  var _registrar = window.registrarExpediente;
+  if(typeof _registrar === "function"){
+    window.registrarExpediente = function(p){
+      var r = _registrar.apply(this, arguments);
+      try{ Store.desdeGenerador(p); }catch(e){ console.warn("Registro OC:", e); }
+      return r;
+    };
+  }
+  Store.escuchar();
+})();
+
 </script>
 <!-- Botón flotante "Volver al inicio": vuelve a la pantalla de ingreso -->
 <button type="button" id="btn-volver" onclick="volverInicio()" title="Volver a la pantalla de inicio" aria-label="Volver a la pantalla de inicio">&#8592; Volver al inicio</button>
