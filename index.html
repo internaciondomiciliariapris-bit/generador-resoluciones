@@ -254,6 +254,10 @@ hr{border:none;border-top:1.5px solid #e2e8f0;margin:16px 0 14px}
 .rg-card.ok .rg-oc{border-color:#16a34a}.rg-card.ok .rg-oc span{color:#15803d}
 .rg-oc.vacia{border-style:dashed;border-color:#cbd5e1;box-shadow:none}.rg-oc.vacia span{color:#64748b}.rg-oc.vacia b{font-family:inherit;font-size:16px;color:#64748b}
 @media (max-width:600px){.rg-oc b{font-size:28px}}
+.rg-tit{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 12px}
+.rg-exp{font-family:Consolas,"Courier New",monospace;font-size:17px;font-weight:800;color:#1a56a0;background:#e8f0fb;border-radius:7px;padding:1px 8px}
+.rg-card.ok .rg-exp{color:#15803d;background:#dcfce7}
+.rg-pacn{font-size:17px;font-weight:800;color:#0f172a}
 </style>
 </head>
 <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
@@ -3243,10 +3247,7 @@ if(typeof module !== "undefined" && module.exports) module.exports = EntConsulta
       var ocGrande = ocs.length
         ? '<div class="rg-oc"><span>Orden de compra N°</span><b>' + ocs.map(esc).join(" / ") + "</b></div>"
         : '<div class="rg-oc vacia"><span>Orden de compra</span><b>sin cargar</b></div>';
-      var datos = [
-        "Expediente <b>" + esc(r.nroExp || C.expedienteTexto(r) || "—") + "</b>",
-        r.fechaOC ? "Fecha OC " + esc(r.fechaOC) : ""
-      ].filter(Boolean).join('<span class="rg-sep">·</span>');
+      var datos = r.fechaOC ? "Fecha OC " + esc(r.fechaOC) : "";
       var alertas = (r.alertas || []).map(function(a){ return '<div class="rg-warn">⚠️ ' + esc(a) + "</div>"; }).join("");
       var entrega;
       if(r.entregado){
@@ -3262,9 +3263,10 @@ if(typeof module !== "undefined" && module.exports) module.exports = EntConsulta
         '<div class="rg-ico">' + icono + "</div>" +
         '<div class="rg-main">' +
           '<div class="rg-kick">' + esc(kick) + "</div>" +
-          '<div class="rg-tit">' + esc(r.paciente || "(sin nombre)") + "</div>" +
+          // Primero el N° de expediente y, a la par, el nombre y apellido del paciente.
+          '<div class="rg-tit"><span class="rg-exp">' + esc(r.nroExp || C.expedienteTexto(r) || "Sin expediente") + '</span><span class="rg-pacn">' + esc(r.paciente || "(sin nombre)") + "</span></div>" +
           ocGrande +
-          '<div class="rg-datos">' + datos + "</div>" + alertas + entrega +
+          (datos ? '<div class="rg-datos">' + datos + "</div>" : "") + alertas + entrega +
         "</div>" +
         '<div class="rg-acc"><button type="button" class="ent-mini" title="Copiar paciente, expediente y OC" onclick="EntUI.copiar(\'' + r._id + '\', this)">📋</button>' +
         '<button type="button" class="ent-mini rojo" title="Eliminar del registro" onclick="EntUI.eliminar(\'' + r._id + '\')">🗑️</button></div>' +
