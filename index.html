@@ -203,6 +203,50 @@ hr{border:none;border-top:1.5px solid #e2e8f0;margin:16px 0 14px}
 .ent-det{margin-top:8px}
 .ent-det summary{cursor:pointer;font-size:12px;color:#1a56a0;font-weight:600}
 @media print{#reg-modal{display:none!important}}
+
+/* Cartel de búsqueda con el formato de los avisos de Facturación */
+.rg-box{background:#fff;width:100%;max-width:780px;max-height:88vh;border-radius:18px;box-shadow:0 24px 70px rgba(0,0,0,.4);display:flex;flex-direction:column;overflow:hidden}
+.rg-head{display:flex;align-items:flex-start;gap:16px;padding:20px 22px 18px 26px;background:linear-gradient(120deg,#14284b 0%,#1a56a0 100%);color:#fff}
+.rg-head-ico{flex-shrink:0;width:46px;height:46px;border-radius:12px;background:rgba(255,255,255,.14);display:flex;align-items:center;justify-content:center;font-size:24px;margin-top:4px}
+.rg-head-txt{flex:1;min-width:0}
+.rg-kicker{font-size:12px;font-weight:800;letter-spacing:1.2px;text-transform:uppercase;opacity:.85}
+.rg-title{font-size:23px;font-weight:800;line-height:1.2;margin-top:3px}
+.rg-sub{font-size:13px;font-weight:600;opacity:.9;margin-top:5px}
+.rg-x{flex-shrink:0;width:36px;height:36px;border-radius:10px;border:1.5px solid rgba(255,255,255,.55);background:rgba(255,255,255,.12);color:#fff;font-size:17px;cursor:pointer}
+.rg-x:hover{background:rgba(255,255,255,.25)}
+.rg-search{display:flex;gap:8px;align-items:center;padding:14px 26px;border-bottom:1px solid #e2e8f0;background:#f8fafc;position:relative}
+.rg-search span{position:absolute;left:38px;color:#94a3b8;font-size:15px}
+.rg-search input{flex:1;min-width:0;padding:11px 12px 11px 36px;border:1.5px solid #cbd5e1;border-radius:10px;font-size:15px;outline:none;background:#fff}
+.rg-search input:focus{border-color:#1a56a0;box-shadow:0 0 0 3px rgba(26,86,160,.12)}
+.rg-search select{padding:10px 8px;border:1.5px solid #cbd5e1;border-radius:10px;font-size:13px;background:#fff}
+.rg-body{padding:14px 26px 10px;overflow:auto;flex:1;background:#f8fafc}
+.rg-vacio{font-size:14px;color:#475569;padding:18px 4px;line-height:1.7}
+.rg-vacio span{font-size:12px;color:#64748b}
+.rg-sec{display:flex;align-items:center;gap:8px;font-size:12px;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:#334155;margin:6px 0 10px}
+.rg-dot{width:9px;height:9px;border-radius:50%;display:inline-block}
+.rg-num{background:#ede9fe;color:#5b21b6;border-radius:999px;padding:1px 9px;font-size:12px;letter-spacing:0}
+.rg-card{display:flex;gap:14px;align-items:flex-start;background:#f5f3ff;border:1.5px solid #ddd6fe;border-radius:14px;padding:14px 16px;margin-bottom:12px}
+.rg-card.ok{background:#f0fdf4;border-color:#bbf7d0}
+.rg-ico{flex-shrink:0;width:44px;height:44px;border-radius:10px;background:#fff;border:1.5px solid #e2e8f0;display:flex;align-items:center;justify-content:center;font-size:22px}
+.rg-main{flex:1;min-width:0}
+.rg-kick{font-size:11px;font-weight:800;letter-spacing:.8px;text-transform:uppercase;color:#7c3aed}
+.rg-card.ok .rg-kick{color:#15803d}
+.rg-tit{font-size:17px;font-weight:800;color:#0f172a;margin-top:2px}
+.rg-datos{font-size:14px;color:#334155;margin-top:5px;line-height:1.6}
+.rg-datos b{font-family:Consolas,"Courier New",monospace;color:#1a56a0;font-size:15px}
+.rg-sep{color:#94a3b8;margin:0 8px}
+.rg-warn{font-size:12px;color:#92400e;background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:5px 9px;margin-top:8px}
+.rg-entrega{display:flex;gap:10px;align-items:flex-start;margin-top:10px;padding:9px 11px;border-radius:10px;background:#fff;border:1.5px dashed #c4b5fd;font-size:13px;color:#334155;cursor:pointer;font-weight:400}
+.rg-entrega input{width:20px;height:20px;margin-top:1px;flex-shrink:0;accent-color:#16a34a;cursor:pointer}
+.rg-entrega.ok{border-style:solid;border-color:#86efac;color:#166534}
+.rg-entrega.off{border-style:dashed;border-color:#e2e8f0;color:#64748b;cursor:default}
+.rg-acc{display:flex;flex-direction:column;gap:6px;flex-shrink:0}
+.rg-foot{display:flex;justify-content:space-between;align-items:center;gap:14px;padding:14px 26px;border-top:1px solid #e2e8f0;background:#fff}
+.rg-foot-txt{font-size:12.5px;color:#475569;line-height:1.6}
+.rg-foot-txt a{color:#1a56a0;font-weight:600;text-decoration:none}
+.rg-btn{flex-shrink:0;padding:12px 26px;border:none;border-radius:12px;background:#1e3a5f;color:#fff;font-size:15px;font-weight:800;cursor:pointer;box-shadow:0 4px 12px rgba(30,58,95,.3)}
+.rg-btn:hover{background:#14284b}
+@media (max-width:600px){.rg-title{font-size:19px}.rg-head,.rg-search,.rg-body,.rg-foot{padding-left:14px;padding-right:14px}.rg-search span{left:26px}.rg-foot{flex-direction:column;align-items:stretch}}
 </style>
 </head>
 <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
@@ -485,30 +529,31 @@ hr{border:none;border-top:1.5px solid #e2e8f0;margin:16px 0 14px}
 </div>
 
 <!-- ===== REGISTRO DE ÓRDENES (anteojos / audífonos) ===== -->
-<!-- Mini pantalla de búsqueda -->
+<!-- Cartel de búsqueda (mismo formato que los avisos de Facturación) -->
 <div class="reg-ov" id="reg-modal" style="display:none" onclick="if(event.target===this) cerrarBuscadorRegistro()">
-  <div class="reg-box" role="dialog" aria-label="Buscar expediente u orden de compra">
-    <div class="reg-top">
-      <div><b>🔎 Buscar expediente / orden de compra</b><div class="reg-subt">Anteojos y audífonos</div></div>
-      <button type="button" class="reg-x" onclick="cerrarBuscadorRegistro()" title="Cerrar (Esc)">✕</button>
-    </div>
-    <div class="reg-body">
-      <div class="ent-buscar">
-        <span>🔍</span>
-        <input id="ent-q" type="text" autocomplete="off" oninput="EntUI.render()" placeholder="Apellido y nombre, N° de expediente (8871/410) o N° de OC">
+  <div class="rg-box" role="dialog" aria-label="Buscar expediente u orden de compra">
+    <div class="rg-head">
+      <div class="rg-head-ico">🔎</div>
+      <div class="rg-head-txt">
+        <div class="rg-kicker">Registro de órdenes · Anteojos y audífonos</div>
+        <div class="rg-title">Buscar expediente u orden de compra</div>
+        <div class="rg-sub" id="rg-sub">Conectando…</div>
       </div>
-      <div class="reg-filtro">
-        <select id="ent-f-tipo" onchange="EntUI.render()">
-          <option value="">Anteojos y audífonos</option>
-          <option value="anteojos">👓 Solo anteojos</option>
-          <option value="audio">🎧 Solo audífonos</option>
-        </select>
-        <span id="ent-estado" class="ent-estado">Conectando…</span>
-      </div>
-      <div id="ent-lista" class="reg-res"></div>
+      <button type="button" class="rg-x" onclick="cerrarBuscadorRegistro()" title="Cerrar (Esc)">✕</button>
     </div>
-    <div class="reg-pie">
-      <button type="button" class="ent-mini" onclick="abrirEntregas()">⚙️ Cargar PDFs y administrar</button>
+    <div class="rg-search">
+      <span>🔍</span>
+      <input id="ent-q" type="text" autocomplete="off" oninput="EntUI.render()" placeholder="Apellido y nombre · 8871/410 · OC20552">
+      <select id="ent-f-tipo" onchange="EntUI.render()" title="Tipo">
+        <option value="">Todos</option>
+        <option value="anteojos">👓 Anteojos</option>
+        <option value="audio">🎧 Audífonos</option>
+      </select>
+    </div>
+    <div class="rg-body" id="ent-lista"></div>
+    <div class="rg-foot">
+      <div class="rg-foot-txt">Tildá la entrega <b>cuando le das la orden al paciente</b>: queda registrada la fecha y la hora.<br><a href="#" onclick="abrirEntregas(); return false;">⚙️ Cargar PDFs y administrar</a></div>
+      <button type="button" class="rg-btn" onclick="cerrarBuscadorRegistro()">Listo</button>
     </div>
   </div>
 </div>
@@ -526,8 +571,8 @@ hr{border:none;border-top:1.5px solid #e2e8f0;margin:16px 0 14px}
       <button type="button" class="ent-btn ent-btn-azul" onclick="abrirBuscadorRegistro()">🔎 Buscar en el registro</button>
     </div>
 
-    <div class="stitle" style="margin-top:14px">1 · Cargar PDFs (de a una carpeta por vez)</div>
-    <div class="hint" style="margin-bottom:10px">Cargá primero la carpeta de <b>expedientes</b>, guardá, y después la de <b>órdenes de compra</b> (el orden no importa). Los PDF <b>no</b> se guardan: solo los datos.</div>
+    <div class="stitle" style="margin-top:14px">1 · Cargar PDFs (por etapas)</div>
+    <div class="hint" style="margin-bottom:10px">Podés ir agregando de a partes: elegí unos PDF, después <b>➕ Agregar más</b> (de la misma u otra carpeta), y guardá cuando quieras. También podés guardar y seguir otro día: lo guardado <b>nunca se pierde</b> y lo nuevo se suma y se cruza con lo anterior. Los PDF <b>no</b> se guardan: solo los datos.</div>
     <input id="ent-files" type="file" accept="application/pdf,.pdf" multiple style="display:none" onchange="EntUI.analizar(this.files); this.value='';">
     <button type="button" class="ent-btn ent-btn-azul" onclick="document.getElementById('ent-files').click()">📂 Elegir PDFs…</button>
     <div id="ent-prop"></div>
@@ -2713,6 +2758,94 @@ var EntCore = (function(){
 })();
 if(typeof module !== "undefined" && module.exports) module.exports = EntCore;
 
+/* ===== Interpretación de lo que escribe el usuario en el buscador =====
+   Entiende, entre otros: "OC12345", "OC 12345", "O.C. N° 12.345", "orden 12345", "OC-12345",
+   "8871/410", "8871-410", "8871 410", "8871/410/U/2026", "Expte 8871", "EXP8871/410",
+   "88714102026" no (ambiguo), "uraga", "alexis uraga", "Uraga, Alexis", "acuna" (= ACUÑA). */
+var EntConsulta = (function(){
+  "use strict";
+  function fold(s){ return String(s == null ? "" : s).toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/Ñ/g, "N"); }
+  var STOP = { DE:1, DEL:1, LA:1, LAS:1, LOS:1, Y:1, EL:1, PACIENTE:1, PARA:1, SR:1, SRA:1 };
+  function sinCeros(n){ var s = String(n || "").replace(/^0+(?=\d)/, ""); return s; }
+  function interpretar(q){
+    var t = fold(q);
+    // Separa letras pegadas a números: "OC12345" → "OC 12345", "EXP8871" → "EXP 8871"
+    t = t.replace(/([A-Z])(?=\d)/g, "$1 ").replace(/(\d)(?=[A-Z]{2,})/g, "$1 ");
+    // Puntos de miles dentro de un número: "20.552" → "20552" (no toca "8871/410")
+    t = t.replace(/(\d)\.(?=\d{3}(?!\d))/g, "$1");
+    var r = { oc: [], exp: [], nums: [], palabras: [], tipo: "" };
+    // N° de OC con prefijo: OC / O.C. / ORDEN (DE COMPRA) / OCN° …
+    t = t.replace(/\b(?:O\s*\.?\s*C\s*\.?|ORDEN(?:ES)?(?:\s+DE\s+COMPRA)?)\s*(?:N\s*[°ºO]?\s*\.?|NRO\.?|NUM(?:ERO)?\.?|#)?\s*[:\-]?\s*(\d{3,7})\b/g, function(_, n){ r.oc.push(sinCeros(n)); return " "; });
+    // Expediente: 8871/410(/U)(/2026) con / - o espacio; con o sin "EXPTE"
+    t = t.replace(/\b(?:EXP(?:TE|EDIENTE)?\s*\.?\s*(?:N\s*[°ºO]?\s*\.?|NRO\.?)?\s*[:\-]?\s*)?(\d{1,6})\s*[\/\-\s]\s*(\d{2,4})(?:\s*[\/\-\s]\s*([A-Z]))?(?:\s*[\/\-\s]\s*(20\d{2}))?\b/g,
+      function(m, n, c, l, a){
+        // "20552 2026" no es expediente; un código de 4 cifras solo si viene "/" o "-"
+        if(c.length === 4 && !/[\/\-]/.test(m)) return m;
+        r.exp.push({ num: sinCeros(n), cod: sinCeros(c), letra: l || "", anio: a || "" }); return " ";
+      });
+    // Expediente con prefijo pero solo el número: "EXPTE 8871"
+    t = t.replace(/\bEXP(?:TE|EDIENTE)?\s*\.?\s*(?:N\s*[°ºO]?\s*\.?|NRO\.?)?\s*[:\-]?\s*(\d{1,6})\b/g, function(_, n){ r.exp.push({ num: sinCeros(n), cod: "", letra: "", anio: "" }); return " "; });
+    // Números sueltos: pueden ser N° de expediente o de OC
+    t = t.replace(/\b\d{1,8}\b/g, function(n){ r.nums.push(sinCeros(n)); return " "; });
+    t.split(/[^A-Z]+/).forEach(function(w){
+      if(!w || STOP[w]) return;
+      if(/^(ANTE?OJOS?|ANTEJOS?|LENTES?)$/.test(w)){ r.tipo = "anteojos"; return; }
+      if(/^(AUDIFONOS?|AUDIOFONOS?|AUDIFONO)$/.test(w)){ r.tipo = "audio"; return; }
+      if(/^(OC|O|C|EXP|EXPTE|EXPEDIENTE|ORDEN|ORDENES|COMPRA|NRO|NUM|NUMERO|N)$/.test(w)) return;
+      if(w.length >= 2) r.palabras.push(w);
+    });
+    r.vacia = !r.oc.length && !r.exp.length && !r.nums.length && !r.palabras.length;
+    return r;
+  }
+  /* Puntaje de un registro para la consulta (0 = no coincide). */
+  function puntaje(rec, q){
+    var num = sinCeros(rec.num), cod = sinCeros(rec.cod);
+    var ocs = (rec.ocs && rec.ocs.length ? rec.ocs : (rec.oc ? [rec.oc] : [])).map(sinCeros);
+    var nomW = fold(rec.pacienteNorm || rec.paciente).split(/[^A-Z]+/).filter(Boolean);
+    var p = 0, i;
+    if(q.tipo && rec.tipo && rec.tipo !== q.tipo) return 0;
+    for(i = 0; i < q.oc.length; i++){
+      var o = q.oc[i];
+      if(ocs.indexOf(o) >= 0) p += 100; else if(o.length >= 4 && ocs.some(function(x){ return x.indexOf(o) === 0; })) p += 40; else return 0;
+    }
+    for(i = 0; i < q.exp.length; i++){
+      var e = q.exp[i];
+      if(e.num !== num) return 0;
+      if(e.cod && e.cod !== cod) return 0;
+      if(e.letra && rec.letra && e.letra !== String(rec.letra).toUpperCase()) return 0;
+      if(e.anio && rec.anio && e.anio !== String(rec.anio)) return 0;
+      p += 90;
+    }
+    for(i = 0; i < q.nums.length; i++){
+      var n = q.nums[i];
+      if(ocs.indexOf(n) >= 0) p += 80;
+      else if(n === num) p += 70;
+      else if(cod && n === num + cod) p += 70;              // "8871410"
+      else if(n.length >= 4 && ocs.some(function(x){ return x.indexOf(n) === 0; })) p += 30;
+      else if(n.length >= 3 && num.indexOf(n) === 0) p += 20;
+      else return 0;
+    }
+    for(i = 0; i < q.palabras.length; i++){
+      var w = q.palabras[i];
+      if(nomW.indexOf(w) >= 0) p += 20;
+      else if(w.length >= 3 && nomW.some(function(x){ return x.indexOf(w) === 0; })) p += 10;
+      else return 0;
+    }
+    if(!q.oc.length && !q.exp.length && !q.nums.length && !q.palabras.length) return q.tipo ? 1 : 0;
+    return p;
+  }
+  function buscar(lista, texto){
+    var q = interpretar(texto);
+    if(q.vacia && !q.tipo) return [];
+    return lista.map(function(r){ return { r: r, p: puntaje(r, q) }; })
+      .filter(function(x){ return x.p > 0; })
+      .sort(function(a, b){ return b.p - a.p || (b.r.creadoMs || 0) - (a.r.creadoMs || 0); })
+      .map(function(x){ return x.r; });
+  }
+  return { interpretar: interpretar, puntaje: puntaje, buscar: buscar, fold: fold };
+})();
+if(typeof module !== "undefined" && module.exports) module.exports = EntConsulta;
+
 /* ===== REGISTRO DE ÓRDENES — anteojos y audífonos (Firestore, proyecto visitas-siprosa) =====
    Guarda SOLO DATOS (paciente, expediente, N° de OC, fecha de la OC, proveedor). Los PDF se leen
    en el navegador y NO se suben. Colección nueva: genres_registro_oc
@@ -2732,6 +2865,8 @@ if(typeof module !== "undefined" && module.exports) module.exports = EntCore;
   };
   var C = EntCore;
   var db = null, cache = [], estado = "conectando", escuchando = false, propuesta = [];
+  // PDFs leídos que esperan ser guardados: se van SUMANDO en cada "Agregar PDFs" (carga por etapas).
+  var enEspera = [], destildados = {};
   var authReady = new Promise(function(resolve){
     try{
       if(!firebase.apps.length) firebase.initializeApp(firebaseConfig);
@@ -2782,10 +2917,11 @@ if(typeof module !== "undefined" && module.exports) module.exports = EntCore;
       fr.readAsArrayBuffer(f);
     });
   }
-  async function analizarArchivos(files){
+  async function analizarArchivos(files, avance){
     var items = [];
     for(var i = 0; i < files.length; i++){
       var f = files[i], texto = "";
+      if(avance) avance(i + 1, files.length);
       try{ texto = await textoPdf(await leerBytes(f)); }catch(e){ console.warn("Sin texto (se lee por nombre):", f.name, e); }
       var r = C.combinar(f.name, texto);
       r.nombre = f.name;
@@ -2863,6 +2999,14 @@ if(typeof module !== "undefined" && module.exports) module.exports = EntCore;
       await db.collection(COL).doc(rec ? rec._id : idRegistro(datos)).set(datos, { merge: true });
     },
     eliminar: function(rec){ return db.collection(COL).doc(rec._id).delete(); },
+    // Entrega de la OC al paciente: fecha y hora del momento en que se tilda.
+    marcarEntrega: function(rec, entregar){
+      var d = new Date(), dd = function(n){ return String(n).padStart(2, "0"); };
+      var v = entregar
+        ? { entregado: true, entregadoMs: d.getTime(), entregadoFecha: dd(d.getDate()) + "/" + dd(d.getMonth() + 1) + "/" + d.getFullYear(), entregadoHora: dd(d.getHours()) + ":" + dd(d.getMinutes()) }
+        : { entregado: false, entregadoMs: null, entregadoFecha: "", entregadoHora: "" };
+      return db.collection(COL).doc(rec._id).set(v, { merge: true });
+    },
     /* Cruza los datos cargados en tandas separadas (primero expedientes, después OC, o al revés):
        une cada registro que tiene SOLO la OC con el que tiene SOLO el expediente del mismo paciente
        (por N° de expediente o, si el N° no coincide, por nombre — con aviso). Si el nombre
@@ -2905,7 +3049,7 @@ if(typeof module !== "undefined" && module.exports) module.exports = EntCore;
         var tOc = !!(r.ocs && r.ocs.length);
         if(tOc && r.tieneExp) comp++; else if(!tOc) sinOc.push(r.paciente); else sinExp.push(r.paciente);
       });
-      return { comp: comp, sinOc: sinOc, sinExp: sinExp };
+      return { comp: comp, sinOc: sinOc, sinExp: sinExp, entregados: cache.filter(function(r){ return r.entregado; }).length };
     }
   };
   window.RegistroOCStore = Store;
@@ -2913,21 +3057,9 @@ if(typeof module !== "undefined" && module.exports) module.exports = EntCore;
   /* ---------- UI ---------- */
   var UI = {
     filtrar: function(){
-      var qRaw = String((($("ent-q") || {}).value || "")).toUpperCase().trim();
       var tipo = ($("ent-f-tipo") || {}).value || "";
-      var tokens = qRaw.split(/\s+/).filter(Boolean);
-      return cache.filter(function(r){
-        if(tipo && r.tipo !== tipo) return false;
-        var est = ($("ent-f-cruce") || {}).value || "", tOc = !!(r.ocs && r.ocs.length);
-        if(est === "comp" && !(tOc && r.tieneExp)) return false;
-        if(est === "sinoc" && tOc) return false;
-        if(est === "sinexp" && !(tOc && !r.tieneExp)) return false;
-        if(!tokens.length) return true;
-        var num = C.soloNum(r.num), cod = C.soloNum(r.cod);
-        var pila = [r.pacienteNorm || C.normNombre(r.paciente), num, num + "/" + cod, num + "-" + cod, String(r.nroExp || "").toUpperCase(), (r.ocs || []).join(" "), r.oc || ""].join(" | ");
-        var pilaN = pila.replace(/Ñ/g, "N");
-        return tokens.every(function(t){ var tn = (C.normNombre(t) || t).replace(/Ñ/g, "N"); return pila.indexOf(t) >= 0 || (tn && pilaN.indexOf(tn) >= 0); });
-      });
+      var q = (($("ent-q") || {}).value || "");
+      return EntConsulta.buscar(cache, q).filter(function(r){ return !tipo || r.tipo === tipo; });
     },
     render: function(){
       // Resumen (pantalla de administración)
@@ -2935,37 +3067,68 @@ if(typeof module !== "undefined" && module.exports) module.exports = EntCore;
       if(rsBox){
         if(estado === "sin-acceso") rsBox.innerHTML = '<div class="ent-alerta">Sin acceso a la base. Revisá la regla de Firestore para <b>genres_registro_oc</b> (y que el login anónimo esté habilitado).</div>';
         else if(estado === "conectando") rsBox.textContent = "Conectando…";
-        else { var rs0 = Store.resumen(); rsBox.textContent = cache.length + " paciente(s) en el registro · " + rs0.comp + " con expediente y OC · " + rs0.sinOc.length + " sin OC todavía · " + rs0.sinExp.length + " solo con OC"; }
+        else { var rs0 = Store.resumen(); rsBox.textContent = cache.length + " paciente(s) en el registro · " + rs0.comp + " con expediente y OC · " + rs0.sinOc.length + " sin OC todavía · " + rs0.sinExp.length + " solo con OC · " + rs0.entregados + " entregada(s) al paciente"; }
       }
-      // Resultados (mini pantalla de búsqueda)
-      var cont = $("ent-lista"), st = $("ent-estado");
-      if(!cont || !st) return;
-      if(estado === "sin-acceso"){ st.textContent = ""; cont.innerHTML = '<div class="ent-alerta">Sin acceso a la base del registro.</div>'; return; }
-      if(estado === "conectando"){ st.textContent = "Conectando…"; cont.innerHTML = ""; return; }
+      // Cartel de búsqueda
+      var cont = $("ent-lista"), sub = $("rg-sub");
+      if(!cont || !sub) return;
+      if(estado === "sin-acceso"){ sub.textContent = "Sin acceso a la base"; cont.innerHTML = '<div class="rg-vacio">No hay acceso a la base del registro (regla de Firestore <b>genres_registro_oc</b>).</div>'; return; }
+      if(estado === "conectando"){ sub.textContent = "Conectando…"; cont.innerHTML = ""; return; }
       var q = (($("ent-q") || {}).value || "").trim();
-      if(q.length < 2){ st.textContent = cache.length + " paciente(s) en el registro. Escribí apellido, N° de expediente o N° de OC."; cont.innerHTML = ""; return; }
+      if(q.length < 2){
+        sub.textContent = cache.length + " paciente(s) en el registro";
+        cont.innerHTML = '<div class="rg-vacio">Escribí el apellido y nombre, el N° de expediente o el N° de orden de compra.<br><span>Ejemplos: <b>uraga</b> · <b>8871/410</b> · <b>OC20552</b> · <b>oc 20.552</b> · <b>expte 8871</b></span></div>';
+        return;
+      }
       var lista = UI.filtrar();
-      st.textContent = lista.length ? lista.length + " resultado(s)" : "";
-      if(!lista.length){ cont.innerHTML = '<div class="reg-vacio">No se encontró \u201c' + esc(q) + '\u201d en el registro.</div>'; return; }
-      cont.innerHTML = lista.slice(0, 15).map(UI.ficha).join("") +
-        (lista.length > 15 ? '<div class="reg-vacio">Hay ' + lista.length + " coincidencias: escribí más para afinar.</div>" : "");
+      if(!lista.length){ sub.textContent = "Sin resultados"; cont.innerHTML = '<div class="rg-vacio">No se encontró \u201c' + esc(q) + '\u201d en el registro.<br><span>Probá con el apellido solo, o con el N° de expediente o de OC sin letras.</span></div>'; return; }
+      var muestra = lista.slice(0, 12);
+      var pend = muestra.filter(function(r){ return !r.entregado; }), entr = muestra.filter(function(r){ return r.entregado; });
+      sub.textContent = lista.length + " encontrado(s)" + (pend.length ? " · " + pend.length + " por entregar" : "") + (entr.length ? " · " + entr.length + " ya entregado(s)" : "");
+      var seccion = function(titulo, color, arr){
+        return arr.length ? '<div class="rg-sec"><span class="rg-dot" style="background:' + color + '"></span>' + titulo + '<span class="rg-num">' + arr.length + "</span></div>" + arr.map(UI.ficha).join("") : "";
+      };
+      cont.innerHTML = seccion("Por entregar", "#7c3aed", pend) + seccion("Ya entregadas", "#16a34a", entr) +
+        (lista.length > 12 ? '<div class="rg-vacio">Hay ' + lista.length + " coincidencias: escribí más para afinar.</div>" : "");
     },
     ficha: function(r){
       var ocs = (r.ocs && r.ocs.length) ? r.ocs : (r.oc ? [r.oc] : []);
-      var tipo = r.tipo === "audio" ? "🎧 Audífonos" : r.tipo === "anteojos" ? "👓 Anteojos" : "—";
-      var campo = function(et, val, num){ return '<div class="reg-campo"><span>' + et + "</span><b" + (num ? ' class="num"' : "") + ">" + val + "</b></div>"; };
-      var alertas = (r.alertas || []).map(function(a){ return '<div class="warn">⚠️ ' + esc(a) + "</div>"; }).join("");
-      return '<div class="reg-ficha">' +
-        '<div class="reg-cab"><div class="reg-pac">' + esc(r.paciente || "(sin nombre)") + "</div>" +
-          '<div class="reg-acc"><button type="button" class="ent-mini" title="Copiar paciente, expediente y OC" onclick="EntUI.copiar(\'' + r._id + '\', this)">📋 Copiar</button>' +
-          '<button type="button" class="ent-mini rojo" title="Eliminar del registro" onclick="EntUI.eliminar(\'' + r._id + '\')">🗑️</button></div></div>' +
-        '<div class="reg-grid">' +
-          campo("Expediente", esc(r.nroExp || C.expedienteTexto(r) || "—"), true) +
-          campo("N° de orden de compra", ocs.length ? ocs.map(esc).join(" / ") : '<i class="sub">sin OC todavía</i>', true) +
-          campo("Fecha de la OC", esc(r.fechaOC || "—")) +
-          campo("Proveedor", esc(r.proveedor || "—")) +
-          campo("Tipo", tipo + (r.cantidad ? " ×" + r.cantidad : "") + (r.extra ? ' <span class="sub">· ' + esc(r.extra) + "</span>" : "")) +
-        "</div>" + alertas + "</div>";
+      var tipo = r.tipo === "audio" ? "Audífonos" : r.tipo === "anteojos" ? "Anteojos" : "Prestación";
+      var icono = r.tipo === "audio" ? "🎧" : "👓";
+      var kick = [tipo + (r.cantidad ? " ×" + r.cantidad : ""), r.proveedor || "", r.extra || ""].filter(Boolean).join(" · ");
+      var datos = [
+        "Expediente <b>" + esc(r.nroExp || C.expedienteTexto(r) || "—") + "</b>",
+        ocs.length ? "Orden de compra <b>" + ocs.map(esc).join(" / ") + "</b>" : "<i>Sin orden de compra cargada</i>",
+        r.fechaOC ? "Fecha OC " + esc(r.fechaOC) : ""
+      ].filter(Boolean).join('<span class="rg-sep">·</span>');
+      var alertas = (r.alertas || []).map(function(a){ return '<div class="rg-warn">⚠️ ' + esc(a) + "</div>"; }).join("");
+      var entrega;
+      if(r.entregado){
+        entrega = '<label class="rg-entrega ok"><input type="checkbox" checked onchange="EntUI.entrega(\'' + r._id + '\', this)">' +
+          '<span>✅ <b>Entregada al paciente</b> el ' + esc(r.entregadoFecha || "") + (r.entregadoHora ? " a las " + esc(r.entregadoHora) + " hs" : "") + "</span></label>";
+      } else if(ocs.length){
+        entrega = '<label class="rg-entrega"><input type="checkbox" onchange="EntUI.entrega(\'' + r._id + '\', this)">' +
+          "<span><b>¿Estás por entregar esta orden de compra al paciente?</b> Tildá para registrar la entrega con fecha y hora.</span></label>";
+      } else {
+        entrega = '<div class="rg-entrega off">Todavía no se puede registrar la entrega: falta cargar la orden de compra.</div>';
+      }
+      return '<div class="rg-card' + (r.entregado ? " ok" : "") + '">' +
+        '<div class="rg-ico">' + icono + "</div>" +
+        '<div class="rg-main">' +
+          '<div class="rg-kick">' + esc(kick) + "</div>" +
+          '<div class="rg-tit">' + esc(r.paciente || "(sin nombre)") + "</div>" +
+          '<div class="rg-datos">' + datos + "</div>" + alertas + entrega +
+        "</div>" +
+        '<div class="rg-acc"><button type="button" class="ent-mini" title="Copiar paciente, expediente y OC" onclick="EntUI.copiar(\'' + r._id + '\', this)">📋</button>' +
+        '<button type="button" class="ent-mini rojo" title="Eliminar del registro" onclick="EntUI.eliminar(\'' + r._id + '\')">🗑️</button></div>' +
+      "</div>";
+    },
+    entrega: function(id, chk){
+      var r = UI.rec(id); if(!r) return;
+      if(!chk.checked && !confirm("¿Quitar la entrega registrada para " + r.paciente + "? (vuelve a quedar por entregar)")){ chk.checked = true; return; }
+      chk.disabled = true;
+      Store.marcarEntrega(r, chk.checked).catch(function(e){ chk.checked = !chk.checked; alert("No se pudo guardar la entrega: " + (e && e.message || e)); })
+        .then(function(){ chk.disabled = false; });
     },
     rec: function(id){ return cache.filter(function(r){ return r._id === id; })[0]; },
     copiar: function(id, btn){
@@ -2986,20 +3149,35 @@ if(typeof module !== "undefined" && module.exports) module.exports = EntCore;
     analizar: async function(fileList){
       var files = Array.prototype.slice.call(fileList || []).filter(function(f){ return /\.pdf$/i.test(f.name) || f.type === "application/pdf"; });
       var box = $("ent-prop"); if(!box || !files.length) return;
-      box.innerHTML = '<div class="hint" style="margin-top:10px">⏳ Leyendo ' + files.length + " PDF…</div>";
+      // Un PDF que ya está en espera (mismo nombre y tamaño) no se vuelve a leer.
+      var ya = {}; enEspera.forEach(function(it){ ya[it.nombre + "|" + it.tam] = true; });
+      var nuevos = files.filter(function(f){ return !ya[f.name + "|" + f.size]; });
+      var repetidos = files.length - nuevos.length;
+      var aviso = $("ent-leyendo");
+      if(!aviso){ aviso = document.createElement("div"); aviso.id = "ent-leyendo"; aviso.className = "hint"; aviso.style.marginTop = "10px"; box.parentNode.insertBefore(aviso, box); }
       try{
-        var items = await analizarArchivos(files);
-        propuesta = C.agrupar(items).map(function(g){
-          var ex = Store.buscarExistente(g.datos);
-          g.destino = ex ? ex.rec : null;
-          if(ex && ex.porNombre) g.alertas.push("Se une al registro existente de " + ex.rec.paciente + " por nombre (el N° de expediente no coincide).");
-          // Para el registro alcanza con la OC (trae expediente, paciente y N°): no falta nada si no está la carátula.
-          g.alertas = g.alertas.filter(function(a){ return !/^Falta el PDF del expediente/.test(a); });
-          g.incluir = true;
-          return g;
-        });
-        UI.renderPropuesta();
-      }catch(e){ box.innerHTML = '<div class="ent-alerta">No se pudieron leer los PDF: ' + esc(e && e.message || e) + "</div>"; }
+        var items = await analizarArchivos(nuevos, function(k, n){ aviso.textContent = "⏳ Leyendo " + k + " de " + n + " PDF…"; });
+        items.forEach(function(it, k){ it.tam = nuevos[k].size; });
+        enEspera = enEspera.concat(items);
+        aviso.textContent = "✔ Se agregaron " + items.length + " PDF" + (repetidos ? " (" + repetidos + " ya estaban en la carga y se omitieron)" : "") + ". Podés seguir agregando o guardar.";
+        UI.reagrupar();
+      }catch(e){ aviso.textContent = ""; box.innerHTML = '<div class="ent-alerta">No se pudieron leer los PDF: ' + esc(e && e.message || e) + "</div>"; }
+    },
+    // Rearma la propuesta con TODO lo que está en espera (así una OC agregada en la segunda etapa
+    // se une al expediente agregado en la primera, aunque todavía no se haya guardado nada).
+    reagrupar: function(){
+      propuesta = C.agrupar(enEspera).map(function(g){
+        var ex = Store.buscarExistente(g.datos);
+        g.destino = ex ? ex.rec : null;
+        if(ex && ex.porNombre) g.alertas.push("Se une al registro existente de " + ex.rec.paciente + " por nombre (el N° de expediente no coincide).");
+        // Para el registro alcanza con la OC (trae expediente, paciente y N°): no falta nada si no está la carátula.
+        // "Falta la OC" no es un error cuando se carga por etapas: se muestra como estado, no como aviso.
+        g.alertas = g.alertas.filter(function(a){ return !/^Falta el PDF del expediente/.test(a) && !/^Falta la orden de compra/.test(a); });
+        g.llave = g.clave || C.normNombre(g.datos.paciente);
+        g.incluir = !destildados[g.llave];
+        return g;
+      });
+      UI.renderPropuesta();
     },
     renderPropuesta: function(){
       var box = $("ent-prop"); if(!box) return;
@@ -3015,20 +3193,26 @@ if(typeof module !== "undefined" && module.exports) module.exports = EntCore;
           "<td>" + esc(d.oc || "—") + "</td>" +
           "<td>" + esc(d.fechaOC || "—") + "</td>" +
           "<td>" + esc(d.proveedor || "—") + "</td>" +
-          "<td>" + (g.alertas.length ? g.alertas.map(function(a){ return "⚠️ " + esc(a); }).join("<br>") : (g.destino ? "Completa uno existente" : "Nuevo")) + "</td></tr>";
+          "<td>" + (g.alertas.length ? g.alertas.map(function(a){ return "⚠️ " + esc(a); }).join("<br>") : (g.destino ? "Completa uno existente" : "Nuevo") + (d.oc ? "" : ' <span style="color:#64748b">(sin OC todavía)</span>')) + "</td></tr>";
       };
       var cab = function(conCheck){ return "<thead><tr>" + (conCheck ? "<th></th>" : "") + "<th>Paciente</th><th>Expediente</th><th>N° OC</th><th>Fecha OC</th><th>Proveedor</th><th>Control</th></tr></thead>"; };
       box.innerHTML =
-        '<div class="ent-cruce-res">📄 Se leyeron <b>' + propuesta.length + "</b> paciente(s): <b>" + nuevos + "</b> nuevo(s) y <b>" + compl + "</b> que completan uno ya cargado." +
+        '<div class="ent-cruce-res">📥 En espera de guardar: <b>' + enEspera.length + "</b> PDF → <b>" + propuesta.length + "</b> paciente(s): <b>" + nuevos + "</b> nuevo(s) y <b>" + compl + "</b> que completan uno ya cargado." +
           (conAlerta.length ? "<br>⚠️ <b>" + conAlerta.length + "</b> con algo para revisar (abajo)." : "<br>✔ Sin diferencias para revisar.") + "</div>" +
         (conAlerta.length ? '<div class="ent-scroll"><table class="ent-tabla">' + cab(false) + "<tbody>" + conAlerta.map(function(g){ return fila(g, propuesta.indexOf(g), false); }).join("") + "</tbody></table></div>" : "") +
         '<details class="ent-det"><summary>Ver el detalle de los ' + propuesta.length + " (y destildar los que no quieras guardar)</summary>" +
           '<div class="ent-scroll"><table class="ent-tabla">' + cab(true) + "<tbody>" + propuesta.map(function(g, i){ return fila(g, i, true); }).join("") + "</tbody></table></div></details>" +
-        '<div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap"><button type="button" class="ent-btn ent-btn-verde" id="ent-subir" onclick="EntUI.subir()">💾 Guardar en el registro</button>' +
-        '<button type="button" class="ent-btn ent-btn-gris" onclick="EntUI.cancelarProp()">Cancelar</button></div>';
+        '<div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">' +
+        '<button type="button" class="ent-btn ent-btn-azul" onclick="document.getElementById(\'ent-files\').click()">➕ Agregar más PDFs</button>' +
+        '<button type="button" class="ent-btn ent-btn-verde" id="ent-subir" onclick="EntUI.subir()">💾 Guardar en el registro</button>' +
+        '<button type="button" class="ent-btn ent-btn-gris" onclick="EntUI.cancelarProp()">Descartar lo no guardado</button></div>';
     },
-    toggleProp: function(i, v){ if(propuesta[i]) propuesta[i].incluir = v; },
-    cancelarProp: function(){ propuesta = []; UI.renderPropuesta(); },
+    toggleProp: function(i, v){ var g = propuesta[i]; if(!g) return; g.incluir = v; if(v) delete destildados[g.llave]; else destildados[g.llave] = true; },
+    cancelarProp: function(){
+      if(enEspera.length && !confirm("¿Descartar los " + enEspera.length + " PDF leídos que todavía no guardaste?")) return;
+      enEspera = []; destildados = {}; propuesta = []; UI.renderPropuesta();
+      var av = $("ent-leyendo"); if(av) av.textContent = "";
+    },
     subir: async function(){
       var sel = propuesta.filter(function(g){ return g.incluir; });
       if(!sel.length) return;
@@ -3039,7 +3223,8 @@ if(typeof module !== "undefined" && module.exports) module.exports = EntCore;
         try{ await Store.guardarGrupo(sel[i]); ok++; }
         catch(e){ err.push((sel[i].datos.paciente || "?") + ": " + (e && e.message || e)); }
       }
-      propuesta = []; UI.renderPropuesta();
+      enEspera = []; destildados = {}; propuesta = []; UI.renderPropuesta();
+      var av = $("ent-leyendo"); if(av) av.textContent = "";
       await new Promise(function(r){ setTimeout(r, 400); }); // que llegue el snapshot con lo recién guardado
       var cr = null; try{ cr = await Store.cruzar(); }catch(_){ }
       if(msg){
