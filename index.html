@@ -248,6 +248,12 @@ hr{border:none;border-top:1.5px solid #e2e8f0;margin:16px 0 14px}
 .rg-btn:hover{background:#14284b}
 @media (max-width:600px){.rg-title{font-size:19px}.rg-head,.rg-search,.rg-body,.rg-foot{padding-left:14px;padding-right:14px}.rg-search span{left:26px}.rg-foot{flex-direction:column;align-items:stretch}}
 .rg-lis{font-size:12.5px;color:#475569;margin:4px 0 2px 4px;line-height:1.6}
+.rg-oc{display:inline-flex;flex-direction:column;margin-top:8px;padding:8px 16px 9px;background:#fff;border:2px solid #1a56a0;border-radius:12px;box-shadow:0 2px 8px rgba(26,86,160,.12)}
+.rg-oc span{font-size:11px;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:#1a56a0}
+.rg-oc b{font-family:Consolas,"Courier New",monospace;font-size:34px;line-height:1.1;font-weight:800;color:#0f2c55;letter-spacing:1px}
+.rg-card.ok .rg-oc{border-color:#16a34a}.rg-card.ok .rg-oc span{color:#15803d}
+.rg-oc.vacia{border-style:dashed;border-color:#cbd5e1;box-shadow:none}.rg-oc.vacia span{color:#64748b}.rg-oc.vacia b{font-family:inherit;font-size:16px;color:#64748b}
+@media (max-width:600px){.rg-oc b{font-size:28px}}
 </style>
 </head>
 <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
@@ -3233,9 +3239,12 @@ if(typeof module !== "undefined" && module.exports) module.exports = EntConsulta
       var tipo = r.tipo === "audio" ? "Audífonos" : r.tipo === "anteojos" ? "Anteojos" : "Prestación";
       var icono = r.tipo === "audio" ? "🎧" : "👓";
       var kick = [tipo + (r.cantidad ? " ×" + r.cantidad : ""), r.proveedor || "", r.extra || ""].filter(Boolean).join(" · ");
+      // El N° de OC va GRANDE, en su propio recuadro; abajo, expediente y fecha.
+      var ocGrande = ocs.length
+        ? '<div class="rg-oc"><span>Orden de compra N°</span><b>' + ocs.map(esc).join(" / ") + "</b></div>"
+        : '<div class="rg-oc vacia"><span>Orden de compra</span><b>sin cargar</b></div>';
       var datos = [
         "Expediente <b>" + esc(r.nroExp || C.expedienteTexto(r) || "—") + "</b>",
-        ocs.length ? "Orden de compra <b>" + ocs.map(esc).join(" / ") + "</b>" : "<i>Sin orden de compra cargada</i>",
         r.fechaOC ? "Fecha OC " + esc(r.fechaOC) : ""
       ].filter(Boolean).join('<span class="rg-sep">·</span>');
       var alertas = (r.alertas || []).map(function(a){ return '<div class="rg-warn">⚠️ ' + esc(a) + "</div>"; }).join("");
@@ -3254,6 +3263,7 @@ if(typeof module !== "undefined" && module.exports) module.exports = EntConsulta
         '<div class="rg-main">' +
           '<div class="rg-kick">' + esc(kick) + "</div>" +
           '<div class="rg-tit">' + esc(r.paciente || "(sin nombre)") + "</div>" +
+          ocGrande +
           '<div class="rg-datos">' + datos + "</div>" + alertas + entrega +
         "</div>" +
         '<div class="rg-acc"><button type="button" class="ent-mini" title="Copiar paciente, expediente y OC" onclick="EntUI.copiar(\'' + r._id + '\', this)">📋</button>' +
