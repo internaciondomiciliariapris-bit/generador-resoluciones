@@ -257,6 +257,9 @@ hr{border:none;border-top:1.5px solid #e2e8f0;margin:16px 0 14px}
 .rg-tit{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 12px}
 /* Expediente con la MISMA letra, tamaño y color que el nombre, bien negrita */
 .rg-exp,.rg-pacn{font-family:inherit;font-size:17px;font-weight:900;color:#0f172a;background:none;padding:0}
+.rg-fix{margin:6px 0;padding:7px 9px;background:#fff;border:1px solid #fde68a;border-radius:8px;font-size:12.5px;color:#334155;line-height:1.9}
+.rg-fix-it{display:inline-block;margin-right:12px}
+.rg-fix .sub{color:#64748b;font-size:11.5px}
 </style>
 </head>
 <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
@@ -2769,6 +2772,10 @@ var EntCore = (function(){
       grupos.forEach(function(h){
         if(h === g || h.clave !== g.clave) return;
         var otro = pacDe(h), oco = ocDe(h);
+        if(otro && pacDe(g) && mismaPersona(otro, pacDe(g))){
+          g.alertas.push("Este paciente tiene otra OC" + (oco ? " (" + oco + ")" : "") + " con el mismo expediente. Cada OC es \u00fanica: si una est\u00e1 anulada, eleg\u00ed la v\u00e1lida en \u00abCruzar y revisar\u00bb.");
+          return;
+        }
         g.alertas.push("El expediente " + g.clave + " tambi\u00e9n figura para " + (otro || "otro paciente") + (oco ? " (OC " + oco + ")" : "") + ". Cada OC es \u00fanica: revis\u00e1 con Compras cu\u00e1l es el expediente correcto.");
       });
     });
@@ -3054,6 +3061,7 @@ if(typeof module !== "undefined" && module.exports) module.exports = EntConsulta
     guardarGrupo: async function(g){
       var ok = await authReady; if(!ok || !db) throw new Error("Sin acceso a la base");
       var d = g.datos, rec = g.destino || null;
+      if(d.oc && Store.anuladas()[C.soloNum(d.oc)]) return;   // OC anulada: nunca se guarda
       var ocsRec = rec ? ((rec.ocs && rec.ocs.length) ? rec.ocs : (rec.oc ? [rec.oc] : [])) : [];
       if(rec && d.oc && ocsRec.length && ocsRec.indexOf(d.oc) < 0) rec = null;   // cada OC es única: va a su propio registro
       var datos = {
@@ -3132,7 +3140,8 @@ if(typeof module !== "undefined" && module.exports) module.exports = EntConsulta
       var ok = await authReady; if(!ok || !db) throw new Error("Sin acceso a la base");
       var ocsDe = function(r){ return (r.ocs && r.ocs.length) ? r.ocs.slice() : (r.oc ? [r.oc] : []); };
       var ocDeArchivo = function(n){ var x = C.leerNombreArchivo(n); return x.rol === "oc" ? x : null; };
-      var res = { separados: [], sinResolver: [], limpiados: 0 };
+      var res = { separados: [], sinResolver: [], limpiados: 0, corregidos: [], multiItems: [], expItems: [] };
+      try{ res.corregidos = await Store.aplicarCorrecciones(); }catch(e){ console.warn("Correcciones:", e); }
       var lista = cache.slice();
       for(var i = 0; i < lista.length; i++){
         var rec = lista[i], ocs = ocsDe(rec), upd = null;
@@ -3182,12 +3191,109 @@ if(typeof module !== "undefined" && module.exports) module.exports = EntConsulta
         var k = C.clave(r.num, r.cod); if(k) (porClave[k] = porClave[k] || []).push(r);
         ocsDe(r).forEach(function(o){ (porOc[o] = porOc[o] || []).push(r); });
       });
-      res.expCompartidos = Object.keys(porClave).filter(function(k){
+      var compartidas = Object.keys(porClave).filter(function(k){
         var g = porClave[k]; return g.some(function(a){ return g.some(function(b){ return a !== b && a.paciente && b.paciente && !C.mismaPersona(a.paciente, b.paciente); }); });
-      }).map(function(k){ return k + ": " + porClave[k].map(function(r){ return r.paciente + (ocsDe(r).length ? " (OC " + ocsDe(r).join("/") + ")" : ""); }).join(" \u00b7 "); });
+      });
+      res.expCompartidos = compartidas.map(function(k){ return k + ": " + porClave[k].map(function(r){ return r.paciente + (ocsDe(r).length ? " (OC " + ocsDe(r).join("/") + ")" : ""); }).join(" \u00b7 "); });
+      res.expItems = compartidas.map(function(k){ return { clave: k, recs: porClave[k].map(function(r){ return { id: r._id, paciente: r.paciente, ocs: ocsDe(r), nroExp: r.nroExp || C.expedienteTexto(r) }; }) }; });
+      // Registros que todavía tienen más de una OC (después de separar y corregir)
+      res.multiItems = cache.filter(function(r){ return ocsDe(r).length > 1; }).map(function(r){ return { id: r._id, paciente: r.paciente, ocs: ocsDe(r) }; });
+      res.sinResolver = res.multiItems.map(function(m){ return m.paciente + ": OC " + m.ocs.join(" y "); });
       res.ocRepetidas = Object.keys(porOc).filter(function(o){ return porOc[o].length > 1; })
         .map(function(o){ return "OC " + o + ": " + porOc[o].map(function(r){ return r.paciente; }).join(" \u00b7 "); });
       return res;
+    },
+    /* ---- Correcciones manuales (lo que dice Compras manda) ---- */
+    anuladas: function(){
+      var a = {};
+      cache.forEach(function(r){ (r.anuladas || []).forEach(function(o){ a[C.soloNum(o)] = r.paciente || true; }); });
+      return a;
+    },
+    // Cambia el N° de expediente de un registro (ej. VALENZUELA 9585 → 9589) y limpia los avisos de conflicto.
+    corregirExpediente: async function(rec, texto){
+      var p = C.partirExpediente(texto);
+      if(!p || !p.num || !p.cod) throw new Error("Escribí el expediente completo, por ejemplo 9589/410/S/2026");
+      var reAviso = /expediente|Se asociaron|también figura|Se une al registro|ya está en el registro|nombre del archivo dice/i;
+      var datos = {
+        num: p.num, cod: p.cod, letra: p.letra || rec.letra || "", anio: p.anio || rec.anio || "",
+        claves: [C.clave(p.num, p.cod)], expCorregido: true, actualizadoMs: Date.now(),
+        alertas: (rec.alertas || []).filter(function(a){ return !reAviso.test(a); })
+      };
+      datos.nroExp = C.expedienteTexto(datos);
+      await db.collection(COL).doc(rec._id).set(datos, { merge: true });
+      // En los otros registros, se borra el aviso que nombraba a este paciente.
+      var pac = String(rec.paciente || "");
+      for(var i = 0; i < cache.length; i++){
+        var o = cache[i]; if(o._id === rec._id || !(o.alertas || []).length) continue;
+        var nuevas = o.alertas.filter(function(a){ return !(pac && a.indexOf(pac) >= 0 && reAviso.test(a)); });
+        if(nuevas.length !== o.alertas.length) await db.collection(COL).doc(o._id).set({ alertas: nuevas, actualizadoMs: Date.now() }, { merge: true });
+      }
+      return datos.nroExp;
+    },
+    // Deja una sola OC válida en el registro; las demás quedan ANULADAS (y no se vuelven a cargar nunca).
+    dejarOcValida: async function(rec, valida){
+      valida = C.soloNum(valida);
+      var ocs = ((rec.ocs && rec.ocs.length) ? rec.ocs : (rec.oc ? [rec.oc] : [])).map(C.soloNum);
+      var anul = ocs.filter(function(o){ return o !== valida; });
+      var upd = {
+        ocs: ocs.indexOf(valida) >= 0 ? [valida] : ocs.filter(function(o){ return anul.indexOf(o) < 0; }),
+        anuladas: unir(rec.anuladas, anul), actualizadoMs: Date.now(),
+        alertas: (rec.alertas || []).filter(function(a){ return !/más de una OC|Figura con más de una OC/i.test(a); }),
+        archivos: (rec.archivos || []).filter(function(n){ var x = C.leerNombreArchivo(n); return !(x.rol === "oc" && anul.indexOf(C.soloNum(x.oc)) >= 0); })
+      };
+      upd.oc = upd.ocs[upd.ocs.length - 1] || "";
+      if(rec.oc && C.soloNum(rec.oc) !== upd.oc){ upd.fechaOC = ""; }   // la fecha era de la OC anulada: se completa al volver a cargar la válida
+      if(rec.entregado && anul.indexOf(C.soloNum(rec.oc)) >= 0){ upd.entregado = false; upd.entregadoMs = null; upd.entregadoFecha = ""; upd.entregadoHora = ""; }
+      await db.collection(COL).doc(rec._id).set(upd, { merge: true });
+      return anul;
+    },
+    anularOc: async function(rec, oc){
+      oc = C.soloNum(oc);
+      var ocs = ((rec.ocs && rec.ocs.length) ? rec.ocs : (rec.oc ? [rec.oc] : [])).map(C.soloNum);
+      var resto = ocs.filter(function(o){ return o !== oc; });
+      if(resto.length) return Store.dejarOcValida(rec, resto[0]);
+      await db.collection(COL).doc(rec._id).set({ ocs: [], oc: "", fechaOC: "", anuladas: unir(rec.anuladas, [oc]), actualizadoMs: Date.now() }, { merge: true });
+      return [oc];
+    },
+    /* Correcciones informadas por Jorge (06/10/2026). Se aplican una sola vez: si ya están hechas, no tocan nada. */
+    aplicarCorrecciones: async function(){
+      var hechas = [];
+      var LISTA = [
+        { paciente: "VALENZUELA GERONIMO", exp: "9589/410/S/2026" },
+        { paciente: "CARRIZO MARCELA DEL CARMEN", exp: "9585/410/S/2026" },
+        { paciente: "HERRERA SUSANA MERCEDES", valida: "18989", anular: ["19916"] },
+        { paciente: "OJEDA JUAN HERNALDO", valida: "20244", anular: ["20294"] }
+      ];
+      for(var i = 0; i < LISTA.length; i++){
+        var c = LISTA[i];
+        var recs = cache.filter(function(r){ return C.mismaPersona(r.paciente, c.paciente); });
+        for(var j = 0; j < recs.length; j++){
+          var r = recs[j], ocs = ((r.ocs && r.ocs.length) ? r.ocs : (r.oc ? [r.oc] : [])).map(C.soloNum);
+          if(c.exp){
+            var p = C.partirExpediente(c.exp);
+            if(!(r.expCorregido && C.soloNum(r.num) === p.num && C.soloNum(r.cod) === p.cod)){
+              await Store.corregirExpediente(r, c.exp); hechas.push(r.paciente + ": expediente " + c.exp);
+            }
+          } else {
+            var aAnular = c.anular.filter(function(o){ return ocs.indexOf(o) >= 0; });
+            if(!aAnular.length){
+              if(c.anular.some(function(o){ return (r.anuladas || []).map(C.soloNum).indexOf(o) < 0; }))
+                await db.collection(COL).doc(r._id).set({ anuladas: unir(r.anuladas, c.anular), actualizadoMs: Date.now() }, { merge: true });
+              continue;
+            }
+            if(ocs.indexOf(c.valida) >= 0){ await Store.dejarOcValida(r, c.valida); hechas.push(r.paciente + ": OC válida " + c.valida + " (anulada " + aAnular.join(", ") + ")"); }
+            else {
+              // Registro que SOLO tiene la anulada: si otro registro del paciente tiene la válida, se borra; si no, se marca anulada.
+              var hayValida = recs.some(function(x){ return x !== r && ((x.ocs || []).map(C.soloNum).indexOf(c.valida) >= 0); });
+              if(hayValida && ocs.length === aAnular.length){ await db.collection(COL).doc(r._id).delete(); }
+              else { for(var k = 0; k < aAnular.length; k++) await Store.anularOc(r, aAnular[k]); }
+              hechas.push(r.paciente + ": OC " + aAnular.join(", ") + " anulada");
+            }
+          }
+        }
+      }
+      if(hechas.length) await new Promise(function(res){ setTimeout(res, 500); });
+      return hechas;
     },
     resumen: function(){
       var comp = 0, sinOc = [], sinExp = [];
@@ -3246,7 +3352,7 @@ if(typeof module !== "undefined" && module.exports) module.exports = EntConsulta
       var ocGrande = ocs.length
         ? '<div class="rg-oc"><span>Orden de compra N°</span><b>' + ocs.map(esc).join(" / ") + "</b></div>"
         : '<div class="rg-oc vacia"><span>Orden de compra</span><b>sin cargar</b></div>';
-      var datos = r.fechaOC ? "Fecha OC " + esc(r.fechaOC) : "";
+      var datos = [r.fechaOC ? "Fecha OC " + esc(r.fechaOC) : "", (r.anuladas && r.anuladas.length) ? '<span style="color:#b91c1c">OC anulada: ' + r.anuladas.map(esc).join(", ") + "</span>" : ""].filter(Boolean).join('<span class="rg-sep">·</span>');
       var alertas = (r.alertas || []).map(function(a){ return '<div class="rg-warn">⚠️ ' + esc(a) + "</div>"; }).join("");
       var entrega;
       if(r.entregado){
@@ -3321,7 +3427,13 @@ if(typeof module !== "undefined" && module.exports) module.exports = EntConsulta
         // Para el registro alcanza con la OC (trae expediente, paciente y N°): no falta nada si no está la carátula.
         // "Falta la OC" no es un error cuando se carga por etapas: se muestra como estado, no como aviso.
         g.alertas = g.alertas.filter(function(a){ return !/^Falta el PDF del expediente/.test(a) && !/^Falta la orden de compra/.test(a); });
-        Store.conflictos(g.datos, g.destino).forEach(function(r){
+        // Expediente ya corregido a mano: lo que diga el PDF sobre el N° de expediente no se vuelve a avisar.
+        var refExp = g.datos;
+        if(g.destino && g.destino.expCorregido){
+          g.alertas = g.alertas.filter(function(a){ return !/expediente|Se asociaron|Se une al registro|nombre del archivo dice/i.test(a); });
+          refExp = { num: g.destino.num, cod: g.destino.cod, paciente: g.destino.paciente };
+        }
+        Store.conflictos(refExp, g.destino).forEach(function(r){
           var a = "El expediente " + C.clave(g.datos.num, g.datos.cod) + " ya est\u00e1 en el registro para " + r.paciente + ((r.ocs && r.ocs.length) ? " (OC " + r.ocs.join("/") + ")" : "") + ". Cada OC es \u00fanica: revis\u00e1 con Compras cu\u00e1l es el correcto.";
           if(g.alertas.indexOf(a) < 0) g.alertas.push(a);
         });
@@ -3331,8 +3443,11 @@ if(typeof module !== "undefined" && module.exports) module.exports = EntConsulta
         var aportaExp = g.items.some(function(it){ return it.rol === "expediente"; }) && !(dst && dst.tieneExp);
         var aportaDatos = !!dst && ((g.datos.fechaOC && !dst.fechaOC) || (g.datos.proveedor && !dst.proveedor));
         g.estado = !dst ? "nuevo" : (aportaOc || aportaExp || aportaDatos ? "completa" : "igual");
+        var anuladasReg = Store.anuladas();
+        if(g.datos.oc && anuladasReg[C.soloNum(g.datos.oc)]){ g.estado = "anulada"; g.alertas = ["OC " + g.datos.oc + " ANULADA: no se guarda en el registro."]; }
+        else g.alertas = g.alertas.filter(function(a){ return !Object.keys(anuladasReg).some(function(o){ return a.indexOf("OC " + o) >= 0 || a.indexOf("(" + o + ")") >= 0; }); });
         g.llave = g.datos.oc ? "oc" + g.datos.oc : (g.clave || C.normNombre(g.datos.paciente));
-        g.incluir = !destildados[g.llave];
+        g.incluir = g.estado !== "anulada" && !destildados[g.llave];
         return g;
       });
       UI.renderPropuesta();
@@ -3354,7 +3469,7 @@ if(typeof module !== "undefined" && module.exports) module.exports = EntConsulta
           "<td>" + esc(d.oc || "—") + "</td>" +
           "<td>" + esc(d.fechaOC || "—") + "</td>" +
           "<td>" + esc(d.proveedor || "—") + "</td>" +
-          "<td>" + (g.alertas.length ? g.alertas.map(function(a){ return "⚠️ " + esc(a); }).join("<br>") : (g.estado === "igual" ? "Ya estaba en el registro" : g.estado === "completa" ? "Completa uno existente" : "Nuevo") + (d.oc ? "" : ' <span style="color:#64748b">(sin OC todavía)</span>')) + "</td></tr>";
+          "<td>" + (g.alertas.length ? g.alertas.map(function(a){ return "⚠️ " + esc(a); }).join("<br>") : (g.estado === "anulada" ? "Anulada (no se guarda)" : g.estado === "igual" ? "Ya estaba en el registro" : g.estado === "completa" ? "Completa uno existente" : "Nuevo") + (d.oc ? "" : ' <span style="color:#64748b">(sin OC todavía)</span>')) + "</td></tr>";
       };
       var cab = function(conCheck){ return "<thead><tr>" + (conCheck ? "<th></th>" : "") + "<th>Paciente</th><th>Expediente</th><th>N° OC</th><th>Fecha OC</th><th>Proveedor</th><th>Control</th></tr></thead>"; };
       box.innerHTML =
@@ -3376,7 +3491,7 @@ if(typeof module !== "undefined" && module.exports) module.exports = EntConsulta
       var av = $("ent-leyendo"); if(av) av.textContent = "";
     },
     subir: async function(){
-      var sel = propuesta.filter(function(g){ return g.incluir && g.estado !== "igual"; });
+      var sel = propuesta.filter(function(g){ return g.incluir && g.estado !== "igual" && g.estado !== "anulada"; });
       if(!sel.length){ enEspera = []; destildados = {}; propuesta = []; UI.renderPropuesta(); var m0 = $("ent-admin-msg"); if(m0){ m0.className = "msg ok"; m0.textContent = "✔ No había nada nuevo para guardar: todo ya estaba en el registro."; } return; }
       var btn = $("ent-subir"), msg = $("ent-admin-msg"), ok = 0, err = [];
       if(btn) btn.disabled = true;
@@ -3403,21 +3518,47 @@ if(typeof module !== "undefined" && module.exports) module.exports = EntConsulta
         await new Promise(function(r){ setTimeout(r, 400); });
         var rs = Store.resumen();
         var lis = function(arr, n){ return arr.length ? '<div class="rg-lis">' + arr.slice(0, n || 40).map(function(x){ return "• " + esc(x); }).join("<br>") + (arr.length > (n || 40) ? "<br>…" : "") + "</div>" : ""; };
-        var problemas = rv.expCompartidos.length + rv.ocRepetidas.length + rv.sinResolver.length;
+        var problemas = rv.expItems.length + rv.ocRepetidas.length + rv.multiItems.length;
+        var btnExp = function(it){
+          return '<div class="rg-fix"><b>' + esc(it.clave) + "</b> figura en: " + it.recs.map(function(x){
+            return '<span class="rg-fix-it">' + esc(x.paciente) + (x.ocs.length ? " (OC " + esc(x.ocs.join("/")) + ")" : "") +
+              ' <button type="button" class="ent-mini" onclick="EntUI.corregirExp(\'' + x.id + '\')">✏️ Corregir su expediente</button></span>';
+          }).join("") + "</div>";
+        };
+        var btnMulti = function(it){
+          return '<div class="rg-fix"><b>' + esc(it.paciente) + "</b> tiene más de una OC. ¿Cuál es la válida? " + it.ocs.map(function(o){
+            return '<button type="button" class="ent-mini" onclick="EntUI.ocValida(\'' + it.id + "','" + esc(o) + '\')">✔ OC ' + esc(o) + " es la válida</button>";
+          }).join(" ") + ' <span class="sub">(las otras quedan anuladas)</span></div>';
+        };
         box.innerHTML =
           '<div class="ent-cruce-res">' +
+          (rv.corregidos.length ? "<div>🛠️ <b>Correcciones aplicadas:</b>" + lis(rv.corregidos) + "</div>" : "") +
           (rv.separados.length ? "<div>✂️ <b>Corregidos:</b> " + rv.separados.length + " OC estaban pegadas a otro paciente y se separaron." + lis(rv.separados) + "</div>" : "<div>✔ Ningún paciente tiene OC ajenas pegadas.</div>") +
           (cr.unidos.length ? "<div>🔄 Unidos en este cruce: <b>" + cr.unidos.length + "</b>" + lis(cr.unidos) + "</div>" : "") +
           "<div>✅ Completos (expediente + OC): <b>" + rs.comp + "</b> · ⏳ sin OC todavía: <b>" + rs.sinOc.length + "</b> · 📄 solo con OC: <b>" + rs.sinExp.length + "</b></div>" +
           (problemas ? '<div class="ent-alerta"><b>Para revisar con Compras (' + problemas + "):</b>" +
-              (rv.expCompartidos.length ? "<div style=\"margin-top:6px\">Mismo N° de expediente en pacientes distintos:</div>" + lis(rv.expCompartidos) : "") +
+              (rv.expItems.length ? "<div style=\"margin-top:6px\">Mismo N° de expediente en pacientes distintos (corregí el que está mal):</div>" + rv.expItems.map(btnExp).join("") : "") +
               (rv.ocRepetidas.length ? "<div style=\"margin-top:6px\">La misma OC en dos registros:</div>" + lis(rv.ocRepetidas) : "") +
-              (rv.sinResolver.length ? "<div style=\"margin-top:6px\">Con más de una OC y sin poder separarlas:</div>" + lis(rv.sinResolver) : "") +
+              (rv.multiItems.length ? "<div style=\"margin-top:6px\">Con más de una OC (elegí la válida; la otra queda anulada):</div>" + rv.multiItems.map(btnMulti).join("") : "") +
             "</div>" : "<div>✔ No hay expedientes repetidos ni OC duplicadas.</div>") +
           (cr.dudosos.length ? '<div class="ent-alerta">⚠️ No se unieron porque el nombre coincide con más de un expediente: ' + cr.dudosos.map(esc).join(" · ") + "</div>" : "") +
           "</div>";
       }catch(e){ box.innerHTML = '<div class="ent-alerta">No se pudo revisar: ' + esc(e && e.message || e) + "</div>"; }
       finally{ if(btn){ btn.disabled = false; btn.textContent = t0; } }
+    },
+    corregirExp: async function(id){
+      var r = UI.rec(id); if(!r) return;
+      var nuevo = prompt("Expediente correcto de " + r.paciente + " (ej. 9589/410/S/2026):", r.nroExp || C.expedienteTexto(r));
+      if(nuevo === null || !String(nuevo).trim()) return;
+      try{ var t = await Store.corregirExpediente(r, nuevo); await new Promise(function(x){ setTimeout(x, 400); }); UI.cruzar(); alert("✅ " + r.paciente + " quedó con el expediente " + t + "."); }
+      catch(e){ alert("No se pudo corregir: " + (e && e.message || e)); }
+    },
+    ocValida: async function(id, oc){
+      var r = UI.rec(id); if(!r) return;
+      var otras = ((r.ocs && r.ocs.length) ? r.ocs : []).filter(function(o){ return C.soloNum(o) !== C.soloNum(oc); });
+      if(!confirm("¿Dejar la OC " + oc + " como válida para " + r.paciente + "?\nSe ANULA: " + otras.join(", ") + " (no se vuelve a cargar).")) return;
+      try{ await Store.dejarOcValida(r, oc); await new Promise(function(x){ setTimeout(x, 400); }); UI.cruzar(); }
+      catch(e){ alert("No se pudo guardar: " + (e && e.message || e)); }
     },
     eliminarRango: async function(){
       var d = ($("ent-del-desde") || {}).value, h = ($("ent-del-hasta") || {}).value, msg = $("ent-admin-msg");
