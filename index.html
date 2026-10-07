@@ -122,6 +122,19 @@ hr{border:none;border-top:1.5px solid #e2e8f0;margin:16px 0 14px}
 .splash-sub{font-size:13px;color:#64748b;line-height:1.6;margin-bottom:28px}
 .splash-btn{width:100%;padding:14px;background:#0f766e;color:#fff;border:none;border-radius:10px;font-size:16px;font-weight:700;cursor:pointer;transition:background .15s}
 .splash-btn:hover{background:#0d6460}
+/* Contraseña de ingreso */
+.pw-box{display:none;text-align:left;margin:4px 0 12px;padding:14px;border:1.5px solid #cbd5e1;border-radius:12px;background:#f8fafc}
+.pw-box.on{display:block}
+.pw-box label.pw-lbl{display:block;font-size:12px;font-weight:700;color:#334155;margin-bottom:6px}
+.pw-wrap{position:relative}
+.pw-wrap input{width:100%;padding:11px 46px 11px 12px;border:1.5px solid #cbd5e1;border-radius:9px;font-size:15px;outline:none;box-sizing:border-box}
+.pw-wrap input:focus{border-color:#0f766e;box-shadow:0 0 0 3px rgba(15,118,110,.15)}
+.pw-ojo{position:absolute;right:6px;top:50%;transform:translateY(-50%);border:none;background:none;font-size:18px;cursor:pointer;padding:4px 8px;border-radius:6px;line-height:1}
+.pw-ojo:hover{background:#e2e8f0}
+.pw-rec{display:flex;align-items:center;gap:8px;margin-top:10px;font-size:13px;color:#334155;cursor:pointer}
+.pw-rec input{width:16px;height:16px;accent-color:#0f766e;cursor:pointer}
+.pw-err{min-height:16px;margin-top:8px;font-size:12px;color:#b91c1c;font-weight:600}
+.pw-olvidar{display:none;margin-top:10px;background:none;border:none;color:#64748b;font-size:11px;text-decoration:underline;cursor:pointer}
 .splash-foot{margin-top:18px;font-size:11px;color:#94a3b8;letter-spacing:.3px}
 @media print{#splash{display:none!important}}
 /* Botón flotante "Volver al inicio" (vuelve a la pantalla de ingreso) */
@@ -279,7 +292,17 @@ hr{border:none;border-top:1.5px solid #e2e8f0;margin:16px 0 14px}
     </div>
     <div class="splash-title">👓🎧 Prestaciones Ópticas y Auditivas</div>
     <div class="splash-sub">Anteojos y audífonos<br>Programa Integrado de Salud<br>Ministerio de Salud Pública de Tucumán</div>
-    <button class="splash-btn" onclick="ingresar()">Ingresar</button>
+    <div class="pw-box" id="pw-box">
+      <label class="pw-lbl" for="pw-input">🔒 Contraseña</label>
+      <div class="pw-wrap">
+        <input type="password" id="pw-input" autocomplete="current-password" inputmode="numeric" placeholder="Escribí la contraseña" onkeydown="if(event.key==='Enter'){event.preventDefault();ingresar();}">
+        <button type="button" class="pw-ojo" id="pw-ojo" onclick="verClave()" title="Mostrar contraseña" aria-label="Mostrar contraseña">👁️</button>
+      </div>
+      <label class="pw-rec"><input type="checkbox" id="pw-recordar" checked> Recordar en esta computadora</label>
+      <div class="pw-err" id="pw-err"></div>
+    </div>
+    <button class="splash-btn" id="btn-ingresar" onclick="ingresar()">Ingresar</button>
+    <button type="button" class="pw-olvidar" id="pw-olvidar" onclick="olvidarClave()">🔓 Olvidar la contraseña en esta computadora</button>
     <button class="splash-btn splash-btn-ent" onclick="abrirBuscadorRegistro()">🔎 Buscar expediente / orden de compra</button>
     <div class="splash-foot">Internación Domiciliaria · PRIS · SI.PRO.SA.</div>
   </div>
@@ -656,8 +679,71 @@ const LOGO2="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAgwAAACDCAYAAADh/0MrA
 (function(){
   var p=document.getElementById('splash-logo-pris'); if(p) p.src=LOGO1;
   var g=document.getElementById('splash-logo-gob');  if(g) g.src=LOGO2;
+  setTimeout(function(){ var o=document.getElementById('pw-olvidar'); if(o && claveRecordada()) o.style.display='inline-block'; }, 0);
 })();
+/* ===== Contraseña de ingreso =====
+   Se guarda SOLO el hash SHA-256 (no la contraseña en texto). Para cambiarla, reemplazar
+   CLAVE_HASH por el SHA-256 de la nueva. Si se cambia, las compus que la tenían recordada
+   la vuelven a pedir. El buscador de expedientes/OC queda libre (no pide contraseña). */
+var CLAVE_HASH = "d0f451801443fa1478e1cf080e8d63dead650c9712b2631edf7e1658a98967d9";
+var CLAVE_KEY = "genres_acceso_ok";
+var _desbloqueado = false;
+function claveRecordada(){ try{ return localStorage.getItem(CLAVE_KEY) === CLAVE_HASH; }catch(_){ return false; } }
+function hashClave(txt){
+  if(window.crypto && crypto.subtle && window.TextEncoder){
+    return crypto.subtle.digest("SHA-256", new TextEncoder().encode(txt)).then(function(buf){
+      return Array.prototype.map.call(new Uint8Array(buf), function(b){ return ("0"+b.toString(16)).slice(-2); }).join("");
+    });
+  }
+  return Promise.resolve(sha256Js(txt));
+}
+// SHA-256 de respaldo (por si el navegador no expone crypto.subtle, ej. fuera de https)
+function sha256Js(str){
+  function r(n,x){ return (x>>>n)|(x<<(32-n)); }
+  var K=[],H=[],p=2,c=0;
+  function frac(x){ return ((x-Math.floor(x))*4294967296)|0; }
+  while(c<64){ var esPrimo=true; for(var d=2;d*d<=p;d++){ if(p%d===0){ esPrimo=false; break; } }
+    if(esPrimo){ if(c<8) H[c]=frac(Math.pow(p,1/2)); K[c]=frac(Math.pow(p,1/3)); c++; } p++; }
+  var bytes=unescape(encodeURIComponent(str)), l=bytes.length, w=[];
+  for(var i=0;i<l;i++) w[i>>2]|=(bytes.charCodeAt(i)&255)<<(24-(i%4)*8);
+  w[l>>2]|=0x80<<(24-(l%4)*8);
+  var n=((l+8)>>6)*16+16; w[n-1]=l*8;
+  for(var j=0;j<n;j++) w[j]=w[j]|0;
+  for(var o=0;o<n;o+=16){
+    var W=w.slice(o,o+16), a=H.slice(0);
+    for(var t=0;t<64;t++){
+      if(t>=16){ var x=W[t-15], y=W[t-2];
+        W[t]=(W[t-16]+(r(7,x)^r(18,x)^(x>>>3))+W[t-7]+(r(17,y)^r(19,y)^(y>>>10)))|0; }
+      var t1=(a[7]+(r(6,a[4])^r(11,a[4])^r(25,a[4]))+((a[4]&a[5])^(~a[4]&a[6]))+K[t]+W[t])|0;
+      var t2=((r(2,a[0])^r(13,a[0])^r(22,a[0]))+((a[0]&a[1])^(a[0]&a[2])^(a[1]&a[2])))|0;
+      a=[(t1+t2)|0].concat(a); a[4]=(a[4]+t1)|0; a.length=8;
+    }
+    for(var q=0;q<8;q++) H[q]=(H[q]+a[q])|0;
+  }
+  var out=""; for(var z=0;z<8;z++) out+=("00000000"+(H[z]>>>0).toString(16)).slice(-8);
+  return out;
+}
+function verClave(){
+  var i=document.getElementById('pw-input'), b=document.getElementById('pw-ojo'); if(!i) return;
+  var mostrar = i.type === 'password';
+  i.type = mostrar ? 'text' : 'password';
+  if(b){ b.textContent = mostrar ? '🙈' : '👁️'; b.title = mostrar ? 'Ocultar contraseña' : 'Mostrar contraseña'; b.setAttribute('aria-label', b.title); }
+  i.focus();
+}
+function olvidarClave(){
+  try{ localStorage.removeItem(CLAVE_KEY); }catch(_){}
+  _desbloqueado = false;
+  var o=document.getElementById('pw-olvidar'); if(o) o.style.display='none';
+  alert('Listo: la próxima vez que ingreses en esta computadora te va a pedir la contraseña.');
+}
+function pedirClave(){
+  var box=document.getElementById('pw-box'), err=document.getElementById('pw-err'), i=document.getElementById('pw-input');
+  if(box) box.classList.add('on');
+  if(err) err.textContent='';
+  if(i) setTimeout(function(){ i.focus(); }, 30);
+}
 function mostrarApp(){
+  if(!_desbloqueado && !claveRecordada()){ mostrarInicio(); pedirClave(); return; }
   var s=document.getElementById('splash');   if(s) s.style.display='none';
   var m=document.getElementById('app-main');  if(m) m.style.display='';
 }
@@ -667,6 +753,20 @@ function mostrarInicio(){
   window.scrollTo(0,0);
 }
 function ingresar(){
+  if(!_desbloqueado && !claveRecordada()){
+    var box=document.getElementById('pw-box'), i=document.getElementById('pw-input'), err=document.getElementById('pw-err');
+    if(!box || !box.classList.contains('on') || !i || !i.value){ pedirClave(); if(i && box && box.classList.contains('on') && !i.value && err) err.textContent='Escribí la contraseña.'; return; }
+    hashClave(i.value).then(function(h){
+      if(h !== CLAVE_HASH){ err.textContent='Contraseña incorrecta.'; i.select(); return; }
+      _desbloqueado = true;
+      var rec=document.getElementById('pw-recordar');
+      try{ if(rec && rec.checked) localStorage.setItem(CLAVE_KEY, CLAVE_HASH); }catch(_){}
+      i.value=''; i.type='password'; box.classList.remove('on');
+      var o=document.getElementById('pw-olvidar'); if(o && claveRecordada()) o.style.display='inline-block';
+      ingresar();
+    }).catch(function(e){ err.textContent='No se pudo verificar: ' + (e && e.message || e); });
+    return;
+  }
   mostrarApp();
   // Deja un paso en el historial: el botón "atrás" del navegador también vuelve al inicio.
   try { if(!(history.state && history.state.genApp)) history.pushState({genApp:true}, ''); } catch(e){}
