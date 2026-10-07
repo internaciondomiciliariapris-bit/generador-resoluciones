@@ -126,6 +126,8 @@ LEFT = Alignment(horizontal="left", vertical="center", wrap_text=True)
 
 FMT_PESOS     = '"$"\\ #,##0.00'
 FMT_PESOS_WIN = '_-"$"\\ * #,##0.00_-;\\-"$"\\ * #,##0.00_-;_-"$"\\ * "-"??_-;_-@_-'
+FMT_UNIT      = '"P. unit. $ "#,##0.00'
+FMT_TOTAL     = '"Total $ "#,##0.00'
 
 
 def build_xlsx_bytes(d):
@@ -176,34 +178,38 @@ def build_xlsx_bytes(d):
             ws["%s%d" % (col, r)].alignment = CTR
             ws["%s%d" % (col, r)].border = BORDER_ALL
 
-    # Datos
+    # Datos: fila 8 = precio unitario, fila 9 = total (unitario x cantidad)
+    ws.merge_cells("A8:A9")
+    ws.merge_cells("B8:B9")
     ws["A8"] = "AUDIFONO"; ws["A8"].font = F_DATA_B; ws["A8"].alignment = CTR
     ws["B8"] = v["cantidad"]; ws["B8"].font = F_DATA_B; ws["B8"].alignment = CTR
+    ws.row_dimensions[8].height = 18
+    ws.row_dimensions[9].height = 18
     for i, cot in enumerate(v["cots"]):
         col = cols_prov[i]
-        cel = ws["%s8" % col]
-        cel.alignment = CTR
+        c_u = ws["%s8" % col]
+        c_t = ws["%s9" % col]
+        c_u.alignment = CTR
+        c_t.alignment = CTR
+        es_gan = (i == v["gan"])
         if cot["_negativa"]:
-            cel.value = "NEGATIVA"
-            if i == v["gan"]:
-                cel.font = F_WIN
-                cel.fill = GRIS_GANADORA
-                ws["%s9" % col].fill = GRIS_GANADORA
-            else:
-                cel.font = F_DATA
+            c_u.value = "NEGATIVA"
+            c_t.value = "NEGATIVA"
+            c_u.font = F_DATA
+            c_t.font = F_WIN if es_gan else F_DATA
         else:
-            cel.value = float(cot["_total"])
-            if i == v["gan"]:
-                cel.font = F_WIN
-                cel.fill = GRIS_GANADORA
-                cel.number_format = FMT_PESOS_WIN
-                ws["%s9" % col].fill = GRIS_GANADORA
-            else:
-                cel.font = F_DATA
-                cel.number_format = FMT_PESOS
+            c_u.value = float(cot["_unit"])
+            c_t.value = float(cot["_total"])
+            c_u.number_format = FMT_UNIT
+            c_t.number_format = FMT_TOTAL
+            c_u.font = F_DATA
+            c_t.font = F_WIN if es_gan else F_DATA
+        if es_gan:
+            c_u.fill = GRIS_GANADORA
+            c_t.fill = GRIS_GANADORA
     for col in ["A", "B"] + cols_prov:
-        ws["%s8" % col].border = Border(left=_thin, right=_thin, top=_thin)
-        ws["%s9" % col].border = Border(left=_thin, right=_thin, bottom=_thin)
+        for r in (8, 9):
+            ws["%s%d" % (col, r)].border = BORDER_ALL
 
     # Texto de adjudicacion
     ws.merge_cells("A10:%s13" % ultima)
@@ -310,8 +316,9 @@ def build_pdf_bytes(d):
     cv.drawCentredString(ml + tabla / 2, y - h_exp / 2 - 3.9 * mm, linea2)
     y -= h_exp
 
-    # --- Tabla ---
-    h_head, h_data = 11 * mm, 9 * mm
+    # --- Tabla: encabezado + 2 subfilas (precio unitario / total) ---
+    h_head, h_sub = 11 * mm, 7 * mm
+    h_data = h_sub * 2
 
     xs = [ml, ml + w_det, ml + w_det + w_cant]
     for i in range(n):
@@ -328,6 +335,8 @@ def build_pdf_bytes(d):
     cv.rect(ml, y - h_head - h_data, tabla, h_data)
     for x in xs[1:-1]:
         cv.line(x, y, x, y - h_head - h_data)
+    # linea entre unitario y total (solo columnas de proveedores)
+    cv.line(xs[2], y - h_head - h_sub, ml + tabla, y - h_head - h_sub)
 
     # encabezados
     cv.setFont("Helvetica", 9.5)
@@ -345,20 +354,28 @@ def build_pdf_bytes(d):
             ty -= 3.4 * mm
     y -= h_head
 
-    # fila de datos
+    # Detalle y Cantidad centrados en las 2 subfilas
     cv.setFont("Helvetica-Bold", 8)
     cv.drawCentredString(ml + w_det / 2, y - h_data / 2 - 1 * mm, "AUDIFONO")
     cv.drawCentredString(xs[1] + w_cant / 2, y - h_data / 2 - 1 * mm, str(v["cantidad"]))
+
+    y_u = y - h_sub / 2 - 1 * mm
+    y_t = y - h_sub - h_sub / 2 - 1 * mm
     for i, cot in enumerate(cots):
         cx = xs[2] + w_prov * i + w_prov / 2
-        txt = "NEGATIVA" if cot["_negativa"] else pesos_ar(cot["_total"])
-        if i == v["gan"]:
-            tam = _ajustar(cv, txt, "Helvetica-Bold", 10, w_prov - 4 * mm)
-            cv.setFont("Helvetica-Bold", tam)
+        es_gan = (i == v["gan"])
+        if cot["_negativa"]:
+            txt_u, txt_t = "NEGATIVA", "NEGATIVA"
         else:
-            tam = _ajustar(cv, txt, "Helvetica", 8.5, w_prov - 4 * mm)
-            cv.setFont("Helvetica", tam)
-        cv.drawCentredString(cx, y - h_data / 2 - 1 * mm, txt)
+            txt_u = "P. unit. " + pesos_ar(cot["_unit"])
+            txt_t = "Total " + pesos_ar(cot["_total"])
+        tam = _ajustar(cv, txt_u, "Helvetica", 8, w_prov - 4 * mm)
+        cv.setFont("Helvetica", tam)
+        cv.drawCentredString(cx, y_u, txt_u)
+        fuente = "Helvetica-Bold" if es_gan else "Helvetica"
+        tam = _ajustar(cv, txt_t, fuente, 9.5 if es_gan else 8.5, w_prov - 4 * mm)
+        cv.setFont(fuente, tam)
+        cv.drawCentredString(cx, y_t, txt_t)
     y -= h_data + 5 * mm
 
     # --- Texto de adjudicacion, fondo gris (ancho = ancho de la tabla) ---
