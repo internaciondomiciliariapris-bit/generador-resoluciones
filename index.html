@@ -252,6 +252,9 @@ hr{border:none;border-top:1.5px solid #e2e8f0;margin:16px 0 14px}
 .rg-oc span{font-size:11px;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:#1a56a0}
 .rg-oc b{font-family:Consolas,"Courier New",monospace;font-size:34px;line-height:1.1;font-weight:800;color:#0f2c55;letter-spacing:1px}
 .rg-card.ok .rg-oc{border-color:#16a34a}.rg-card.ok .rg-oc span{color:#15803d}
+.rg-card.tr{background:#fffbeb;border-color:#fde68a}.rg-card.tr .rg-kick{color:#b45309}
+.rg-tramite{margin-top:10px;padding:9px 11px;border-radius:10px;background:#fff;border:1.5px dashed #fcd34d;font-size:13px;color:#78350f}
+.rg-tramite b{color:#92400e}
 .rg-oc.vacia{border-style:dashed;border-color:#cbd5e1;box-shadow:none}.rg-oc.vacia span{color:#64748b}.rg-oc.vacia b{font-family:inherit;font-size:16px;color:#64748b}
 @media (max-width:600px){.rg-oc b{font-size:28px}}
 .rg-tit{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 12px}
@@ -2932,7 +2935,10 @@ if(typeof module !== "undefined" && module.exports) module.exports = EntConsulta
     measurementId: "G-GHDRCXE81C"
   };
   var C = EntCore;
-  var db = null, cache = [], estado = "conectando", escuchando = false, propuesta = [];
+  var db = null, cache = [], todos = [], estado = "conectando", escuchando = false, propuesta = [];
+  // Expedientes en trámite (cuadro hecho / resolución en proceso) que todavía no tienen OC
+  var ETAPA_RANK = { cuadro: 1, proceso: 2, resolucion: 3 };
+  var tramite = { pend: null, borr: null }, _syncT = null;
   // PDFs leídos que esperan ser guardados: se van SUMANDO en cada "Agregar PDFs" (carga por etapas).
   var enEspera = [], destildados = {};
   var authReady = new Promise(function(resolve){
@@ -3006,9 +3012,11 @@ if(typeof module !== "undefined" && module.exports) module.exports = EntConsulta
       authReady.then(function(ok){
         if(!ok || !db){ estado = "sin-acceso"; UI.render(); return; }
         db.collection(COL).onSnapshot(function(snap){
-          cache = snap.docs.map(function(d){ var x = d.data(); x._id = d.id; return x; });
+          todos = snap.docs.map(function(d){ var x = d.data(); x._id = d.id; return x; });
+          // Los "en trámite" eliminados a mano quedan marcados (descartado) para que no vuelvan a aparecer solos.
+          cache = todos.filter(function(r){ return !r.descartado; });
           cache.sort(function(a,b){ return (b.creadoMs||0) - (a.creadoMs||0); });
-          estado = "ok"; UI.render();
+          estado = "ok"; UI.render(); Store.programarSync();
         }, function(err){ console.warn("Registro OC onSnapshot:", err); estado = "sin-acceso"; UI.render(); });
       });
     },
@@ -3059,6 +3067,7 @@ if(typeof module !== "undefined" && module.exports) module.exports = EntConsulta
         };
         if(cant) datos.cantidad = cant;
         datos.tieneExp = true; // el generador ya conoce el expediente
+        datos.etapa = "resolucion"; datos.etapaFecha = hoyTxt(); datos.descartado = false;
         if(!mismo){ datos.creadoMs = Date.now(); datos.creadoTxt = hoyTxt(); datos.origen = "generador"; datos.ocs = []; }
         return db.collection(COL).doc(mismo ? ex.rec._id : idRegistro(d)).set(datos, { merge: true })
           .then(function(){ return true; }).catch(function(e){ console.warn("Registro OC (generador):", e); return false; });
@@ -3097,7 +3106,76 @@ if(typeof module !== "undefined" && module.exports) module.exports = EntConsulta
       if(!rec){ datos.creadoMs = Date.now(); datos.creadoTxt = hoyTxt(); datos.origen = "pdf"; }
       await db.collection(COL).doc(rec ? rec._id : idRegistro({ oc: d.oc, num: datos.num, cod: datos.cod, anio: datos.anio, paciente: datos.paciente })).set(datos, { merge: true });
     },
-    eliminar: function(rec){ return db.collection(COL).doc(rec._id).delete(); },
+    /* ---------- Expedientes en trámite (todavía sin OC) ----------
+       Escucha los pendientes del Cuadro (genres_pendientes) y las resoluciones "En proceso"
+       (genres_borradores) y los suma al registro como "OC en trámite". Cuando después se carga
+       el PDF de la OC, se une al MISMO registro por N° de expediente (no se duplica). */
+    escucharTramite: function(){
+      authReady.then(function(ok){
+        if(!ok || !db) return;
+        db.collection("genres_pendientes").onSnapshot(function(snap){
+          tramite.pend = snap.docs.map(function(d){ return d.data(); }); Store.programarSync();
+        }, function(err){ console.warn("Registro OC (pendientes):", err); });
+        db.collection("genres_borradores").onSnapshot(function(snap){
+          tramite.borr = snap.docs.map(function(d){ return d.data(); }); Store.programarSync();
+        }, function(err){ console.warn("Registro OC (en proceso):", err); });
+      });
+    },
+    programarSync: function(){
+      clearTimeout(_syncT);
+      _syncT = setTimeout(function(){ Store.sincronizarTramite().catch(function(e){ console.warn("Registro OC (trámite):", e); }); }, 1200);
+    },
+    sincronizarTramite: async function(){
+      if(estado !== "ok" || !db || (!tramite.pend && !tramite.borr)) return 0;
+      // 1) Juntar por expediente, quedándonos con la etapa más avanzada
+      var porExp = {};
+      var sumar = function(x, etapa){
+        var parts = C.partirExpediente(x && x.nroExp);
+        if(!parts || !(x.paciente || "").trim()) return;
+        var k = C.clave(parts.num, parts.cod) + "_" + (parts.anio || "");
+        var prev = porExp[k];
+        if(prev && ETAPA_RANK[prev.etapa] >= ETAPA_RANK[etapa]) return;
+        porExp[k] = { parts: parts, x: x, etapa: etapa };
+      };
+      (tramite.pend || []).forEach(function(x){ sumar(Object.assign({ tipo: "audio" }, x), "cuadro"); });
+      (tramite.borr || []).forEach(function(x){ sumar(x, "proceso"); });
+      // 2) Crear o avanzar la etapa en el registro (nunca retrocede, nunca toca lo que ya tiene OC)
+      var hechos = 0, ks = Object.keys(porExp);
+      for(var i = 0; i < ks.length; i++){
+        var it = porExp[ks[i]], x = it.x, p = it.parts;
+        var d = { num: p.num, cod: p.cod, letra: p.letra, anio: p.anio, paciente: String(x.paciente).trim(), tipo: x.tipo || "audio" };
+        var id = idRegistro(d);
+        var crudo = todos.filter(function(r){ return r._id === id; })[0];
+        if(crudo && crudo.descartado) continue;                       // lo eliminaste a mano: no vuelve
+        var ex = Store.buscarExistente(d);
+        var rec = (ex && !ex.porNombre) ? ex.rec : (crudo || null);
+        if(rec){
+          var tieneOc = (rec.ocs && rec.ocs.length) || rec.oc;
+          if(tieneOc || rec.entregado) continue;
+          if((ETAPA_RANK[rec.etapa] || 0) >= ETAPA_RANK[it.etapa]) continue;
+        }
+        var cant = parseInt(String(x.cantidad || "").replace(/[^0-9]/g, ""), 10) || null;
+        var datos = { etapa: it.etapa, etapaFecha: hoyTxt(), tieneExp: true, actualizadoMs: Date.now() };
+        if(x.ganadora) datos.ganadora = String(x.ganadora).trim();
+        if(!rec){
+          Object.assign(datos, {
+            tipo: d.tipo, nroExp: String(x.nroExp).trim(), num: d.num, cod: d.cod, letra: d.letra, anio: d.anio,
+            paciente: d.paciente, pacienteNorm: C.normNombre(d.paciente), ocs: [],
+            creadoMs: Date.now(), creadoTxt: hoyTxt(), origen: it.etapa === "cuadro" ? "cuadro" : "en-proceso"
+          });
+          if(cant) datos.cantidad = cant;
+        }
+        try{ await db.collection(COL).doc(rec ? rec._id : id).set(datos, { merge: true }); hechos++; }
+        catch(e){ console.warn("Registro OC (trámite):", e); }
+      }
+      return hechos;
+    },
+    eliminar: function(rec){
+      // Un expediente en trámite (sin OC) se marca como descartado para que el sincronizador no lo vuelva a crear.
+      var tieneOc = (rec.ocs && rec.ocs.length) || rec.oc;
+      if(!tieneOc && rec.etapa) return db.collection(COL).doc(rec._id).set({ descartado: true, actualizadoMs: Date.now() }, { merge: true });
+      return db.collection(COL).doc(rec._id).delete();
+    },
     // Entrega de la OC al paciente: fecha y hora del momento en que se tilda.
     marcarEntrega: function(rec, entregar){
       var d = new Date(), dd = function(n){ return String(n).padStart(2, "0"); };
@@ -3348,7 +3426,8 @@ if(typeof module !== "undefined" && module.exports) module.exports = EntConsulta
         var tOc = !!(r.ocs && r.ocs.length);
         if(tOc && r.tieneExp) comp++; else if(!tOc) sinOc.push(r.paciente); else sinExp.push(r.paciente);
       });
-      return { comp: comp, sinOc: sinOc, sinExp: sinExp, entregados: cache.filter(function(r){ return r.entregado; }).length };
+      return { comp: comp, sinOc: sinOc, sinExp: sinExp, entregados: cache.filter(function(r){ return r.entregado; }).length,
+               enTramite: cache.filter(function(r){ return r.etapa && !(r.ocs && r.ocs.length) && !r.oc; }).length };
     }
   };
   window.RegistroOCStore = Store;
@@ -3366,7 +3445,7 @@ if(typeof module !== "undefined" && module.exports) module.exports = EntConsulta
       if(rsBox){
         if(estado === "sin-acceso") rsBox.innerHTML = '<div class="ent-alerta">Sin acceso a la base. Revisá la regla de Firestore para <b>genres_registro_oc</b> (y que el login anónimo esté habilitado).</div>';
         else if(estado === "conectando") rsBox.textContent = "Conectando…";
-        else { var rs0 = Store.resumen(); rsBox.textContent = cache.length + " paciente(s) en el registro · " + rs0.comp + " con expediente y OC · " + rs0.sinOc.length + " sin OC todavía · " + rs0.sinExp.length + " solo con OC · " + rs0.entregados + " entregada(s) al paciente"; }
+        else { var rs0 = Store.resumen(); rsBox.textContent = cache.length + " paciente(s) en el registro · " + rs0.comp + " con expediente y OC · " + rs0.sinOc.length + " sin OC todavía (" + rs0.enTramite + " en trámite) · " + rs0.sinExp.length + " solo con OC · " + rs0.entregados + " entregada(s) al paciente"; }
       }
       // Cartel de búsqueda
       var cont = $("ent-lista"), sub = $("rg-sub");
@@ -3382,23 +3461,26 @@ if(typeof module !== "undefined" && module.exports) module.exports = EntConsulta
       var lista = UI.filtrar();
       if(!lista.length){ sub.textContent = "Sin resultados"; cont.innerHTML = '<div class="rg-vacio">No se encontró \u201c' + esc(q) + '\u201d en el registro.<br><span>Probá con el apellido solo, o con el N° de expediente o de OC sin letras.</span></div>'; return; }
       var muestra = lista.slice(0, 12);
-      var pend = muestra.filter(function(r){ return !r.entregado; }), entr = muestra.filter(function(r){ return r.entregado; });
-      sub.textContent = lista.length + " encontrado(s)" + (pend.length ? " · " + pend.length + " por entregar" : "") + (entr.length ? " · " + entr.length + " ya entregado(s)" : "");
+      var conOc = function(r){ return !!((r.ocs && r.ocs.length) || r.oc); };
+      var tram = muestra.filter(function(r){ return !r.entregado && !conOc(r); });
+      var pend = muestra.filter(function(r){ return !r.entregado && conOc(r); }), entr = muestra.filter(function(r){ return r.entregado; });
+      sub.textContent = lista.length + " encontrado(s)" + (tram.length ? " · " + tram.length + " con OC en trámite" : "") + (pend.length ? " · " + pend.length + " por entregar" : "") + (entr.length ? " · " + entr.length + " ya entregado(s)" : "");
       var seccion = function(titulo, color, arr){
         return arr.length ? '<div class="rg-sec"><span class="rg-dot" style="background:' + color + '"></span>' + titulo + '<span class="rg-num">' + arr.length + "</span></div>" + arr.map(UI.ficha).join("") : "";
       };
-      cont.innerHTML = seccion("Por entregar", "#7c3aed", pend) + seccion("Ya entregadas", "#16a34a", entr) +
+      cont.innerHTML = seccion("OC en trámite", "#f59e0b", tram) + seccion("Por entregar", "#7c3aed", pend) + seccion("Ya entregadas", "#16a34a", entr) +
         (lista.length > 12 ? '<div class="rg-vacio">Hay ' + lista.length + " coincidencias: escribí más para afinar.</div>" : "");
     },
     ficha: function(r){
       var ocs = (r.ocs && r.ocs.length) ? r.ocs : (r.oc ? [r.oc] : []);
       var tipo = r.tipo === "audio" ? "Audífonos" : r.tipo === "anteojos" ? "Anteojos" : "Prestación";
       var icono = r.tipo === "audio" ? "🎧" : "👓";
-      var kick = [tipo + (r.cantidad ? " ×" + r.cantidad : ""), r.proveedor || "", r.extra || ""].filter(Boolean).join(" · ");
+      var kick = [tipo + (r.cantidad ? " ×" + r.cantidad : ""), r.proveedor || r.ganadora || "", r.extra || ""].filter(Boolean).join(" · ");
+      var enTramite = !r.entregado && !ocs.length;
       // El N° de OC va GRANDE, en su propio recuadro; abajo, expediente y fecha.
       var ocGrande = ocs.length
         ? '<div class="rg-oc"><span>Orden de compra N°</span><b>' + ocs.map(esc).join(" / ") + "</b></div>"
-        : '<div class="rg-oc vacia"><span>Orden de compra</span><b>sin cargar</b></div>';
+        : '<div class="rg-oc vacia"><span>Orden de compra</span><b>' + (enTramite ? "🟡 en trámite" : "sin cargar") + "</b></div>";
       var datos = [r.fechaOC ? "Fecha OC " + esc(r.fechaOC) : "", (r.anuladas && r.anuladas.length) ? '<span style="color:#b91c1c">OC anulada: ' + r.anuladas.map(esc).join(", ") + "</span>" : ""].filter(Boolean).join('<span class="rg-sep">·</span>');
       var alertas = (r.alertas || []).map(function(a){ return '<div class="rg-warn">⚠️ ' + esc(a) + "</div>"; }).join("");
       var entrega;
@@ -3409,9 +3491,13 @@ if(typeof module !== "undefined" && module.exports) module.exports = EntConsulta
         entrega = '<label class="rg-entrega"><input type="checkbox" onchange="EntUI.entrega(\'' + r._id + '\', this)">' +
           "<span><b>¿Estás por entregar esta orden de compra al paciente?</b> Tildá para registrar la entrega con fecha y hora.</span></label>";
       } else {
-        entrega = '<div class="rg-entrega off">Todavía no se puede registrar la entrega: falta cargar la orden de compra.</div>';
+        var et = r.etapa === "resolucion" ? "Resolución generada" + (r.nroRes ? " (Res. N° " + esc(r.nroRes) + ")" : "") + (r.fechaRes ? " el " + esc(r.fechaRes) : (r.etapaFecha ? " el " + esc(r.etapaFecha) : ""))
+               : r.etapa === "proceso" ? "Resolución en proceso" + (r.etapaFecha ? " (desde el " + esc(r.etapaFecha) + ")" : "")
+               : r.etapa === "cuadro" ? "Cuadro comparativo hecho" + (r.etapaFecha ? " el " + esc(r.etapaFecha) : "") + (r.ganadora ? " · adjudica a " + esc(r.ganadora) : "")
+               : "Expediente cargado";
+        entrega = '<div class="rg-tramite">🟡 <b>Orden de compra en trámite</b> — ' + et + ".<br>Todavía no se puede entregar: cuando se cargue el PDF de la OC pasa a “Por entregar”.</div>";
       }
-      return '<div class="rg-card' + (r.entregado ? " ok" : "") + '">' +
+      return '<div class="rg-card' + (r.entregado ? " ok" : (enTramite ? " tr" : "")) + '">' +
         '<div class="rg-ico">' + icono + "</div>" +
         '<div class="rg-main">' +
           '<div class="rg-kick">' + esc(kick) + "</div>" +
@@ -3681,6 +3767,7 @@ if(typeof module !== "undefined" && module.exports) module.exports = EntConsulta
     };
   }
   Store.escuchar();
+  Store.escucharTramite();
 })();
 
 </script>
