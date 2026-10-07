@@ -205,9 +205,25 @@
     return _pdfjsPromise;
   }
 
+  // Algunos PDF (ej. IAR) traen el importe partido: "$ 85 0 .000 ,00" → "$850.000,00"
+  function unirImportes(texto) {
+    return texto.replace(/\$\s*([0-9][0-9\s.,]*[0-9])/g, function (m, g) {
+      var junto = g.replace(/\s+/g, "");
+      var mm = junto.match(/^([0-9]{1,3}(?:\.[0-9]{3})+|[0-9]+)(,[0-9]{2})?/);
+      if (!mm) return m;
+      var resto = junto.slice(mm[0].length);
+      return "$" + mm[0] + (resto ? " " + resto : "");
+    });
+  }
+
   function montosDelTexto(texto) {
     // Normalizamos y dejamos un espacio de guarda a los costados
     var t = " " + String(texto).replace(/\u00a0/g, " ") + " ";
+    // Fuera CUIT/CUIL (30-71185942-6) para que nunca se lean como precio
+    t = t.replace(/\b[0-9]{2}\s*-\s*[0-9]{8}\s*-\s*[0-9]\b/g, " ");
+    t = unirImportes(t);
+    // Números que vienen después de DNI / teléfono / Nº de comprobante tampoco son precios
+    var noPrecio = /(c\.?\s*u\.?\s*i\.?\s*[tl]|d\.?\s*n\.?\s*i|tel|cel|whats|n\s*[°º]|nro|n[uú]mero|comprobante)[^$]{0,6}$/i;
     var re = /([0-9]{1,3}(?:[.\s][0-9]{3})+(?:,[0-9]{2})?|[0-9]{5,9}(?:,[0-9]{2})?)/g;
     // Palabras que indican que el número de al lado es un precio
     var kw = /(total|importe|precio|subtotal|valor|monto|unitario|unit\b|c\/u|p\/u|p\.?\s*unit)/i;
@@ -223,6 +239,7 @@
 
       var ini = m.index;
       var antes = t.slice(Math.max(0, ini - 24), ini);   // 24 caracteres previos
+      if (noPrecio.test(antes)) continue;
       var tieneSigno = /\$\s*$/.test(antes);              // ...$ justo antes
       var tieneCentavos = /,[0-9]{2}$/.test(crudo);       // termina en ,00 / ,50
       var cercaPalabra = kw.test(antes);                  // "total", "precio", etc. cerca
@@ -335,10 +352,10 @@
   }
 
   // Procesa el texto (venga del PDF nativo o del OCR): carga unitario, detecta negativa
-  function procesarTexto(k, file, info, sug, texto, viaOcr) {
+  function procesarTexto(k, file, info, sug, texto, viaOcr, motivo) {
     var negativa = esNegativa(texto);
     var montos = montosDelTexto(texto);
-    var marca = viaOcr ? " (OCR)" : "";
+    var marca = (viaOcr ? " (OCR)" : " (lector local)") + (motivo ? " [Gemini: " + motivo + "]" : "");
     info.textContent = " 📎 " + file.name + marca;
 
     var btnNeg = crearBtnNegativa(k);
@@ -410,8 +427,13 @@
         })
       });
     }).then(function (r) {
-      if (!r.ok) throw new Error("HTTP " + r.status);
-      return r.json();
+      return r.json().catch(function () { return null; }).then(function (out) {
+        if (!r.ok) {
+          var det = out && (out.error || "");
+          throw new Error("HTTP " + r.status + (det ? " — " + det : ""));
+        }
+        return out;
+      });
     }).then(function (out) {
       if (!out || !out.ok) throw new Error((out && out.error) || "sin datos");
       return out.datos || {};
@@ -464,7 +486,7 @@
   }
 
   /* ---------- Respaldo local: pdf.js nativo + Tesseract (si Gemini no está) ---------- */
-  function leerLocal(k, file, info, sug) {
+  function leerLocal(k, file, info, sug, motivo) {
     var pdfDoc = null;
     info.textContent = " 📎 " + file.name + " — leyendo…";
     cargarPdfJs().then(function (pdfjs) {
@@ -477,13 +499,13 @@
     }).then(function (texto) {
       // Si el texto nativo ya trae montos o es una negativa, lo usamos (rápido)
       if (montosDelTexto(texto).length || esNegativa(texto)) {
-        procesarTexto(k, file, info, sug, texto, false);
+        procesarTexto(k, file, info, sug, texto, false, motivo);
         return;
       }
       // PDF sin texto útil (escaneado/imagen) → OCR de respaldo
       info.textContent = " 📎 " + file.name + " — sin texto, leyendo con OCR (puede tardar unos segundos)…";
       return ocrPdf(pdfDoc).then(function (textoOcr) {
-        procesarTexto(k, file, info, sug, textoOcr, true);
+        procesarTexto(k, file, info, sug, textoOcr, true, motivo);
       });
     }).catch(function () {
       info.textContent = " 📎 " + file.name + " — no pude leerlo, cargá el precio a mano";
@@ -508,11 +530,12 @@
           aplicarGemini(k, file, info, sug, d);
         } else {
           // Gemini respondió pero sin datos útiles → respaldo local
-          leerLocal(k, file, info, sug);
+          leerLocal(k, file, info, sug, "sin datos");
         }
-      }).catch(function () {
-        // Gemini no disponible (sin key, sin red, cuota) → respaldo local
-        leerLocal(k, file, info, sug);
+      }).catch(function (ex) {
+        // Gemini no disponible (sin key, modelo inválido, cuota) → respaldo local, mostrando el motivo
+        if (window.console) console.warn("Gemini leer_presupuesto:", ex);
+        leerLocal(k, file, info, sug, String((ex && ex.message) || "no disponible").slice(0, 80));
       });
     });
   }
