@@ -2703,10 +2703,16 @@ var EntCore = (function(){
     return r;
   }
   function etq(k){ return k==="num" ? "N\u00b0 de expediente" : k==="cod" ? "c\u00f3digo" : k==="oc" ? "N\u00b0 de OC" : k==="anio" ? "a\u00f1o" : k; }
+  // Mismo paciente: las palabras de enlace (DE, DEL, LA, LOS, Y…) NO cuentan, y el APELLIDO (primera
+  // palabra) tiene que estar en los dos. Antes "CARRIZO MARCELA DEL CARMEN" y "LEIVA CLAUDIA DEL CARMEN"
+  // daban iguales por "DEL" + "CARMEN".
+  var ENLACE = { DE:1, DEL:1, LA:1, LAS:1, LOS:1, Y:1, E:1, VDA:1, VIUDA:1 };
+  function palabrasNombre(s){ return normNombre(s).split(" ").filter(function(w){ return w.length > 1 && !ENLACE[w]; }); }
   function mismaPersona(a, b){
-    var x = normNombre(a).split(" ").filter(Boolean), y = normNombre(b).split(" ").filter(Boolean);
+    var x = palabrasNombre(a), y = palabrasNombre(b);
     if(!x.length || !y.length) return false;
-    var comunes = x.filter(function(w){ return w.length > 1 && y.indexOf(w) >= 0; }).length;
+    if(y.indexOf(x[0]) < 0 && x.indexOf(y[0]) < 0) return false;          // el apellido tiene que coincidir
+    var comunes = x.filter(function(w){ return y.indexOf(w) >= 0; }).length;
     return comunes >= Math.min(2, Math.min(x.length, y.length));
   }
   function clave(num, cod){ return (num && cod) ? (soloNum(num)+"/"+soloNum(cod)) : ""; }
@@ -3064,6 +3070,11 @@ if(typeof module !== "undefined" && module.exports) module.exports = EntConsulta
       if(d.oc && Store.anuladas()[C.soloNum(d.oc)]) return;   // OC anulada: nunca se guarda
       var ocsRec = rec ? ((rec.ocs && rec.ocs.length) ? rec.ocs : (rec.oc ? [rec.oc] : [])) : [];
       if(rec && d.oc && ocsRec.length && ocsRec.indexOf(d.oc) < 0) rec = null;   // cada OC es única: va a su propio registro
+      if(rec && rec.restaurar && d.num && d.cod){
+        // Paciente con expediente reparado: manda lo que dice su OC (número, letra y año).
+        rec = Object.assign({}, rec, { num: d.num, cod: d.cod, letra: d.letra || "", anio: d.anio || "", nroExp: "",
+          alertas: (rec.alertas || []).filter(function(a){ return !/se cambi\u00f3 por error/.test(a); }) });
+      }
       var datos = {
         num: (rec && rec.num) || d.num || "", cod: (rec && rec.cod) || d.cod || "",
         letra: (rec && rec.letra) || d.letra || "", anio: (rec && rec.anio) || d.anio || "",
@@ -3076,7 +3087,8 @@ if(typeof module !== "undefined" && module.exports) module.exports = EntConsulta
       datos.tieneExp = !!((rec && rec.tieneExp) || g.items.some(function(i){ return i.rol === "expediente"; }));
       datos.pacienteNorm = C.normNombre(datos.paciente);
       datos.nroExp = (rec && rec.nroExp) || C.expedienteTexto(datos);
-      datos.claves = unir(rec && rec.claves, unir([C.clave(datos.num, datos.cod)], d.claves || []).filter(Boolean));
+      datos.claves = (rec && rec.restaurar) ? [C.clave(datos.num, datos.cod)] : unir(rec && rec.claves, unir([C.clave(datos.num, datos.cod)], d.claves || []).filter(Boolean));
+      if(rec && rec.restaurar) datos.restaurar = false;
       if(d.oc) datos.oc = d.oc;
       if(d.fechaOC) datos.fechaOC = d.fechaOC;
       if(d.proveedor) datos.proveedor = d.proveedor;
@@ -3141,6 +3153,8 @@ if(typeof module !== "undefined" && module.exports) module.exports = EntConsulta
       var ocsDe = function(r){ return (r.ocs && r.ocs.length) ? r.ocs.slice() : (r.oc ? [r.oc] : []); };
       var ocDeArchivo = function(n){ var x = C.leerNombreArchivo(n); return x.rol === "oc" ? x : null; };
       var res = { separados: [], sinResolver: [], limpiados: 0, corregidos: [], multiItems: [], expItems: [] };
+      res.reparados = [];
+      try{ res.reparados = await Store.repararExpedientes(); }catch(e){ console.warn("Reparaci\u00f3n:", e); }
       try{ res.corregidos = await Store.aplicarCorrecciones(); }catch(e){ console.warn("Correcciones:", e); }
       var lista = cache.slice();
       for(var i = 0; i < lista.length; i++){
@@ -3255,18 +3269,51 @@ if(typeof module !== "undefined" && module.exports) module.exports = EntConsulta
       await db.collection(COL).doc(rec._id).set({ ocs: [], oc: "", fechaOC: "", anuladas: unir(rec.anuladas, [oc]), actualizadoMs: Date.now() }, { merge: true });
       return [oc];
     },
+    /* Reparación (06/10/2026): la primera versión de las correcciones comparó nombres por parecido y le
+       puso 9585/410/S/2026 a otros pacientes "… DEL CARMEN" (LEIVA, DIOSQUEZ, LIZA…). Se les devuelve
+       el N° que figura en el nombre del PDF de su OC; la letra y el año se completan al volver a cargarla. */
+    repararExpedientes: async function(){
+      var buenos = { "VALENZUELA GERONIMO": "9589/410", "CARRIZO MARCELA DEL CARMEN": "9585/410" };
+      var hechas = [];
+      for(var i = 0; i < cache.length; i++){
+        var r = cache[i];
+        if(!r.expCorregido) continue;
+        var n = C.normNombre(r.paciente), k = C.clave(r.num, r.cod);
+        if(buenos[n] && buenos[n] === k) continue;                                // corrección correcta
+        if(k !== "9585/410" && k !== "9589/410") continue;                       // corregido a mano con el botón: no se toca
+        var orig = null;
+        (r.archivos || []).forEach(function(a){ var x = C.leerNombreArchivo(a); if(!orig && x.num && x.cod) orig = x; });
+        var upd = { expCorregido: false, restaurar: true, actualizadoMs: Date.now() };
+        if(orig){
+          upd.num = orig.num; upd.cod = orig.cod; upd.letra = orig.letra || ""; upd.anio = orig.anio || "";
+          upd.claves = [C.clave(orig.num, orig.cod)];
+          upd.nroExp = C.expedienteTexto(upd);
+          hechas.push(r.paciente + ": expediente devuelto a " + upd.nroExp + " (volvé a cargar su OC para completar letra y año)");
+        } else {
+          upd.alertas = unir(r.alertas, ["El expediente de este paciente se cambió por error a " + k + ". Volvé a cargar su OC o corregilo con ✏️."]);
+          hechas.push(r.paciente + ": no se encontró su expediente original; volvé a cargar su OC");
+        }
+        await db.collection(COL).doc(r._id).set(upd, { merge: true });
+      }
+      if(hechas.length) await new Promise(function(res){ setTimeout(res, 500); });
+      return hechas;
+    },
     /* Correcciones informadas por Jorge (06/10/2026). Se aplican una sola vez: si ya están hechas, no tocan nada. */
     aplicarCorrecciones: async function(){
       var hechas = [];
       var LISTA = [
-        { paciente: "VALENZUELA GERONIMO", exp: "9589/410/S/2026" },
-        { paciente: "CARRIZO MARCELA DEL CARMEN", exp: "9585/410/S/2026" },
+        { paciente: "VALENZUELA GERONIMO", exp: "9589/410/S/2026", oc: "20521" },
+        { paciente: "CARRIZO MARCELA DEL CARMEN", exp: "9585/410/S/2026", oc: "20304" },
         { paciente: "HERRERA SUSANA MERCEDES", valida: "18989", anular: ["19916"] },
         { paciente: "OJEDA JUAN HERNALDO", valida: "20244", anular: ["20294"] }
       ];
       for(var i = 0; i < LISTA.length; i++){
         var c = LISTA[i];
-        var recs = cache.filter(function(r){ return C.mismaPersona(r.paciente, c.paciente); });
+        var recs = cache.filter(function(r){
+          if(C.normNombre(r.paciente) !== C.normNombre(c.paciente)) return false;      // nombre exacto
+          if(c.oc){ var o = ((r.ocs && r.ocs.length) ? r.ocs : (r.oc ? [r.oc] : [])).map(C.soloNum); if(o.length && o.indexOf(c.oc) < 0) return false; }
+          return true;
+        });
         for(var j = 0; j < recs.length; j++){
           var r = recs[j], ocs = ((r.ocs && r.ocs.length) ? r.ocs : (r.oc ? [r.oc] : [])).map(C.soloNum);
           if(c.exp){
@@ -3441,7 +3488,7 @@ if(typeof module !== "undefined" && module.exports) module.exports = EntConsulta
         var dst = g.destino, ocsD = dst ? ((dst.ocs && dst.ocs.length) ? dst.ocs : (dst.oc ? [dst.oc] : [])) : [];
         var aportaOc = g.datos.oc && ocsD.indexOf(g.datos.oc) < 0;
         var aportaExp = g.items.some(function(it){ return it.rol === "expediente"; }) && !(dst && dst.tieneExp);
-        var aportaDatos = !!dst && ((g.datos.fechaOC && !dst.fechaOC) || (g.datos.proveedor && !dst.proveedor));
+        var aportaDatos = !!dst && ((g.datos.fechaOC && !dst.fechaOC) || (g.datos.proveedor && !dst.proveedor) || (dst.restaurar && !!g.datos.num));
         g.estado = !dst ? "nuevo" : (aportaOc || aportaExp || aportaDatos ? "completa" : "igual");
         var anuladasReg = Store.anuladas();
         if(g.datos.oc && anuladasReg[C.soloNum(g.datos.oc)]){ g.estado = "anulada"; g.alertas = ["OC " + g.datos.oc + " ANULADA: no se guarda en el registro."]; }
@@ -3532,6 +3579,7 @@ if(typeof module !== "undefined" && module.exports) module.exports = EntConsulta
         };
         box.innerHTML =
           '<div class="ent-cruce-res">' +
+          ((rv.reparados || []).length ? '<div class="ent-alerta">🔧 <b>Reparados ' + rv.reparados.length + ' paciente(s)</b> que la corrección anterior cambió por error:' + lis(rv.reparados) + "</div>" : "") +
           (rv.corregidos.length ? "<div>🛠️ <b>Correcciones aplicadas:</b>" + lis(rv.corregidos) + "</div>" : "") +
           (rv.separados.length ? "<div>✂️ <b>Corregidos:</b> " + rv.separados.length + " OC estaban pegadas a otro paciente y se separaron." + lis(rv.separados) + "</div>" : "<div>✔ Ningún paciente tiene OC ajenas pegadas.</div>") +
           (cr.unidos.length ? "<div>🔄 Unidos en este cruce: <b>" + cr.unidos.length + "</b>" + lis(cr.unidos) + "</div>" : "") +
