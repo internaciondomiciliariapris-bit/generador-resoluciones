@@ -92,6 +92,10 @@ button,input,select{font-family:inherit}
 .it-acc{display:flex;flex-direction:column;gap:6px}
 .mini{border:1.5px solid #e2e8f0;background:#fff;border-radius:9px;padding:7px 9px;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap;color:#334155;text-decoration:none;text-align:center}
 .mini:hover{background:#f1f5f9}
+.it-docs{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:10px;padding:10px 12px;border-radius:10px;background:#eff6ff;border:1.5px solid #93c5fd}
+.it-docs button{padding:10px 14px;border:none;border-radius:9px;background:#1a56a0;color:#fff;font-size:14px;font-weight:800;cursor:pointer;font-family:inherit}
+.it-docs button:disabled{opacity:.6}
+.it-docs span{font-size:13px;color:#1e3a8a;line-height:1.4}
 .mini.wa{border-color:#86efac;background:#f0fdf4;color:#166534}
 .sec{font-size:12px;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:#334155;margin:18px 0 10px}
 /* ---- Observaciones de Jorge ---- */
@@ -547,6 +551,202 @@ var EntConsulta = (function(){
 if(typeof module !== "undefined" && module.exports) module.exports = EntConsulta;
 </script>
 <script>
+/* ===== Documentación para Mesa de Entradas =====
+   Arma en el navegador UN solo PDF para imprimir: OC sin precios y con sello (2 copias) + copia del DNI + receta.
+   Los precios se detectan por su formato (38.000,0000) y por la fila "Son pesos"; el sello va arriba de la línea "Autorizó".
+   Se guarda en Firestore en pedazos (plan gratis, sin Storage): genres_mesa_docs (datos) + genres_mesa_docs_partes (contenido).
+   Nada se sube a otro servidor. */
+var MesaDocs = (function(){
+  "use strict";
+  var URLS = window.MESA_DOCS_URLS || {
+    pdfjs: "https://cdn.jsdelivr.net/npm/pdfjs-dist@4.7.76/build/pdf.min.mjs",
+    worker: "https://cdn.jsdelivr.net/npm/pdfjs-dist@4.7.76/build/pdf.worker.min.mjs",
+    jspdf: "https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"
+  };
+  var COL_D = "genres_mesa_docs", COL_DP = "genres_mesa_docs_partes";
+  var TAM_PARTE = 700000;                   // caracteres base64 por documento (límite Firestore: 1 MB)
+  var MAX_BYTES = 9 * 1024 * 1024;          // PDF final máximo
+  var SELLO_ALTO = 76;                      // alto del sello en puntos PDF
+  var RE_PRECIO = /\$?\s*\d{1,3}(?:\.\d{3})*,\d{4}/g;
+
+  var _pdfjs = null, _jspdf = null;
+  function pdfjs(){
+    if(!_pdfjs){
+      _pdfjs = import(/* @vite-ignore */ URLS.pdfjs).then(function(m){ m.GlobalWorkerOptions.workerSrc = URLS.worker; return m; });
+    }
+    return _pdfjs;
+  }
+  function jspdf(){
+    if(window.jspdf && window.jspdf.jsPDF) return Promise.resolve(window.jspdf.jsPDF);
+    if(!_jspdf){
+      _jspdf = new Promise(function(res, rej){
+        var s = document.createElement("script"); s.src = URLS.jspdf;
+        s.onload = function(){ window.jspdf && window.jspdf.jsPDF ? res(window.jspdf.jsPDF) : rej(new Error("No cargó jsPDF")); };
+        s.onerror = function(){ _jspdf = null; rej(new Error("No se pudo cargar jsPDF (revisá la conexión)")); };
+        document.head.appendChild(s);
+      });
+    }
+    return _jspdf;
+  }
+  function leer(file){ return new Promise(function(res, rej){ var r = new FileReader(); r.onload = function(){ res(new Uint8Array(r.result)); }; r.onerror = function(){ rej(r.error); }; r.readAsArrayBuffer(file); }); }
+  function cargarImg(src){ return new Promise(function(res, rej){ var i = new Image(); i.onload = function(){ res(i); }; i.onerror = function(){ rej(new Error("No se pudo leer la imagen")); }; i.src = src; }); }
+  function esPdf(f){ return /\.pdf$/i.test(f.name || "") || f.type === "application/pdf"; }
+  function jpeg(cv, q){ return cv.toDataURL("image/jpeg", q || 0.85); }
+
+  /* ---------- OC: render + borrar precios + sello ---------- */
+  async function procesarOC(file){
+    var lib = await pdfjs();
+    var doc = await lib.getDocument({ data: await leer(file) }).promise;
+    var out = { paginas: [], tapados: 0, sello: false, texto: "", ocNro: "", expte: null };
+    var sello = window.MESA_SELLO ? await cargarImg(window.MESA_SELLO) : null;
+    for(var n = 1; n <= doc.numPages; n++){
+      var page = await doc.getPage(n), ESC = 2.2, vp = page.getViewport({ scale: ESC });
+      var cv = document.createElement("canvas"); cv.width = Math.ceil(vp.width); cv.height = Math.ceil(vp.height);
+      var ctx = cv.getContext("2d"); ctx.fillStyle = "#fff"; ctx.fillRect(0, 0, cv.width, cv.height);
+      await page.render({ canvasContext: ctx, viewport: vp }).promise;
+      var items = (await page.getTextContent()).items.filter(function(i){ return i.str && i.str.trim(); });
+      out.texto += items.map(function(i){ return i.str; }).join(" ") + "\n";
+      var fsDe = function(it){ var t = it.transform; return Math.hypot(t[2], t[3]) || Math.abs(t[3]) || 8; };
+      var tapar = function(it, i0, i1, padR){
+        var t = it.transform, fs = fsDe(it), L = it.str.length || 1;
+        var x0 = t[4] + it.width * (i0 / L), x1 = t[4] + it.width * (i1 / L);
+        var r = vp.convertToViewportRectangle([x0 - 1.5, t[5] - fs * 0.2, x1 + (padR == null ? -0.2 : padR), t[5] + fs * 0.82]);
+        ctx.fillStyle = "#fff";
+        ctx.fillRect(Math.min(r[0], r[2]), Math.min(r[1], r[3]), Math.abs(r[2] - r[0]), Math.abs(r[3] - r[1]));
+        out.tapados++;
+      };
+      // Precios con 4 decimales (38.000,0000): unitario, total y Total
+      items.forEach(function(it){
+        var m; RE_PRECIO.lastIndex = 0;
+        while((m = RE_PRECIO.exec(it.str))) tapar(it, m.index, m.index + m[0].length);
+      });
+      // "Son pesos": todo lo que está a la derecha del rótulo, en la misma fila
+      items.forEach(function(it){
+        var m = it.str.match(/son\s+pesos\s*:?/i); if(!m) return;
+        var base = it.transform[5], fin = it.transform[4] + it.width * ((m.index + m[0].length) / it.str.length);
+        if(it.str.slice(m.index + m[0].length).trim()) tapar(it, m.index + m[0].length, it.str.length, 2);
+        items.forEach(function(o){ if(o !== it && Math.abs(o.transform[5] - base) < 2.5 && o.transform[4] >= fin - 1) tapar(o, 0, o.str.length, 2); });
+      });
+      // N° de OC (al lado de "Nro:") y expediente de la Observación
+      if(!out.ocNro){
+        var nro = items.filter(function(i){ return /^Nro:?$/i.test(i.str.trim()); })[0];
+        if(nro){
+          var cand = items.filter(function(i){ return /^\d{4,7}$/.test(i.str.trim()) && Math.abs(i.transform[5] - nro.transform[5]) < 4 && i.transform[4] > nro.transform[4]; })
+            .sort(function(a, b){ return a.transform[4] - b.transform[4]; })[0];
+          if(cand) out.ocNro = cand.str.trim();
+        }
+      }
+      // Sello arriba de la línea "Autorizó"
+      var aut = items.filter(function(i){ return /^autoriz/i.test(i.str.trim()); })[0];
+      if(aut && sello && !out.sello){
+        var fsA = fsDe(aut), cx = aut.transform[4] + aut.width / 2, lineaY = aut.transform[5] + fsA * 1.4;
+        var H = SELLO_ALTO, W = H * sello.naturalWidth / sello.naturalHeight, abajo = lineaY + H * 0.03;
+        var r = vp.convertToViewportRectangle([cx - W / 2, abajo, cx + W / 2, abajo + H]);
+        ctx.drawImage(sello, Math.min(r[0], r[2]), Math.min(r[1], r[3]), Math.abs(r[2] - r[0]), Math.abs(r[3] - r[1]));
+        out.sello = true;
+      }
+      out.paginas.push({ img: jpeg(cv, 0.86), w: vp.width / ESC, h: vp.height / ESC });
+    }
+    var e = out.texto.replace(/\s+/g, " ").match(/EXPTE\.?\s*(?:N[°º]?\s*)?:?\s*(\d{1,6})\s*\/\s*(\d{2,4})/i);
+    if(e) out.expte = { num: String(parseInt(e[1], 10)), cod: String(parseInt(e[2], 10)) };
+    return out;
+  }
+
+  /* ---------- DNI / receta: PDF o foto ---------- */
+  async function procesarAdjunto(file){
+    if(esPdf(file)){
+      var lib = await pdfjs(), doc = await lib.getDocument({ data: await leer(file) }).promise, pags = [];
+      for(var n = 1; n <= doc.numPages; n++){
+        var page = await doc.getPage(n), ESC = 1.7, vp = page.getViewport({ scale: ESC });
+        var cv = document.createElement("canvas"); cv.width = Math.ceil(vp.width); cv.height = Math.ceil(vp.height);
+        var ctx = cv.getContext("2d"); ctx.fillStyle = "#fff"; ctx.fillRect(0, 0, cv.width, cv.height);
+        await page.render({ canvasContext: ctx, viewport: vp }).promise;
+        pags.push({ img: jpeg(cv, 0.8), w: vp.width / ESC, h: vp.height / ESC });
+      }
+      return pags;
+    }
+    var url = URL.createObjectURL(file);
+    try{
+      var im = await cargarImg(url), MAX = 1800, k = Math.min(1, MAX / Math.max(im.naturalWidth, im.naturalHeight));
+      var c2 = document.createElement("canvas"); c2.width = Math.round(im.naturalWidth * k); c2.height = Math.round(im.naturalHeight * k);
+      var x2 = c2.getContext("2d"); x2.fillStyle = "#fff"; x2.fillRect(0, 0, c2.width, c2.height); x2.drawImage(im, 0, 0, c2.width, c2.height);
+      return [{ img: jpeg(c2, 0.82), foto: true, pw: c2.width, ph: c2.height }];
+    }finally{ URL.revokeObjectURL(url); }
+  }
+
+  /* ---------- Armar el PDF final ---------- */
+  async function armar(oc, dnis, recetas, avance){
+    var JsPDF = await jspdf(), pdf = null, n = 0;
+    function pagina(w, h){
+      var o = w > h ? "l" : "p";
+      if(!pdf) pdf = new JsPDF({ unit: "pt", format: [w, h], orientation: o, compress: true }); else pdf.addPage([w, h], o);
+      n++;
+    }
+    function poner(p, alias){
+      if(p.foto){                               // foto: hoja A4 con márgenes, centrada
+        var A4w = 595.28, A4h = 841.89, M = 28, k = Math.min((A4w - 2 * M) / p.pw, (A4h - 2 * M) / p.ph);
+        var w = p.pw * k, h = p.ph * k; pagina(A4w, A4h);
+        pdf.addImage(p.img, "JPEG", (A4w - w) / 2, M, w, h, alias, "FAST");
+      } else { pagina(p.w, p.h); pdf.addImage(p.img, "JPEG", 0, 0, p.w, p.h, alias, "FAST"); }
+    }
+    avance && avance("Armando el PDF…");
+    var procOC = oc ? await procesarOC(oc) : null;
+    for(var c = 0; c < 2 && procOC; c++) procOC.paginas.forEach(function(p, i){ poner(p, "oc" + i); });   // 2 copias (la imagen se guarda una sola vez)
+    var cont = { oc: !!procOC, dni: 0, receta: 0 };
+    for(var i = 0; i < dnis.length; i++){ avance && avance("Agregando DNI…"); (await procesarAdjunto(dnis[i])).forEach(function(p, j){ poner(p, "dni" + i + "_" + j); cont.dni++; }); }
+    for(var r = 0; r < recetas.length; r++){ avance && avance("Agregando receta…"); (await procesarAdjunto(recetas[r])).forEach(function(p, j){ poner(p, "rec" + r + "_" + j); cont.receta++; }); }
+    if(!pdf) throw new Error("No hay nada para armar.");
+    var bytes = new Uint8Array(pdf.output("arraybuffer"));
+    return { bytes: bytes, paginas: n, oc: procOC, contenido: cont };
+  }
+
+  /* ---------- Guardar / leer / borrar en Firestore ---------- */
+  function aB64(u8){ var s = "", P = 0x8000; for(var i = 0; i < u8.length; i += P) s += String.fromCharCode.apply(null, u8.subarray(i, i + P)); return btoa(s); }
+  function deB64(b){ var s = atob(b), u = new Uint8Array(s.length); for(var i = 0; i < s.length; i++) u[i] = s.charCodeAt(i); return u; }
+  function idDe(mesaId){ return "d_" + mesaId; }
+  async function borrar(db, mesaId){
+    var id = idDe(mesaId), ref = db.collection(COL_D).doc(id), d = await ref.get();
+    var partes = d.exists ? (d.data().partes || 0) : 0;
+    for(var i = 0; i < Math.max(partes, 1) + 2; i++){ try{ await db.collection(COL_DP).doc(id + "_" + i).delete(); }catch(_){ } }
+    if(d.exists) await ref.delete();
+  }
+  async function subir(db, mesaId, res, extra, avance){
+    if(res.bytes.length > MAX_BYTES) throw new Error("El PDF quedó muy pesado (" + (res.bytes.length / 1048576).toFixed(1) + " MB). Probá con fotos más livianas.");
+    await borrar(db, mesaId);
+    var b = aB64(res.bytes), n = Math.ceil(b.length / TAM_PARTE), id = idDe(mesaId);
+    for(var i = 0; i < n; i++){
+      avance && avance("Subiendo " + (i + 1) + " de " + n + "…");
+      await db.collection(COL_DP).doc(id + "_" + i).set({ d: b.slice(i * TAM_PARTE, (i + 1) * TAM_PARTE), i: i, doc: id });
+    }
+    await db.collection(COL_D).doc(id).set(Object.assign({ mesaId: mesaId, partes: n, bytes: res.bytes.length, paginas: res.paginas, contenido: res.contenido }, extra || {}));
+    return { partes: n };
+  }
+  async function bajar(db, mesaId){
+    var id = idDe(mesaId), d = await db.collection(COL_D).doc(id).get();
+    if(!d.exists) throw new Error("La documentación ya no está disponible.");
+    var n = d.data().partes, idx = []; for(var i = 0; i < n; i++) idx.push(i);
+    var partes = await Promise.all(idx.map(function(i){ return db.collection(COL_DP).doc(id + "_" + i).get(); }));
+    var b = partes.map(function(p){ if(!p.exists) throw new Error("Falta una parte del archivo."); return p.data().d; }).join("");
+    return new Blob([deB64(b)], { type: "application/pdf" });
+  }
+  /* Abre el PDF en una pestaña nueva (desde ahí se imprime). La pestaña se abre antes de bajar
+     el archivo para que el navegador no la bloquee. */
+  function abrir(promesaBlob){
+    var w = window.open("", "_blank");
+    if(w){ try{ w.document.write('<p style="font:16px Segoe UI,Arial;padding:30px">Cargando la documentación…</p>'); }catch(_){ } }
+    return Promise.resolve(promesaBlob).then(function(blob){
+      var url = URL.createObjectURL(blob);
+      if(w) w.location.href = url;
+      else { var a = document.createElement("a"); a.href = url; a.download = "Documentacion.pdf"; document.body.appendChild(a); a.click(); a.remove(); }
+      setTimeout(function(){ URL.revokeObjectURL(url); }, 120000);
+    }, function(e){ if(w) try{ w.close(); }catch(_){ } throw e; });
+  }
+  return { procesarOC: procesarOC, armar: armar, subir: subir, bajar: bajar, borrar: borrar, abrir: abrir,
+           COL_D: COL_D, COL_DP: COL_DP, aB64: aB64, deB64: deB64 };
+})();
+
+</script>
+<script>
 /* ===== Calendario de días hábiles — Mesa de Entradas (anteojos / audífonos) =====
    Lógica pura (sin DOM). Plazo del trámite: 10 días hábiles contados desde el día SIGUIENTE al ingreso.
    No cuentan sábados, domingos ni los feriados de la lista (editable desde el panel de Jorge). */
@@ -651,7 +851,7 @@ if(typeof module !== "undefined" && module.exports) module.exports = MesaCal;
     measurementId: "G-GHDRCXE81C"
   };
   var COL = "genres_mesa", COL_U = "genres_mesa_usuarios", COL_CFG = "genres_mesa_config", COL_REG = "genres_registro_oc", COL_OBS = "genres_mesa_obs";
-  var obs = [], obsConocidas = null;
+  var obs = [], obsConocidas = null, docsMeta = {};
   var SES_KEY = "mesa_pris_sesion";
   var C = EntCore, K = MesaCal;
   var db = null, usuario = null, mesa = [], reg = [], feriados = null;
@@ -785,6 +985,10 @@ if(typeof module !== "undefined" && module.exports) module.exports = MesaCal;
         reg = snap.docs.map(function(d){ var x = d.data(); x._id = d.id; return x; }).filter(function(r){ return !r.descartado; });
         estado.reg = "ok"; render();
       }, function(err){ console.warn("Registro OC (mesa):", err); estado.reg = "sin-acceso"; render(); });
+      db.collection(MesaDocs.COL_D).onSnapshot(function(snap){
+        docsMeta = {}; snap.docs.forEach(function(d){ var x = d.data(); if(x.mesaId) docsMeta[x.mesaId] = x; });
+        render();
+      }, function(err){ console.warn("Documentación (mesa):", err); });
       db.collection(COL_OBS).onSnapshot(function(snap){
         obs = snap.docs.map(function(d){ var x = d.data(); x._id = d.id; return x; }).filter(function(o){ return !o.anulada; });
         obs.sort(function(a, b){ return (a.creadoMs || 0) - (b.creadoMs || 0); });
@@ -871,6 +1075,25 @@ if(typeof module !== "undefined" && module.exports) module.exports = MesaCal;
       return '<div class="it-obs-r' + (o.leido ? " leida" : "") + '">📨 <b>Observación de ' + esc(o.autor || "Jorge") + "</b> (" + esc(o.creadoTxt || "") + "): <b>" + esc(o.texto || "") + "</b>" +
         "<i>" + (o.leido ? "✅ Leída por " + esc(o.leidoPor || "") + " el " + esc(o.leidoTxt || "") + " hs" + (o.respuesta ? " · Respuesta: " + esc(o.respuesta) : "") : "⏳ Sin leer") + "</i></div>";
     }).join("") + "</div>";
+  }
+
+  /* ---------- Documentación enviada por Jorge (un solo PDF para imprimir) ---------- */
+  function contenidoTxt(c){ if(!c) return ""; var p = []; if(c.oc) p.push("orden de compra ×2"); if(c.dni) p.push("copia del DNI"); if(c.receta) p.push("receta"); return p.join(", "); }
+  function docsTarjeta(m){
+    var d = docsMeta[m._id]; if(!d) return "";
+    return '<div class="it-docs"><button type="button" data-acc="imprimir" data-id="' + esc(m._id) + '">🖨️ Imprimir documentación</button>' +
+      "<span>📎 " + esc(contenidoTxt(d.contenido)) + " · " + (d.paginas || "?") + " páginas" +
+      (m.docsImpresoTxt ? "<br>Impresa por <b>" + esc(m.docsImpresoPor || "") + "</b> el " + esc(m.docsImpresoTxt) + " hs" : "<br><b>Todavía no se imprimió</b>") + "</span></div>";
+  }
+  function imprimirDocs(id, btn){
+    var m = porId(id); if(!m) return;
+    btn.disabled = true; var txt = btn.textContent; btn.textContent = "Abriendo…";
+    MesaDocs.abrir(MesaDocs.bajar(db, id)).then(function(){
+      var t = ahora(), d = { historial: firebase.firestore.FieldValue.arrayUnion(t.txt + " · Documentación abierta para imprimir por " + usuario.n) };
+      if(!m.docsImpresoTxt){ d.docsImpresoTxt = t.txt; d.docsImpresoPor = usuario.n; d.docsImpresoMs = t.ms; }
+      return db.collection(COL).doc(id).set(d, { merge: true });
+    }).catch(function(e){ alert("No se pudo abrir la documentación: " + (e && e.message || e)); })
+      .then(function(){ btn.disabled = false; btn.textContent = txt; });
   }
 
   /* ---------- Pestañas ---------- */
@@ -1078,7 +1301,7 @@ if(typeof module !== "undefined" && module.exports) module.exports = MesaCal;
         '<div class="it-dato">Ingresó el ' + esc(m.ingresoTxt) + " hs · cargado por " + esc(m.usuarioNombre || m.usuario || "") +
           (ef !== "entregado" ? " · vuelve a partir del <b>" + esc(K.fmtLargo(sit.vence)) + "</b>" : "") +
           (m.telefono ? " · 📞 " + esc(m.telefono) : "") + "</div>" +
-        est + obsTarjeta(m._id) +
+        est + docsTarjeta(m) + obsTarjeta(m._id) +
       "</div>" +
       '<div class="it-acc">' +
         (wa ? '<a class="mini wa" href="' + esc(wa) + '" target="_blank" rel="noopener" title="Avisar al paciente por WhatsApp">📲 WhatsApp</a>' : "") +
@@ -1149,6 +1372,7 @@ if(typeof module !== "undefined" && module.exports) module.exports = MesaCal;
   document.addEventListener("click", function(e){
     var el = e.target && e.target.closest ? e.target.closest("[data-acc],[data-f]") : null; if(!el) return;
     if(el.hasAttribute("data-f")){ $("ls-q").value = ""; $("ls-f").value = el.getAttribute("data-f"); window.render(); return; }
+    if(el.getAttribute("data-acc") === "imprimir"){ imprimirDocs(el.getAttribute("data-id"), el); return; }
     if(el.getAttribute("data-acc") === "obs-ok"){ confirmarObs(el.getAttribute("data-id"), el); return; }
     if(el.getAttribute("data-acc") === "tirilla"){ var m = porId(el.getAttribute("data-id")); if(m) imprimirTirilla(m); }
   });
