@@ -1,9 +1,10 @@
 <!DOCTYPE html>
+<!-- ===== ARCHIVO: index.html de la RAÍZ (GENERADOR de Jorge) — NO va en la carpeta mesa ===== -->
 <html lang="es">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Generador de Resoluciones — PRIS</title>
+<title>Prestaciones Ópticas y Auditivas — PRIS</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:"Segoe UI",Arial,sans-serif;background:#f0f4f8;min-height:100vh;padding:24px}
@@ -122,6 +123,19 @@ hr{border:none;border-top:1.5px solid #e2e8f0;margin:16px 0 14px}
 .splash-sub{font-size:13px;color:#64748b;line-height:1.6;margin-bottom:28px}
 .splash-btn{width:100%;padding:14px;background:#0f766e;color:#fff;border:none;border-radius:10px;font-size:16px;font-weight:700;cursor:pointer;transition:background .15s}
 .splash-btn:hover{background:#0d6460}
+/* Contraseña de ingreso */
+.pw-box{display:none;text-align:left;margin:4px 0 12px;padding:14px;border:1.5px solid #cbd5e1;border-radius:12px;background:#f8fafc}
+.pw-box.on{display:block}
+.pw-box label.pw-lbl{display:block;font-size:12px;font-weight:700;color:#334155;margin-bottom:6px}
+.pw-wrap{position:relative}
+.pw-wrap input{width:100%;padding:11px 46px 11px 12px;border:1.5px solid #cbd5e1;border-radius:9px;font-size:15px;outline:none;box-sizing:border-box}
+.pw-wrap input:focus{border-color:#0f766e;box-shadow:0 0 0 3px rgba(15,118,110,.15)}
+.pw-ojo{position:absolute;right:6px;top:50%;transform:translateY(-50%);border:none;background:none;font-size:18px;cursor:pointer;padding:4px 8px;border-radius:6px;line-height:1}
+.pw-ojo:hover{background:#e2e8f0}
+.pw-rec{display:flex;align-items:center;gap:8px;margin-top:10px;font-size:13px;color:#334155;cursor:pointer}
+.pw-rec input{width:16px;height:16px;accent-color:#0f766e;cursor:pointer}
+.pw-err{min-height:16px;margin-top:8px;font-size:12px;color:#b91c1c;font-weight:600}
+.pw-olvidar{display:none;margin-top:10px;background:none;border:none;color:#64748b;font-size:11px;text-decoration:underline;cursor:pointer}
 .splash-foot{margin-top:18px;font-size:11px;color:#94a3b8;letter-spacing:.3px}
 @media print{#splash{display:none!important}}
 /* Botón flotante "Volver al inicio" (vuelve a la pantalla de ingreso) */
@@ -252,6 +266,9 @@ hr{border:none;border-top:1.5px solid #e2e8f0;margin:16px 0 14px}
 .rg-oc span{font-size:11px;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:#1a56a0}
 .rg-oc b{font-family:Consolas,"Courier New",monospace;font-size:34px;line-height:1.1;font-weight:800;color:#0f2c55;letter-spacing:1px}
 .rg-card.ok .rg-oc{border-color:#16a34a}.rg-card.ok .rg-oc span{color:#15803d}
+.rg-card.tr{background:#fffbeb;border-color:#fde68a}.rg-card.tr .rg-kick{color:#b45309}
+.rg-tramite{margin-top:10px;padding:9px 11px;border-radius:10px;background:#fff;border:1.5px dashed #fcd34d;font-size:13px;color:#78350f}
+.rg-tramite b{color:#92400e}
 .rg-oc.vacia{border-style:dashed;border-color:#cbd5e1;box-shadow:none}.rg-oc.vacia span{color:#64748b}.rg-oc.vacia b{font-family:inherit;font-size:16px;color:#64748b}
 @media (max-width:600px){.rg-oc b{font-size:28px}}
 .rg-tit{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 12px}
@@ -274,9 +291,19 @@ hr{border:none;border-top:1.5px solid #e2e8f0;margin:16px 0 14px}
       <img id="splash-logo-pris" class="splash-logo-pris" alt="PRIS">
       <img id="splash-logo-gob" class="splash-logo-gob" alt="Ministerio de Salud Pública de Tucumán">
     </div>
-    <div class="splash-title">📋 Generador de Resoluciones</div>
-    <div class="splash-sub">Programa Integrado de Salud<br>Ministerio de Salud Pública de Tucumán</div>
-    <button class="splash-btn" onclick="ingresar()">Ingresar</button>
+    <div class="splash-title">👓🎧 Prestaciones Ópticas y Auditivas</div>
+    <div class="splash-sub">Anteojos y audífonos<br>Programa Integrado de Salud<br>Ministerio de Salud Pública de Tucumán</div>
+    <div class="pw-box" id="pw-box">
+      <label class="pw-lbl" for="pw-input">🔒 Contraseña</label>
+      <div class="pw-wrap">
+        <input type="password" id="pw-input" autocomplete="current-password" inputmode="numeric" placeholder="Escribí la contraseña" onkeydown="if(event.key==='Enter'){event.preventDefault();ingresar();}">
+        <button type="button" class="pw-ojo" id="pw-ojo" onclick="verClave()" title="Mostrar contraseña" aria-label="Mostrar contraseña">👁️</button>
+      </div>
+      <label class="pw-rec"><input type="checkbox" id="pw-recordar" checked> Recordar en esta computadora</label>
+      <div class="pw-err" id="pw-err"></div>
+    </div>
+    <button class="splash-btn" id="btn-ingresar" onclick="ingresar()">Ingresar</button>
+    <button type="button" class="pw-olvidar" id="pw-olvidar" onclick="olvidarClave()">🔓 Olvidar la contraseña en esta computadora</button>
     <button class="splash-btn splash-btn-ent" onclick="abrirBuscadorRegistro()">🔎 Buscar expediente / orden de compra</button>
     <div class="splash-foot">Internación Domiciliaria · PRIS · SI.PRO.SA.</div>
   </div>
@@ -286,7 +313,7 @@ hr{border:none;border-top:1.5px solid #e2e8f0;margin:16px 0 14px}
 <div class="card" id="form-card">
   <div class="header" style="position:relative">
     <button type="button" class="btn-ent-hdr" onclick="abrirBuscadorRegistro()" title="Buscar expediente / orden de compra">🔎 Buscar OC</button>
-    <h1>📋 Generador de Resoluciones</h1>
+    <h1>👓🎧 Prestaciones Ópticas y Auditivas</h1>
     <p>Programa Integrado de Salud — Ministerio de Salud Pública de Tucumán</p>
   </div>
   <div class="tabs">
@@ -653,8 +680,71 @@ const LOGO2="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAgwAAACDCAYAAADh/0MrA
 (function(){
   var p=document.getElementById('splash-logo-pris'); if(p) p.src=LOGO1;
   var g=document.getElementById('splash-logo-gob');  if(g) g.src=LOGO2;
+  setTimeout(function(){ var o=document.getElementById('pw-olvidar'); if(o && claveRecordada()) o.style.display='inline-block'; }, 0);
 })();
+/* ===== Contraseña de ingreso =====
+   Se guarda SOLO el hash SHA-256 (no la contraseña en texto). Para cambiarla, reemplazar
+   CLAVE_HASH por el SHA-256 de la nueva. Si se cambia, las compus que la tenían recordada
+   la vuelven a pedir. El buscador de expedientes/OC queda libre (no pide contraseña). */
+var CLAVE_HASH = "d0f451801443fa1478e1cf080e8d63dead650c9712b2631edf7e1658a98967d9";
+var CLAVE_KEY = "genres_acceso_ok";
+var _desbloqueado = false;
+function claveRecordada(){ try{ return localStorage.getItem(CLAVE_KEY) === CLAVE_HASH; }catch(_){ return false; } }
+function hashClave(txt){
+  if(window.crypto && crypto.subtle && window.TextEncoder){
+    return crypto.subtle.digest("SHA-256", new TextEncoder().encode(txt)).then(function(buf){
+      return Array.prototype.map.call(new Uint8Array(buf), function(b){ return ("0"+b.toString(16)).slice(-2); }).join("");
+    });
+  }
+  return Promise.resolve(sha256Js(txt));
+}
+// SHA-256 de respaldo (por si el navegador no expone crypto.subtle, ej. fuera de https)
+function sha256Js(str){
+  function r(n,x){ return (x>>>n)|(x<<(32-n)); }
+  var K=[],H=[],p=2,c=0;
+  function frac(x){ return ((x-Math.floor(x))*4294967296)|0; }
+  while(c<64){ var esPrimo=true; for(var d=2;d*d<=p;d++){ if(p%d===0){ esPrimo=false; break; } }
+    if(esPrimo){ if(c<8) H[c]=frac(Math.pow(p,1/2)); K[c]=frac(Math.pow(p,1/3)); c++; } p++; }
+  var bytes=unescape(encodeURIComponent(str)), l=bytes.length, w=[];
+  for(var i=0;i<l;i++) w[i>>2]|=(bytes.charCodeAt(i)&255)<<(24-(i%4)*8);
+  w[l>>2]|=0x80<<(24-(l%4)*8);
+  var n=((l+8)>>6)*16+16; w[n-1]=l*8;
+  for(var j=0;j<n;j++) w[j]=w[j]|0;
+  for(var o=0;o<n;o+=16){
+    var W=w.slice(o,o+16), a=H.slice(0);
+    for(var t=0;t<64;t++){
+      if(t>=16){ var x=W[t-15], y=W[t-2];
+        W[t]=(W[t-16]+(r(7,x)^r(18,x)^(x>>>3))+W[t-7]+(r(17,y)^r(19,y)^(y>>>10)))|0; }
+      var t1=(a[7]+(r(6,a[4])^r(11,a[4])^r(25,a[4]))+((a[4]&a[5])^(~a[4]&a[6]))+K[t]+W[t])|0;
+      var t2=((r(2,a[0])^r(13,a[0])^r(22,a[0]))+((a[0]&a[1])^(a[0]&a[2])^(a[1]&a[2])))|0;
+      a=[(t1+t2)|0].concat(a); a[4]=(a[4]+t1)|0; a.length=8;
+    }
+    for(var q=0;q<8;q++) H[q]=(H[q]+a[q])|0;
+  }
+  var out=""; for(var z=0;z<8;z++) out+=("00000000"+(H[z]>>>0).toString(16)).slice(-8);
+  return out;
+}
+function verClave(){
+  var i=document.getElementById('pw-input'), b=document.getElementById('pw-ojo'); if(!i) return;
+  var mostrar = i.type === 'password';
+  i.type = mostrar ? 'text' : 'password';
+  if(b){ b.textContent = mostrar ? '🙈' : '👁️'; b.title = mostrar ? 'Ocultar contraseña' : 'Mostrar contraseña'; b.setAttribute('aria-label', b.title); }
+  i.focus();
+}
+function olvidarClave(){
+  try{ localStorage.removeItem(CLAVE_KEY); }catch(_){}
+  _desbloqueado = false;
+  var o=document.getElementById('pw-olvidar'); if(o) o.style.display='none';
+  alert('Listo: la próxima vez que ingreses en esta computadora te va a pedir la contraseña.');
+}
+function pedirClave(){
+  var box=document.getElementById('pw-box'), err=document.getElementById('pw-err'), i=document.getElementById('pw-input');
+  if(box) box.classList.add('on');
+  if(err) err.textContent='';
+  if(i) setTimeout(function(){ i.focus(); }, 30);
+}
 function mostrarApp(){
+  if(!_desbloqueado && !claveRecordada()){ mostrarInicio(); pedirClave(); return; }
   var s=document.getElementById('splash');   if(s) s.style.display='none';
   var m=document.getElementById('app-main');  if(m) m.style.display='';
 }
@@ -664,6 +754,20 @@ function mostrarInicio(){
   window.scrollTo(0,0);
 }
 function ingresar(){
+  if(!_desbloqueado && !claveRecordada()){
+    var box=document.getElementById('pw-box'), i=document.getElementById('pw-input'), err=document.getElementById('pw-err');
+    if(!box || !box.classList.contains('on') || !i || !i.value){ pedirClave(); if(i && box && box.classList.contains('on') && !i.value && err) err.textContent='Escribí la contraseña.'; return; }
+    hashClave(i.value).then(function(h){
+      if(h !== CLAVE_HASH){ err.textContent='Contraseña incorrecta.'; i.select(); return; }
+      _desbloqueado = true;
+      var rec=document.getElementById('pw-recordar');
+      try{ if(rec && rec.checked) localStorage.setItem(CLAVE_KEY, CLAVE_HASH); }catch(_){}
+      i.value=''; i.type='password'; box.classList.remove('on');
+      var o=document.getElementById('pw-olvidar'); if(o && claveRecordada()) o.style.display='inline-block';
+      ingresar();
+    }).catch(function(e){ err.textContent='No se pudo verificar: ' + (e && e.message || e); });
+    return;
+  }
   mostrarApp();
   // Deja un paso en el historial: el botón "atrás" del navegador también vuelve al inicio.
   try { if(!(history.state && history.state.genApp)) history.pushState({genApp:true}, ''); } catch(e){}
@@ -2932,7 +3036,10 @@ if(typeof module !== "undefined" && module.exports) module.exports = EntConsulta
     measurementId: "G-GHDRCXE81C"
   };
   var C = EntCore;
-  var db = null, cache = [], estado = "conectando", escuchando = false, propuesta = [];
+  var db = null, cache = [], todos = [], estado = "conectando", escuchando = false, propuesta = [];
+  // Expedientes en trámite (cuadro hecho / resolución en proceso) que todavía no tienen OC
+  var ETAPA_RANK = { mesa: 0, cuadro: 1, proceso: 2, resolucion: 3 };
+  var tramite = { pend: null, borr: null, mesa: null }, _syncT = null;
   // PDFs leídos que esperan ser guardados: se van SUMANDO en cada "Agregar PDFs" (carga por etapas).
   var enEspera = [], destildados = {};
   var authReady = new Promise(function(resolve){
@@ -3006,9 +3113,11 @@ if(typeof module !== "undefined" && module.exports) module.exports = EntConsulta
       authReady.then(function(ok){
         if(!ok || !db){ estado = "sin-acceso"; UI.render(); return; }
         db.collection(COL).onSnapshot(function(snap){
-          cache = snap.docs.map(function(d){ var x = d.data(); x._id = d.id; return x; });
+          todos = snap.docs.map(function(d){ var x = d.data(); x._id = d.id; return x; });
+          // Los "en trámite" eliminados a mano quedan marcados (descartado) para que no vuelvan a aparecer solos.
+          cache = todos.filter(function(r){ return !r.descartado; });
           cache.sort(function(a,b){ return (b.creadoMs||0) - (a.creadoMs||0); });
-          estado = "ok"; UI.render();
+          estado = "ok"; UI.render(); Store.programarSync();
         }, function(err){ console.warn("Registro OC onSnapshot:", err); estado = "sin-acceso"; UI.render(); });
       });
     },
@@ -3059,6 +3168,7 @@ if(typeof module !== "undefined" && module.exports) module.exports = EntConsulta
         };
         if(cant) datos.cantidad = cant;
         datos.tieneExp = true; // el generador ya conoce el expediente
+        datos.etapa = "resolucion"; datos.etapaFecha = hoyTxt(); datos.descartado = false;
         if(!mismo){ datos.creadoMs = Date.now(); datos.creadoTxt = hoyTxt(); datos.origen = "generador"; datos.ocs = []; }
         return db.collection(COL).doc(mismo ? ex.rec._id : idRegistro(d)).set(datos, { merge: true })
           .then(function(){ return true; }).catch(function(e){ console.warn("Registro OC (generador):", e); return false; });
@@ -3097,7 +3207,81 @@ if(typeof module !== "undefined" && module.exports) module.exports = EntConsulta
       if(!rec){ datos.creadoMs = Date.now(); datos.creadoTxt = hoyTxt(); datos.origen = "pdf"; }
       await db.collection(COL).doc(rec ? rec._id : idRegistro({ oc: d.oc, num: datos.num, cod: datos.cod, anio: datos.anio, paciente: datos.paciente })).set(datos, { merge: true });
     },
-    eliminar: function(rec){ return db.collection(COL).doc(rec._id).delete(); },
+    /* ---------- Expedientes en trámite (todavía sin OC) ----------
+       Escucha los pendientes del Cuadro (genres_pendientes) y las resoluciones "En proceso"
+       (genres_borradores) y los suma al registro como "OC en trámite". Cuando después se carga
+       el PDF de la OC, se une al MISMO registro por N° de expediente (no se duplica). */
+    escucharTramite: function(){
+      authReady.then(function(ok){
+        if(!ok || !db) return;
+        db.collection("genres_pendientes").onSnapshot(function(snap){
+          tramite.pend = snap.docs.map(function(d){ return d.data(); }); Store.programarSync();
+        }, function(err){ console.warn("Registro OC (pendientes):", err); });
+        db.collection("genres_borradores").onSnapshot(function(snap){
+          tramite.borr = snap.docs.map(function(d){ return d.data(); }); Store.programarSync();
+        }, function(err){ console.warn("Registro OC (en proceso):", err); });
+        // Ingresos de Mesa de Entradas (genres_mesa): entran como "OC en trámite" desde el primer día.
+        db.collection("genres_mesa").onSnapshot(function(snap){
+          tramite.mesa = snap.docs.map(function(d){ return d.data(); }).filter(function(x){ return !x.anulado; }); Store.programarSync();
+        }, function(err){ console.warn("Registro OC (mesa de entradas):", err); });
+      });
+    },
+    programarSync: function(){
+      clearTimeout(_syncT);
+      _syncT = setTimeout(function(){ Store.sincronizarTramite().catch(function(e){ console.warn("Registro OC (trámite):", e); }); }, 1200);
+    },
+    sincronizarTramite: async function(){
+      if(estado !== "ok" || !db || (!tramite.pend && !tramite.borr && !tramite.mesa)) return 0;
+      // 1) Juntar por expediente, quedándonos con la etapa más avanzada
+      var porExp = {};
+      var sumar = function(x, etapa){
+        var parts = C.partirExpediente(x && x.nroExp);
+        if(!parts || !(x.paciente || "").trim()) return;
+        var k = C.clave(parts.num, parts.cod) + "_" + (parts.anio || "");
+        var prev = porExp[k];
+        if(prev && ETAPA_RANK[prev.etapa] >= ETAPA_RANK[etapa]) return;
+        porExp[k] = { parts: parts, x: x, etapa: etapa };
+      };
+      (tramite.mesa || []).forEach(function(x){ sumar(x, "mesa"); });
+      (tramite.pend || []).forEach(function(x){ sumar(Object.assign({ tipo: "audio" }, x), "cuadro"); });
+      (tramite.borr || []).forEach(function(x){ sumar(x, "proceso"); });
+      // 2) Crear o avanzar la etapa en el registro (nunca retrocede, nunca toca lo que ya tiene OC)
+      var hechos = 0, ks = Object.keys(porExp);
+      for(var i = 0; i < ks.length; i++){
+        var it = porExp[ks[i]], x = it.x, p = it.parts;
+        var d = { num: p.num, cod: p.cod, letra: p.letra, anio: p.anio, paciente: String(x.paciente).trim(), tipo: x.tipo || "audio" };
+        var id = idRegistro(d);
+        var crudo = todos.filter(function(r){ return r._id === id; })[0];
+        if(crudo && crudo.descartado) continue;                       // lo eliminaste a mano: no vuelve
+        var ex = Store.buscarExistente(d);
+        var rec = (ex && !ex.porNombre) ? ex.rec : (crudo || null);
+        if(rec){
+          var tieneOc = (rec.ocs && rec.ocs.length) || rec.oc;
+          if(tieneOc || rec.entregado) continue;
+          if((ETAPA_RANK[rec.etapa] || 0) >= ETAPA_RANK[it.etapa]) continue;
+        }
+        var cant = parseInt(String(x.cantidad || "").replace(/[^0-9]/g, ""), 10) || null;
+        var datos = { etapa: it.etapa, etapaFecha: hoyTxt(), tieneExp: true, actualizadoMs: Date.now() };
+        if(x.ganadora) datos.ganadora = String(x.ganadora).trim();
+        if(!rec){
+          Object.assign(datos, {
+            tipo: d.tipo, nroExp: String(x.nroExp).trim(), num: d.num, cod: d.cod, letra: d.letra, anio: d.anio,
+            paciente: d.paciente, pacienteNorm: C.normNombre(d.paciente), ocs: [],
+            creadoMs: Date.now(), creadoTxt: hoyTxt(), origen: it.etapa === "cuadro" ? "cuadro" : it.etapa === "mesa" ? "mesa" : "en-proceso"
+          });
+          if(cant) datos.cantidad = cant;
+        }
+        try{ await db.collection(COL).doc(rec ? rec._id : id).set(datos, { merge: true }); hechos++; }
+        catch(e){ console.warn("Registro OC (trámite):", e); }
+      }
+      return hechos;
+    },
+    eliminar: function(rec){
+      // Un expediente en trámite (sin OC) se marca como descartado para que el sincronizador no lo vuelva a crear.
+      var tieneOc = (rec.ocs && rec.ocs.length) || rec.oc;
+      if(!tieneOc && rec.etapa) return db.collection(COL).doc(rec._id).set({ descartado: true, actualizadoMs: Date.now() }, { merge: true });
+      return db.collection(COL).doc(rec._id).delete();
+    },
     // Entrega de la OC al paciente: fecha y hora del momento en que se tilda.
     marcarEntrega: function(rec, entregar){
       var d = new Date(), dd = function(n){ return String(n).padStart(2, "0"); };
@@ -3348,7 +3532,8 @@ if(typeof module !== "undefined" && module.exports) module.exports = EntConsulta
         var tOc = !!(r.ocs && r.ocs.length);
         if(tOc && r.tieneExp) comp++; else if(!tOc) sinOc.push(r.paciente); else sinExp.push(r.paciente);
       });
-      return { comp: comp, sinOc: sinOc, sinExp: sinExp, entregados: cache.filter(function(r){ return r.entregado; }).length };
+      return { comp: comp, sinOc: sinOc, sinExp: sinExp, entregados: cache.filter(function(r){ return r.entregado; }).length,
+               enTramite: cache.filter(function(r){ return r.etapa && !(r.ocs && r.ocs.length) && !r.oc; }).length };
     }
   };
   window.RegistroOCStore = Store;
@@ -3366,7 +3551,7 @@ if(typeof module !== "undefined" && module.exports) module.exports = EntConsulta
       if(rsBox){
         if(estado === "sin-acceso") rsBox.innerHTML = '<div class="ent-alerta">Sin acceso a la base. Revisá la regla de Firestore para <b>genres_registro_oc</b> (y que el login anónimo esté habilitado).</div>';
         else if(estado === "conectando") rsBox.textContent = "Conectando…";
-        else { var rs0 = Store.resumen(); rsBox.textContent = cache.length + " paciente(s) en el registro · " + rs0.comp + " con expediente y OC · " + rs0.sinOc.length + " sin OC todavía · " + rs0.sinExp.length + " solo con OC · " + rs0.entregados + " entregada(s) al paciente"; }
+        else { var rs0 = Store.resumen(); rsBox.textContent = cache.length + " paciente(s) en el registro · " + rs0.comp + " con expediente y OC · " + rs0.sinOc.length + " sin OC todavía (" + rs0.enTramite + " en trámite) · " + rs0.sinExp.length + " solo con OC · " + rs0.entregados + " entregada(s) al paciente"; }
       }
       // Cartel de búsqueda
       var cont = $("ent-lista"), sub = $("rg-sub");
@@ -3382,23 +3567,26 @@ if(typeof module !== "undefined" && module.exports) module.exports = EntConsulta
       var lista = UI.filtrar();
       if(!lista.length){ sub.textContent = "Sin resultados"; cont.innerHTML = '<div class="rg-vacio">No se encontró \u201c' + esc(q) + '\u201d en el registro.<br><span>Probá con el apellido solo, o con el N° de expediente o de OC sin letras.</span></div>'; return; }
       var muestra = lista.slice(0, 12);
-      var pend = muestra.filter(function(r){ return !r.entregado; }), entr = muestra.filter(function(r){ return r.entregado; });
-      sub.textContent = lista.length + " encontrado(s)" + (pend.length ? " · " + pend.length + " por entregar" : "") + (entr.length ? " · " + entr.length + " ya entregado(s)" : "");
+      var conOc = function(r){ return !!((r.ocs && r.ocs.length) || r.oc); };
+      var tram = muestra.filter(function(r){ return !r.entregado && !conOc(r); });
+      var pend = muestra.filter(function(r){ return !r.entregado && conOc(r); }), entr = muestra.filter(function(r){ return r.entregado; });
+      sub.textContent = lista.length + " encontrado(s)" + (tram.length ? " · " + tram.length + " con OC en trámite" : "") + (pend.length ? " · " + pend.length + " por entregar" : "") + (entr.length ? " · " + entr.length + " ya entregado(s)" : "");
       var seccion = function(titulo, color, arr){
         return arr.length ? '<div class="rg-sec"><span class="rg-dot" style="background:' + color + '"></span>' + titulo + '<span class="rg-num">' + arr.length + "</span></div>" + arr.map(UI.ficha).join("") : "";
       };
-      cont.innerHTML = seccion("Por entregar", "#7c3aed", pend) + seccion("Ya entregadas", "#16a34a", entr) +
+      cont.innerHTML = seccion("OC en trámite", "#f59e0b", tram) + seccion("Por entregar", "#7c3aed", pend) + seccion("Ya entregadas", "#16a34a", entr) +
         (lista.length > 12 ? '<div class="rg-vacio">Hay ' + lista.length + " coincidencias: escribí más para afinar.</div>" : "");
     },
     ficha: function(r){
       var ocs = (r.ocs && r.ocs.length) ? r.ocs : (r.oc ? [r.oc] : []);
       var tipo = r.tipo === "audio" ? "Audífonos" : r.tipo === "anteojos" ? "Anteojos" : "Prestación";
       var icono = r.tipo === "audio" ? "🎧" : "👓";
-      var kick = [tipo + (r.cantidad ? " ×" + r.cantidad : ""), r.proveedor || "", r.extra || ""].filter(Boolean).join(" · ");
+      var kick = [tipo + (r.cantidad ? " ×" + r.cantidad : ""), r.proveedor || r.ganadora || "", r.extra || ""].filter(Boolean).join(" · ");
+      var enTramite = !r.entregado && !ocs.length;
       // El N° de OC va GRANDE, en su propio recuadro; abajo, expediente y fecha.
       var ocGrande = ocs.length
         ? '<div class="rg-oc"><span>Orden de compra N°</span><b>' + ocs.map(esc).join(" / ") + "</b></div>"
-        : '<div class="rg-oc vacia"><span>Orden de compra</span><b>sin cargar</b></div>';
+        : '<div class="rg-oc vacia"><span>Orden de compra</span><b>' + (enTramite ? "🟡 en trámite" : "sin cargar") + "</b></div>";
       var datos = [r.fechaOC ? "Fecha OC " + esc(r.fechaOC) : "", (r.anuladas && r.anuladas.length) ? '<span style="color:#b91c1c">OC anulada: ' + r.anuladas.map(esc).join(", ") + "</span>" : ""].filter(Boolean).join('<span class="rg-sep">·</span>');
       var alertas = (r.alertas || []).map(function(a){ return '<div class="rg-warn">⚠️ ' + esc(a) + "</div>"; }).join("");
       var entrega;
@@ -3409,9 +3597,14 @@ if(typeof module !== "undefined" && module.exports) module.exports = EntConsulta
         entrega = '<label class="rg-entrega"><input type="checkbox" onchange="EntUI.entrega(\'' + r._id + '\', this)">' +
           "<span><b>¿Estás por entregar esta orden de compra al paciente?</b> Tildá para registrar la entrega con fecha y hora.</span></label>";
       } else {
-        entrega = '<div class="rg-entrega off">Todavía no se puede registrar la entrega: falta cargar la orden de compra.</div>';
+        var et = r.etapa === "resolucion" ? "Resolución generada" + (r.nroRes ? " (Res. N° " + esc(r.nroRes) + ")" : "") + (r.fechaRes ? " el " + esc(r.fechaRes) : (r.etapaFecha ? " el " + esc(r.etapaFecha) : ""))
+               : r.etapa === "proceso" ? "Resolución en proceso" + (r.etapaFecha ? " (desde el " + esc(r.etapaFecha) + ")" : "")
+               : r.etapa === "cuadro" ? "Cuadro comparativo hecho" + (r.etapaFecha ? " el " + esc(r.etapaFecha) : "") + (r.ganadora ? " · adjudica a " + esc(r.ganadora) : "")
+               : r.etapa === "mesa" ? "Ingresado por Mesa de Entradas" + (r.etapaFecha ? " el " + esc(r.etapaFecha) : "")
+               : "Expediente cargado";
+        entrega = '<div class="rg-tramite">🟡 <b>Orden de compra en trámite</b> — ' + et + ".<br>Todavía no se puede entregar: cuando se cargue el PDF de la OC pasa a “Por entregar”.</div>";
       }
-      return '<div class="rg-card' + (r.entregado ? " ok" : "") + '">' +
+      return '<div class="rg-card' + (r.entregado ? " ok" : (enTramite ? " tr" : "")) + '">' +
         '<div class="rg-ico">' + icono + "</div>" +
         '<div class="rg-main">' +
           '<div class="rg-kick">' + esc(kick) + "</div>" +
@@ -3681,9 +3874,631 @@ if(typeof module !== "undefined" && module.exports) module.exports = EntConsulta
     };
   }
   Store.escuchar();
+  Store.escucharTramite();
 })();
 
 </script>
+<!-- ===== MESA DE ENTRADAS — panel de Jorge (alertas, entrega de OC a mesa, usuarios y feriados) ===== -->
+<style>
+#mesa-chip{position:fixed;left:24px;bottom:24px;z-index:900;display:none;align-items:center;gap:8px;padding:11px 16px;border:none;border-radius:999px;background:#0f766e;color:#fff;font-size:14px;font-weight:700;font-family:inherit;cursor:pointer;box-shadow:0 6px 20px rgba(15,118,110,.35)}
+#mesa-chip:hover{background:#0d6460}
+.mesa-badge{background:#fff;color:#0f766e;border-radius:999px;min-width:22px;padding:1px 7px;font-size:12px;font-weight:800;text-align:center}
+.mesa-badge.nuevo{background:#dc2626;color:#fff;animation:mesaLatido 1.2s ease-in-out infinite}
+@keyframes mesaLatido{0%,100%{transform:scale(1)}50%{transform:scale(1.18)}}
+#mesa-alerta{position:fixed;right:24px;bottom:84px;z-index:10001;width:380px;max-width:calc(100vw - 32px);background:#fff;border-radius:14px;box-shadow:0 18px 50px rgba(0,0,0,.30);border-left:6px solid #0f766e;overflow:hidden;animation:mesaEntra .35s ease-out}
+@keyframes mesaEntra{from{transform:translateY(30px);opacity:0}to{transform:none;opacity:1}}
+.ma-head{display:flex;align-items:center;gap:10px;padding:12px 14px;background:linear-gradient(120deg,#0f766e,#1a56a0);color:#fff}
+.ma-head b{flex:1;font-size:14px}
+.ma-head button{border:none;background:rgba(255,255,255,.18);color:#fff;border-radius:7px;width:28px;height:28px;cursor:pointer;font-size:14px}
+.ma-it{padding:11px 14px;border-bottom:1px solid #eef2f7}
+.ma-it-t{font-size:15px;font-weight:800;color:#1a56a0}
+.ma-it-p{font-size:14px;font-weight:700;color:#1a2b4a;margin-top:1px}
+.ma-it-d{font-size:12px;color:#64748b;margin-top:3px}
+.ma-it-b{display:flex;gap:6px;margin-top:8px}
+.ma-foot{display:flex;gap:8px;justify-content:flex-end;padding:10px 14px;background:#f8fafc}
+.mj-btn{padding:7px 11px;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap}
+.mj-btn:disabled{opacity:.5;cursor:default}
+.mj-verde{background:#0f766e;color:#fff}.mj-verde:hover:not(:disabled){background:#0d6460}
+.mj-azul{background:#1a56a0;color:#fff}.mj-azul:hover:not(:disabled){background:#154482}
+.mj-gris{background:#f1f5f9;color:#374151}.mj-gris:hover:not(:disabled){background:#e2e8f0}
+.mj-rojo{background:#fef2f2;color:#b91c1c;border:1px solid #fecaca}.mj-rojo:hover:not(:disabled){background:#fee2e2}
+.mj-tabs{display:flex;border-bottom:1px solid #e2e8f0;background:#fff}
+.mj-tab{flex:1;padding:11px;text-align:center;font-size:14px;font-weight:700;color:#64748b;cursor:pointer;border-bottom:3px solid transparent}
+.mj-tab.on{color:#0f766e;border-bottom-color:#0f766e}
+.mj-it{display:flex;gap:12px;background:#fff;border:1.5px solid #e2e8f0;border-left:6px solid #94a3b8;border-radius:13px;padding:12px 14px;margin-bottom:10px}
+.mj-it.verde{border-left-color:#16a34a}.mj-it.ambar{border-left-color:#d97706}.mj-it.rojo{border-left-color:#dc2626}.mj-it.azul{border-left-color:#1a56a0}.mj-it.gris{border-left-color:#94a3b8;background:#f8fafc}
+.mj-it.nuevo{box-shadow:0 0 0 2px #fca5a5}
+.mj-ico{font-size:26px;line-height:1}
+.mj-main{flex:1;min-width:0}
+.mj-kick{font-size:11px;font-weight:800;letter-spacing:.8px;text-transform:uppercase;color:#64748b}
+.mj-tit{display:flex;flex-wrap:wrap;gap:3px 10px;align-items:baseline;margin-top:2px}
+.mj-exp{font-size:17px;font-weight:800;color:#1a56a0}.mj-pac{font-size:15px;font-weight:700;color:#1a2b4a}
+.mj-sem{display:inline-block;margin-top:6px;font-size:12px;font-weight:800;border-radius:999px;padding:3px 10px}
+.mj-sem.verde{background:#dcfce7;color:#166534}.mj-sem.ambar{background:#fef3c7;color:#92400e}.mj-sem.rojo{background:#fee2e2;color:#991b1b}.mj-sem.azul{background:#dbeafe;color:#1e40af}.mj-sem.gris{background:#e2e8f0;color:#475569}
+.mj-dato{font-size:12.5px;color:#475569;margin-top:5px;line-height:1.55}
+.mj-acc{display:flex;flex-direction:column;gap:6px;align-items:stretch}
+.mj-nuevo{display:inline-block;background:#dc2626;color:#fff;font-size:10px;font-weight:800;border-radius:6px;padding:1px 6px;margin-left:6px;vertical-align:middle}
+.mj-f{display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:8px;align-items:end;margin-bottom:14px}
+.mj-f label{font-size:12px;font-weight:700;color:#374151}
+.mj-f input{width:100%;padding:9px 11px;border:1.5px solid #cbd5e1;border-radius:8px;font-size:14px;margin-top:4px;font-family:inherit}
+.mj-pw{position:relative}.mj-pw input{padding-right:40px}
+.mj-pw button{position:absolute;right:4px;bottom:3px;width:32px;height:32px;border:none;background:transparent;cursor:pointer;font-size:16px}
+.mj-u{display:flex;align-items:center;gap:10px;padding:10px 12px;border:1.5px solid #e2e8f0;border-radius:11px;background:#fff;margin-bottom:8px;flex-wrap:wrap}
+.mj-u b{font-size:14px}.mj-u span{font-size:12px;color:#64748b}
+.mj-u .mj-u-txt{flex:1;min-width:160px}
+.mj-u.off{opacity:.6;background:#f8fafc}
+.mj-ta{width:100%;min-height:260px;padding:10px 12px;border:1.5px solid #cbd5e1;border-radius:10px;font-size:13px;font-family:Consolas,monospace;line-height:1.5}
+.mj-msg{margin:10px 0 0;font-size:13px;font-weight:600}
+.mj-obs{margin-top:7px;font-size:12.5px;line-height:1.45;padding:6px 9px;border-radius:8px;background:#fffbeb;border:1px solid #fde68a}
+.mj-obs.leida{background:#f0fdf4;border-color:#bbf7d0}
+.mj-obs i{display:block;font-style:normal;font-size:12px;color:#475569;margin-top:2px}
+#mj-obs-ov{position:fixed;inset:0;z-index:10003;background:rgba(15,23,42,.55);display:flex;align-items:flex-start;justify-content:center;padding:10vh 14px 14px}
+.mj-obs-box{background:#fff;width:100%;max-width:520px;border-radius:16px;box-shadow:0 24px 70px rgba(0,0,0,.4);overflow:hidden}
+.mj-obs-box textarea{width:100%;min-height:120px;padding:10px 12px;border:1.5px solid #cbd5e1;border-radius:10px;font-size:15px;font-family:inherit;resize:vertical}
+#mj-leida{position:fixed;right:24px;bottom:84px;z-index:10002;width:360px;max-width:calc(100vw - 32px);background:#fff;border-radius:14px;box-shadow:0 18px 50px rgba(0,0,0,.30);border-left:6px solid #16a34a;padding:12px 14px;font-size:13px;line-height:1.5;animation:mesaEntra .35s ease-out}
+@media(max-width:640px){.mj-f{grid-template-columns:1fr}.mj-it{flex-wrap:wrap}.mj-acc{flex-direction:row;flex-wrap:wrap;width:100%}}
+@media print{#mesa-chip,#mesa-alerta,#mesa-modal,#mj-obs-ov,#mj-leida{display:none!important}}
+</style>
+
+<button type="button" id="mesa-chip" onclick="MesaJ.abrir()" title="Ingresos de Mesa de Entradas">📥 Mesa de entradas <span class="mesa-badge" id="mesa-chip-n">0</span></button>
+<div id="mesa-alerta" style="display:none" role="alert"></div>
+<div id="mj-leida" style="display:none" role="status"></div>
+<div id="mj-obs-ov" style="display:none" onclick="if(event.target===this) MesaJ.obsCerrar()">
+  <div class="mj-obs-box" role="dialog" aria-label="Enviar observación a Mesa de Entradas">
+    <div class="ma-head"><span style="font-size:20px">📨</span><b>Observación para Mesa de Entradas</b><button type="button" onclick="MesaJ.obsCerrar()" title="Cancelar">✕</button></div>
+    <div style="padding:14px 16px">
+      <div id="mj-obs-dest" style="font-size:14px;font-weight:700;color:#1a56a0;margin-bottom:8px"></div>
+      <textarea id="mj-obs-txt" placeholder="Ej.: Falta el certificado médico con firma y sello. Pedirle al paciente que lo traiga."></textarea>
+      <div class="hint" style="margin-top:6px">Les aparece en una mini pantalla apenas la abran y no se cierra hasta que tilden que la leyeron. Queda registrado quién la leyó, fecha y hora.</div>
+      <div class="mj-msg" id="mj-obs-msg"></div>
+    </div>
+    <div class="ma-foot"><button type="button" class="mj-btn mj-gris" onclick="MesaJ.obsCerrar()">Cancelar</button><button type="button" class="mj-btn mj-verde" id="mj-obs-env" onclick="MesaJ.obsEnviar()">📨 Enviar</button></div>
+  </div>
+</div>
+
+<div class="reg-ov" id="mesa-modal" style="display:none" onclick="if(event.target===this) MesaJ.cerrar()">
+  <div class="rg-box" role="dialog" aria-label="Mesa de Entradas">
+    <div class="rg-head" style="background:linear-gradient(120deg,#0f766e 0%,#1a56a0 100%)">
+      <div class="rg-head-ico">📥</div>
+      <div class="rg-head-txt">
+        <div class="rg-kicker">Mesa de Entradas · Anteojos y audífonos</div>
+        <div class="rg-title">Ingresos de pacientes</div>
+        <div class="rg-sub" id="mj-sub">Conectando…</div>
+      </div>
+      <button type="button" class="rg-x" onclick="MesaJ.cerrar()" title="Cerrar (Esc)">✕</button>
+    </div>
+    <div class="mj-tabs">
+      <div class="mj-tab on" id="mj-t-ing" onclick="MesaJ.tab('ing')">📋 Ingresos</div>
+      <div class="mj-tab" id="mj-t-usr" onclick="MesaJ.tab('usr')">👥 Usuarios de mesa</div>
+      <div class="mj-tab" id="mj-t-fer" onclick="MesaJ.tab('fer')">📅 Feriados</div>
+    </div>
+    <div id="mj-p-ing" style="display:flex;flex-direction:column;flex:1;min-height:0">
+      <div class="rg-search">
+        <span>🔍</span>
+        <input id="mj-q" type="text" autocomplete="off" oninput="MesaJ.render()" placeholder="Apellido y nombre · 8871/410 · OC20552">
+        <select id="mj-f" onchange="MesaJ.render()" title="Ver">
+          <option value="pend">Por trabajar (sin OC en mesa)</option>
+          <option value="nuevos">🆕 Nuevos sin tomar</option>
+          <option value="vencidos">🔴 Vencidos / vencen hoy</option>
+          <option value="en_mesa">📦 OC en mesa</option>
+          <option value="entregados">✅ Entregados</option>
+          <option value="todos">Todos</option>
+        </select>
+      </div>
+      <div class="rg-body" id="mj-lista"></div>
+    </div>
+    <div id="mj-p-usr" class="rg-body" style="display:none">
+      <div class="stitle">Crear usuario de Mesa de Entradas</div>
+      <div class="mj-f">
+        <label>Nombre y apellido<input id="mj-u-nom" type="text" autocomplete="off" placeholder="Ej. Juan Pérez"></label>
+        <label>Usuario<input id="mj-u-usr" type="text" autocomplete="off" autocapitalize="none" spellcheck="false" placeholder="Ej. jperez"></label>
+        <label class="mj-pw">Contraseña<input id="mj-u-pw" type="password" autocomplete="new-password" placeholder="Mínimo 4 caracteres"><button type="button" onclick="MesaJ.ojo('mj-u-pw', this)" title="Mostrar contraseña">👁️</button></label>
+        <button type="button" class="mj-btn mj-verde" style="padding:10px 14px" onclick="MesaJ.crearUsuario()">➕ Crear</button>
+      </div>
+      <div class="mj-msg" id="mj-u-msg"></div>
+      <div class="stitle" style="margin-top:14px">Usuarios</div>
+      <div id="mj-u-lista"></div>
+      <div class="hint" style="margin-top:10px">Cada persona entra con su usuario y su contraseña: todo lo que carga o entrega queda registrado con su nombre. Si alguien deja de trabajar en mesa, desactivalo (no se pierde lo que cargó).</div>
+    </div>
+    <div id="mj-p-fer" class="rg-body" style="display:none">
+      <div class="stitle">Feriados y días no laborables (no cuentan para los 10 días hábiles)</div>
+      <div class="hint" style="margin-bottom:8px">Una fecha por renglón (dd/mm/aaaa). Después de la fecha podés escribir el motivo. Sábados y domingos ya se descuentan solos.</div>
+      <textarea id="mj-fer-ta" class="mj-ta" spellcheck="false"></textarea>
+      <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">
+        <button type="button" class="mj-btn mj-verde" onclick="MesaJ.guardarFeriados()">💾 Guardar feriados</button>
+        <button type="button" class="mj-btn mj-gris" onclick="MesaJ.feriadosSugeridos()">↺ Cargar la lista sugerida</button>
+      </div>
+      <div class="mj-msg" id="mj-fer-msg"></div>
+    </div>
+    <div class="rg-foot">
+      <div class="rg-foot-txt">Página de Mesa de Entradas: <a href="/mesa/" target="_blank" rel="noopener" id="mj-link">/mesa</a> · <a href="#" onclick="MesaJ.copiarLink(); return false;">📋 Copiar link</a> · <a href="#" onclick="MesaJ.exportar(); return false;">⬇️ Exportar a Excel (CSV)</a></div>
+      <button type="button" class="rg-btn" onclick="MesaJ.cerrar()">Listo</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ===== Calendario de días hábiles — Mesa de Entradas (anteojos / audífonos) =====
+   Lógica pura (sin DOM). Plazo del trámite: 10 días hábiles contados desde el día SIGUIENTE al ingreso.
+   No cuentan sábados, domingos ni los feriados de la lista (editable desde el panel de Jorge). */
+var MesaCal = (function(){
+  "use strict";
+  var PLAZO = 10;
+  var NOMBRES = {
+    "2026-01-01":"Año Nuevo", "2026-02-16":"Carnaval", "2026-02-17":"Carnaval",
+    "2026-03-23":"Día no laborable", "2026-03-24":"Día de la Memoria",
+    "2026-04-02":"Malvinas", "2026-04-03":"Viernes Santo", "2026-05-01":"Día del Trabajador",
+    "2026-05-25":"Revolución de Mayo", "2026-06-15":"Paso a la Inmortalidad de Güemes",
+    "2026-07-09":"Día de la Independencia", "2026-07-10":"Día no laborable",
+    "2026-08-17":"Paso a la Inmortalidad de San Martín", "2026-09-24":"Batalla de Tucumán (provincial)",
+    "2026-10-12":"Diversidad Cultural", "2026-11-23":"Soberanía Nacional", "2026-12-07":"Día no laborable",
+    "2026-12-08":"Inmaculada Concepción", "2026-12-25":"Navidad",
+    "2027-01-01":"Año Nuevo", "2027-02-08":"Carnaval", "2027-02-09":"Carnaval",
+    "2027-03-24":"Día de la Memoria", "2027-03-26":"Viernes Santo", "2027-04-02":"Malvinas",
+    "2027-05-25":"Revolución de Mayo", "2027-07-09":"Día de la Independencia",
+    "2027-09-24":"Batalla de Tucumán (provincial)", "2027-12-08":"Inmaculada Concepción", "2027-12-25":"Navidad"
+  };
+  var DEF = Object.keys(NOMBRES).sort();
+  var DIAS = ["domingo","lunes","martes","miércoles","jueves","viernes","sábado"];
+  function pad(n){ return String(n).padStart(2, "0"); }
+  function iso(d){ return d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate()); }
+  function fmt(d){ return pad(d.getDate()) + "/" + pad(d.getMonth() + 1) + "/" + d.getFullYear(); }
+  function fmtLargo(d){ return DIAS[d.getDay()] + " " + fmt(d); }
+  function hora(d){ return pad(d.getHours()) + ":" + pad(d.getMinutes()); }
+  function dia(ms){ var d = new Date(ms); return new Date(d.getFullYear(), d.getMonth(), d.getDate()); }
+  function sig(d){ return new Date(d.getFullYear(), d.getMonth(), d.getDate() + 1); }
+  function conjunto(l){ var s = {}; (l && l.length ? l : DEF).forEach(function(x){ s[x] = 1; }); return s; }
+  function habil(d, s){ var w = d.getDay(); return w !== 0 && w !== 6 && !s[iso(d)]; }
+  /* Fecha del día hábil N contado desde el día siguiente a "desdeMs". */
+  function sumarHabiles(desdeMs, n, lista){
+    var s = conjunto(lista), d = dia(desdeMs), c = 0, g = 0;
+    while(c < n && g < 4000){ d = sig(d); if(habil(d, s)) c++; g++; }
+    return d;
+  }
+  /* Días hábiles cumplidos entre el día del ingreso (no cuenta) y "hastaMs" (cuenta). */
+  function habilesEntre(desdeMs, hastaMs, lista){
+    var s = conjunto(lista), a = dia(desdeMs), b = dia(hastaMs), c = 0, g = 0;
+    while(a < b && g < 4000){ a = sig(a); if(habil(a, s)) c++; g++; }
+    return c;
+  }
+  function situacion(m, lista, ahoraMs){
+    var plazo = m.plazo || PLAZO;
+    var trans = habilesEntre(m.ingresoMs, ahoraMs || Date.now(), lista);
+    return { transcurridos: trans, restantes: plazo - trans, plazo: plazo, vence: sumarHabiles(m.ingresoMs, plazo, lista) };
+  }
+  function dh(n){ return n === 1 ? "1 día hábil" : n + " días hábiles"; }
+  /* Semáforo según el estado efectivo (entregado / en_mesa / ingresado / trabajo). */
+  function semaforo(sit, efectivo){
+    if(efectivo === "entregado") return { cls: "gris", txt: "Entregada al paciente" };
+    if(efectivo === "en_mesa") return { cls: "azul", txt: "OC lista en Mesa de Entradas" };
+    if(sit.restantes < 0) return { cls: "rojo", txt: "Vencido hace " + dh(-sit.restantes) };
+    if(sit.restantes === 0) return { cls: "rojo", txt: "Hoy se cumplen los " + sit.plazo + " días hábiles" };
+    if(sit.restantes <= 2) return { cls: "ambar", txt: "Faltan " + dh(sit.restantes) };
+    return { cls: "verde", txt: "Faltan " + dh(sit.restantes) };
+  }
+  /* Texto (una fecha por renglón: dd/mm/aaaa o aaaa-mm-dd, con comentario opcional) → lista ISO */
+  function parseLista(txt){
+    var out = [], malas = [];
+    String(txt || "").split(/\n+/).forEach(function(l){
+      l = l.trim(); if(!l) return;
+      var y, mo, da, m = l.match(/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{4})/);
+      if(m){ da = +m[1]; mo = +m[2]; y = +m[3]; }
+      else { m = l.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/); if(m){ y = +m[1]; mo = +m[2]; da = +m[3]; } }
+      if(!m){ malas.push(l); return; }
+      var d = new Date(y, mo - 1, da);
+      if(d.getMonth() !== mo - 1 || d.getDate() !== da){ malas.push(l); return; }
+      var k = iso(d); if(out.indexOf(k) < 0) out.push(k);
+    });
+    out.sort();
+    return { lista: out, malas: malas };
+  }
+  function listaATexto(lista){
+    return (lista && lista.length ? lista : DEF).slice().sort().map(function(k){
+      var p = k.split("-"); return p[2] + "/" + p[1] + "/" + p[0] + (NOMBRES[k] ? "  " + NOMBRES[k] : "");
+    }).join("\n");
+  }
+  return { PLAZO: PLAZO, DEF: DEF, NOMBRES: NOMBRES, iso: iso, fmt: fmt, fmtLargo: fmtLargo, hora: hora,
+           sumarHabiles: sumarHabiles, habilesEntre: habilesEntre, situacion: situacion, semaforo: semaforo,
+           dh: dh, parseLista: parseLista, listaATexto: listaATexto };
+})();
+if(typeof module !== "undefined" && module.exports) module.exports = MesaCal;
+
+</script>
+<script>
+/* Panel de Mesa de Entradas para Jorge. Mismo Firebase (visitas-siprosa, login anónimo).
+   Reglas Firestore necesarias (al lado de las demás genres_*):
+     match /genres_mesa/{id}          { allow read, write: if request.auth != null; }
+     match /genres_mesa_usuarios/{id} { allow read, write: if request.auth != null; }
+     match /genres_mesa_config/{id}   { allow read, write: if request.auth != null; } */
+var MesaJ = (function(){
+  "use strict";
+  var firebaseConfig = {
+    apiKey: "AIzaSyCDFcb5B7swNnetMOxXhVNQWaDxa1LVRF4",
+    authDomain: "visitas-siprosa.firebaseapp.com",
+    projectId: "visitas-siprosa",
+    storageBucket: "visitas-siprosa.firebasestorage.app",
+    messagingSenderId: "957519453967",
+    appId: "1:957519453967:web:e6c2bfac7a4da10fed287a",
+    measurementId: "G-GHDRCXE81C"
+  };
+  var COL = "genres_mesa", COL_U = "genres_mesa_usuarios", COL_CFG = "genres_mesa_config", COL_REG = "genres_registro_oc", COL_OBS = "genres_mesa_obs";
+  var obs = [], obsLeidas = null, obsPara = null;
+  var C = EntCore, K = MesaCal;
+  var db = null, mesa = [], usuarios = [], reg = [], feriados = null, estado = "conectando", primeraCarga = true;
+  var conocidos = {}, ocultaHasta = 0, tituloBase = document.title;
+  var authReady = new Promise(function(resolve){
+    try{
+      if(!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+      db = firebase.firestore();
+      firebase.auth().signInAnonymously()
+        .then(function(){ resolve(true); })
+        .catch(function(err){ console.warn("Auth anónima falló (mesa J):", err); resolve(false); });
+    }catch(err){ console.warn("Firebase no disponible (mesa J):", err); resolve(false); }
+  });
+  function $(id){ return document.getElementById(id); }
+  function esc(t){ return String(t == null ? "" : t).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;"); }
+  function ahora(){ var d = new Date(); return { ms: d.getTime(), fecha: K.fmt(d), hora: K.hora(d), txt: K.fmt(d) + " " + K.hora(d) }; }
+  function tipoTxt(t){ return t === "audio" ? "Audífonos" : t === "anteojos" ? "Anteojos" : "Prestación"; }
+  function tipoIco(t){ return t === "audio" ? "🎧" : "👓"; }
+  function ocsDe(r){ return r ? ((r.ocs && r.ocs.length) ? r.ocs : (r.oc ? [r.oc] : [])) : []; }
+  function claveDe(x){ return C.clave(x.num, x.cod); }
+  function normUser(u){ return String(u || "").trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9._-]/g, ""); }
+  function desbloqueado(){ try{ return !!(window._desbloqueado || (typeof claveRecordada === "function" && claveRecordada())); }catch(_){ return false; } }
+  function regDe(x){
+    var k = claveDe(x); if(!k) return null;
+    var c = reg.filter(function(r){ return claveDe(r) === k || (r.claves || []).indexOf(k) >= 0; });
+    c.sort(function(a, b){ return (ocsDe(b).length ? 1 : 0) - (ocsDe(a).length ? 1 : 0); });
+    return c[0] || null;
+  }
+  function efectivo(m, r){
+    if(m.estado === "entregado" || (r && r.entregado)) return "entregado";
+    if(m.estado === "en_mesa") return "en_mesa";
+    return m.estado || "ingresado";
+  }
+  function historial(t, txt){ return firebase.firestore.FieldValue.arrayUnion(t.txt + " · " + txt + " (Jorge)"); }
+
+  /* ---------- Datos en vivo ---------- */
+  authReady.then(function(ok){
+    if(!ok || !db){ estado = "sin-acceso"; render(); return; }
+    db.collection(COL).onSnapshot(function(snap){
+      mesa = snap.docs.map(function(d){ var x = d.data(); x._id = d.id; return x; }).filter(function(m){ return !m.anulado; });
+      estado = "ok";
+      var nuevos = mesa.filter(function(m){ return !m.vistoJorge && !conocidos[m._id]; });
+      if(!primeraCarga && nuevos.length){ sonar(); ocultaHasta = 0; }
+      mesa.forEach(function(m){ conocidos[m._id] = true; });
+      primeraCarga = false;
+      render(); alerta();
+    }, function(err){ console.warn("Mesa J onSnapshot:", err); estado = "sin-acceso"; render(); });
+    db.collection(COL_U).onSnapshot(function(snap){
+      usuarios = snap.docs.map(function(d){ var x = d.data(); x._id = d.id; return x; });
+      usuarios.sort(function(a, b){ return String(a.nombre || "").localeCompare(String(b.nombre || "")); });
+      renderUsuarios();
+    }, function(err){ console.warn("Mesa J usuarios:", err); var l = $("mj-u-lista"); if(l) l.innerHTML = '<div class="rg-vacio">Sin acceso: falta la regla de Firestore de <b>genres_mesa_usuarios</b>.</div>'; });
+    db.collection(COL_REG).onSnapshot(function(snap){
+      reg = snap.docs.map(function(d){ var x = d.data(); x._id = d.id; return x; }).filter(function(r){ return !r.descartado; });
+      render();
+    }, function(err){ console.warn("Mesa J registro:", err); });
+    db.collection(COL_OBS).onSnapshot(function(snap){
+      obs = snap.docs.map(function(d){ var x = d.data(); x._id = d.id; return x; }).filter(function(o){ return !o.anulada; });
+      obs.sort(function(a, b){ return (a.creadoMs || 0) - (b.creadoMs || 0); });
+      // Aviso cuando mesa confirma la lectura de una observación (no en la primera carga)
+      var recien = obs.filter(function(o){ return o.leido && obsLeidas && !obsLeidas[o._id]; });
+      obsLeidas = obsLeidas || {}; obs.forEach(function(o){ if(o.leido) obsLeidas[o._id] = true; });
+      if(recien.length && desbloqueado()) avisoLeida(recien[recien.length - 1]);
+      render();
+    }, function(err){ console.warn("Mesa J observaciones:", err); });
+    db.collection(COL_CFG).doc("feriados").onSnapshot(function(d){
+      var x = d.exists ? d.data() : null;
+      feriados = x && x.lista && x.lista.length ? x.lista : null;
+      var ta = $("mj-fer-ta"); if(ta && document.activeElement !== ta) ta.value = K.listaATexto(feriados);
+      render();
+    }, function(err){ console.warn("Mesa J feriados:", err); });
+  });
+
+  /* ---------- Aviso sonoro y título de la pestaña ---------- */
+  function sonar(){
+    try{
+      var Ctx = window.AudioContext || window.webkitAudioContext; if(!Ctx) return;
+      var ac = new Ctx();
+      [0, 0.22].forEach(function(t0, i){
+        var o = ac.createOscillator(), g = ac.createGain();
+        o.type = "sine"; o.frequency.value = i ? 1046 : 784;
+        g.gain.setValueAtTime(0.0001, ac.currentTime + t0);
+        g.gain.exponentialRampToValueAtTime(0.25, ac.currentTime + t0 + 0.02);
+        g.gain.exponentialRampToValueAtTime(0.0001, ac.currentTime + t0 + 0.2);
+        o.connect(g); g.connect(ac.destination); o.start(ac.currentTime + t0); o.stop(ac.currentTime + t0 + 0.22);
+      });
+      setTimeout(function(){ try{ ac.close(); }catch(_){ } }, 900);
+    }catch(_){}
+  }
+  function sinVer(){ return mesa.filter(function(m){ return !m.vistoJorge && efectivo(m, regDe(m)) === "ingresado"; }).sort(function(a, b){ return (b.ingresoMs || 0) - (a.ingresoMs || 0); }); }
+  function sinTomar(){ return mesa.filter(function(m){ return efectivo(m, regDe(m)) === "ingresado"; }); }
+
+  /* ---------- Botón flotante + mini ventana de alerta ---------- */
+  function chip(){
+    var b = $("mesa-chip"), n = $("mesa-chip-n"); if(!b) return;
+    var ver = desbloqueado() && estado === "ok";
+    b.style.display = ver ? "flex" : "none";
+    var nv = sinVer().length, st = sinTomar().length;
+    n.textContent = nv || st; n.classList.toggle("nuevo", nv > 0);
+    b.title = nv ? nv + " ingreso(s) nuevo(s) de Mesa de Entradas" : st + " ingreso(s) sin tomar";
+    document.title = (nv ? "(" + nv + ") 📥 " : "") + tituloBase;
+  }
+  function alerta(){
+    chip();
+    var box = $("mesa-alerta"); if(!box) return;
+    var lista = sinVer();
+    var modalAbierto = $("mesa-modal") && $("mesa-modal").style.display !== "none";
+    if(!desbloqueado() || !lista.length || modalAbierto || Date.now() < ocultaHasta){ box.style.display = "none"; return; }
+    var muestra = lista.slice(0, 3);
+    box.innerHTML = '<div class="ma-head"><span style="font-size:20px">📥</span><b>' + (lista.length === 1 ? "Nuevo ingreso de Mesa de Entradas" : lista.length + " ingresos nuevos de Mesa de Entradas") + '</b><button type="button" data-mj="ocultar" title="Más tarde">✕</button></div>' +
+      muestra.map(function(m){
+        var sit = K.situacion(m, feriados);
+        return '<div class="ma-it"><div class="ma-it-t">' + tipoIco(m.tipo) + " " + esc(m.nroExp) + '</div><div class="ma-it-p">' + esc(m.paciente) + "</div>" +
+          '<div class="ma-it-d">' + esc(tipoTxt(m.tipo)) + " · cargado por " + esc(m.usuarioNombre || m.usuario || "") + " el " + esc(m.ingresoTxt) + " hs · vence el " + esc(K.fmt(sit.vence)) + "</div>" +
+          '<div class="ma-it-b"><button type="button" class="mj-btn mj-verde" data-mj="tomar" data-id="' + esc(m._id) + '">▶ Tomar</button><button type="button" class="mj-btn mj-gris" data-mj="visto" data-id="' + esc(m._id) + '">Visto</button></div></div>';
+      }).join("") +
+      (lista.length > 3 ? '<div class="ma-it" style="font-size:13px;color:#475569">… y ' + (lista.length - 3) + " más.</div>" : "") +
+      '<div class="ma-foot"><button type="button" class="mj-btn mj-gris" data-mj="ocultar">Más tarde</button><button type="button" class="mj-btn mj-azul" data-mj="abrir">Ver todos</button></div>';
+    box.style.display = "";
+  }
+  setInterval(function(){ chip(); if(desbloqueado()) alerta(); }, 1500);
+  setInterval(function(){ render(); }, 5 * 60 * 1000);
+
+  /* ---------- Panel ---------- */
+  function abrir(){
+    var m = $("mesa-modal"); if(!m) return;
+    m.style.display = "flex"; document.body.style.overflow = "hidden";
+    $("mesa-alerta").style.display = "none";
+    var l = $("mj-link"); if(l) l.textContent = location.host + "/mesa";
+    tab("ing"); render();
+    // Al abrir el panel, los ingresos nuevos quedan vistos (siguen en "Nuevos sin tomar" hasta que los tomes).
+    var nv = sinVer();
+    if(nv.length && db){ var b = db.batch(); nv.forEach(function(x){ b.set(db.collection(COL).doc(x._id), { vistoJorge: true }, { merge: true }); }); b.commit().catch(function(e){ console.warn("Mesa J visto:", e); }); }
+    setTimeout(function(){ var q = $("mj-q"); if(q) q.focus(); }, 30);
+  }
+  function cerrar(){
+    var m = $("mesa-modal"); if(m) m.style.display = "none";
+    document.body.style.overflow = "";
+  }
+  document.addEventListener("keydown", function(e){
+    var m = $("mesa-modal");
+    if(e.key === "Escape" && m && m.style.display !== "none") cerrar();
+  });
+  function tab(t){
+    ["ing", "usr", "fer"].forEach(function(k){
+      $("mj-t-" + k).classList.toggle("on", k === t);
+      $("mj-p-" + k).style.display = k === t ? (k === "ing" ? "flex" : "") : "none";
+    });
+    if(t === "fer"){ var ta = $("mj-fer-ta"); if(ta && !ta.value) ta.value = K.listaATexto(feriados); }
+    if(t === "usr") renderUsuarios();
+  }
+
+  function render(){
+    chip();
+    var box = $("mj-lista"), sub = $("mj-sub"); if(!box) return;
+    if(estado === "sin-acceso"){ if(sub) sub.textContent = "Sin acceso a la base"; box.innerHTML = '<div class="rg-vacio">Sin acceso: falta la regla de Firestore para <b>genres_mesa</b> (y que el login anónimo esté habilitado).</div>'; return; }
+    if(estado !== "ok"){ box.innerHTML = '<div class="rg-vacio">Conectando…</div>'; return; }
+    var items = mesa.map(function(m){
+      var r = regDe(m), ocs = ocsDe(r).slice(); if(m.ocNro && ocs.indexOf(String(m.ocNro)) < 0) ocs.unshift(String(m.ocNro));
+      return { num: m.num, cod: m.cod, letra: m.letra, anio: m.anio, claves: r ? r.claves : null, ocs: ocs, paciente: m.paciente,
+               pacienteNorm: C.normNombre(m.paciente), tipo: m.tipo, creadoMs: m.ingresoMs, _m: m, _r: r, _ef: efectivo(m, r), _sit: K.situacion(m, feriados) };
+    });
+    var pend = items.filter(function(x){ return x._ef === "ingresado" || x._ef === "trabajo"; });
+    var venc = pend.filter(function(x){ return x._sit.restantes <= 0; }).length;
+    var enMesa = items.filter(function(x){ return x._ef === "en_mesa"; }).length;
+    var obsSL = obs.filter(function(o){ return !o.leido; }).length;
+    if(sub) sub.textContent = pend.length + " por trabajar" + (venc ? " · " + venc + " vencido(s) o vencen hoy" : "") + " · " + enMesa + " OC en mesa" + (obsSL ? " · 📨 " + obsSL + " observación(es) sin leer" : "");
+    var q = $("mj-q").value.trim(), f = $("mj-f").value, lista;
+    if(q) lista = EntConsulta.buscar(items, q);
+    else lista = items.filter(function(x){
+      if(f === "pend") return x._ef === "ingresado" || x._ef === "trabajo";
+      if(f === "nuevos") return x._ef === "ingresado";
+      if(f === "vencidos") return (x._ef === "ingresado" || x._ef === "trabajo") && x._sit.restantes <= 0;
+      if(f === "en_mesa") return x._ef === "en_mesa";
+      if(f === "entregados") return x._ef === "entregado";
+      return true;
+    }).sort(function(a, b){
+      if(a._ef === "entregado" || b._ef === "entregado") return (b._m.entregadoMs || 0) - (a._m.entregadoMs || 0);
+      if(a._ef === "en_mesa" && b._ef === "en_mesa") return (b._m.enMesaMs || 0) - (a._m.enMesaMs || 0);
+      return a._sit.restantes - b._sit.restantes || (a._m.ingresoMs || 0) - (b._m.ingresoMs || 0);
+    });
+    box.innerHTML = lista.length ? lista.map(tarjeta).join("") :
+      '<div class="rg-vacio">' + (q ? "No se encontró nada con “" + esc(q) + "”." : f === "pend" ? "No hay ingresos por trabajar. 🎉" : "No hay ingresos en esta vista.") + "</div>";
+  }
+  function tarjeta(x){
+    var m = x._m, ef = x._ef, sit = x._sit, sem = K.semaforo(sit, ef), ocTxt = x.ocs.join(" / ");
+    var estadoTxt = ef === "entregado" ? "✅ Entregada al paciente el " + esc(m.entregadoTxt || (x._r && x._r.entregadoFecha) || "") + (m.entregadoPor ? " por " + esc(m.entregadoPor) : "")
+      : ef === "en_mesa" ? "📦 OC" + (ocTxt ? " N° <b>" + esc(ocTxt) + "</b>" : "") + " entregada a Mesa de Entradas el " + esc(m.enMesaTxt || "") + " hs"
+      : ef === "trabajo" ? "🛠️ En trabajo desde el " + esc(m.trabajoTxt || "") + (ocTxt ? " · OC N° <b>" + esc(ocTxt) + "</b> ya emitida" : "")
+      : "🆕 Sin tomar" + (ocTxt ? " · OC N° <b>" + esc(ocTxt) + "</b> ya emitida" : "");
+    var b = function(acc, cls, txt, tit){ return '<button type="button" class="mj-btn ' + cls + '" data-mj="' + acc + '" data-id="' + esc(m._id) + '"' + (tit ? ' title="' + esc(tit) + '"' : "") + ">" + txt + "</button>"; };
+    var acc = "";
+    if(ef === "ingresado") acc = b("tomar", "mj-verde", "▶ Tomar", "Empezar a trabajarlo") + b("mesa", "mj-azul", "📦 OC a mesa", "Ya llevé la orden de compra a Mesa de Entradas");
+    else if(ef === "trabajo") acc = b("mesa", "mj-azul", "📦 OC a mesa", "Ya llevé la orden de compra a Mesa de Entradas") + b("nuevo", "mj-gris", "↩ Sin tomar");
+    else if(ef === "en_mesa") acc = b("deshacer", "mj-gris", "↩ Deshacer", "Quitar la entrega a mesa");
+    if(ef !== "entregado") acc += b("obs", "mj-gris", "📨 Observación", "Enviar una observación a Mesa de Entradas");
+    acc += b("anular", "mj-rojo", "🗑️", "Anular este ingreso");
+    return '<div class="mj-it ' + sem.cls + (!m.vistoJorge && ef === "ingresado" ? " nuevo" : "") + '">' +
+      '<div class="mj-ico">' + tipoIco(m.tipo) + "</div>" +
+      '<div class="mj-main">' +
+        '<div class="mj-kick">' + esc(tipoTxt(m.tipo)) + (!m.vistoJorge && ef === "ingresado" ? '<span class="mj-nuevo">NUEVO</span>' : "") + "</div>" +
+        '<div class="mj-tit"><span class="mj-exp">' + esc(m.nroExp) + '</span><span class="mj-pac">' + esc(m.paciente) + "</span></div>" +
+        '<div class="mj-sem ' + sem.cls + '">' + esc(sem.txt) + (ef === "ingresado" || ef === "trabajo" ? " · vence el " + esc(K.fmtLargo(sit.vence)) : "") + "</div>" +
+        '<div class="mj-dato">' + estadoTxt + "<br>Ingresó el " + esc(m.ingresoTxt) + " hs · cargado por " + esc(m.usuarioNombre || m.usuario || "") + (m.telefono ? " · 📞 " + esc(m.telefono) : "") + "</div>" +
+        obsHtml(m._id) +
+      "</div>" +
+      '<div class="mj-acc">' + acc + "</div></div>";
+  }
+
+  /* ---------- Acciones sobre ingresos ---------- */
+  function porId(id){ return mesa.filter(function(m){ return m._id === id; })[0]; }
+  function guardar(id, datos){ return db.collection(COL).doc(id).set(datos, { merge: true }).catch(function(e){ alert("No se pudo guardar: " + (e && e.message || e)); }); }
+  function accion(acc, id){
+    var m = porId(id), t = ahora();
+    if(acc === "abrir"){ abrir(); return; }
+    if(acc === "ocultar"){ ocultaHasta = Date.now() + 10 * 60 * 1000; $("mesa-alerta").style.display = "none"; return; }
+    if(!m) return;
+    if(acc === "visto") return guardar(id, { vistoJorge: true });
+    if(acc === "tomar") return guardar(id, { estado: "trabajo", trabajoMs: t.ms, trabajoTxt: t.txt, vistoJorge: true, historial: historial(t, "Tomado para trabajar") });
+    if(acc === "nuevo") return guardar(id, { estado: "ingresado", trabajoMs: null, trabajoTxt: "", historial: historial(t, "Vuelve a sin tomar") });
+    if(acc === "mesa"){
+      var r = regDe(m), def = m.ocNro || ocsDe(r)[0] || "";
+      var oc = prompt("OC entregada a Mesa de Entradas\n" + m.nroExp + " — " + m.paciente + "\n\nN° de orden de compra (podés dejarlo vacío):", def);
+      if(oc === null) return;
+      oc = String(oc).replace(/^\s*O\.?\s*C\.?\s*(N\s*[°º]?\.?)?\s*/i, "").replace(/[^\d]/g, "");
+      var d = { estado: "en_mesa", enMesaMs: t.ms, enMesaTxt: t.txt, ocNro: oc, vistoJorge: true, historial: historial(t, "OC" + (oc ? " N° " + oc : "") + " entregada a Mesa de Entradas") };
+      if(!m.trabajoMs){ d.trabajoMs = t.ms; d.trabajoTxt = t.txt; }
+      return guardar(id, d);
+    }
+    if(acc === "deshacer"){
+      if(!confirm("¿Quitar la entrega de la OC a Mesa de Entradas de " + m.paciente + "?")) return;
+      return guardar(id, { estado: m.trabajoMs ? "trabajo" : "ingresado", enMesaMs: null, enMesaTxt: "", historial: historial(t, "Se quitó la entrega a Mesa de Entradas") });
+    }
+    if(acc === "obs") return obsAbrir(m);
+    if(acc === "anular"){
+      if(!confirm("¿Anular el ingreso de " + m.paciente + " (Expte. " + m.nroExp + ")?\nDeja de aparecer en Mesa de Entradas.")) return;
+      return guardar(id, { anulado: true, historial: historial(t, "Ingreso anulado") });
+    }
+  }
+  document.addEventListener("click", function(e){
+    var el = e.target && e.target.closest ? e.target.closest("[data-mj]") : null; if(!el) return;
+    accion(el.getAttribute("data-mj"), el.getAttribute("data-id"));
+  });
+
+  /* ---------- Observaciones para Mesa de Entradas ---------- */
+  function obsHtml(mesaId){
+    return obs.filter(function(o){ return o.mesaId === mesaId; }).map(function(o){
+      return '<div class="mj-obs' + (o.leido ? " leida" : "") + '">📨 <b>' + esc(o.creadoTxt || "") + "</b>: " + esc(o.texto || "") +
+        "<i>" + (o.leido ? "✅ Leída por <b>" + esc(o.leidoPor || "") + "</b> el " + esc(o.leidoTxt || "") + " hs" + (o.respuesta ? " · 💬 " + esc(o.respuesta) : "") : "⏳ Todavía no la leyeron") + "</i></div>";
+    }).join("");
+  }
+  function obsAbrir(m){
+    obsPara = m;
+    $("mj-obs-dest").textContent = tipoIco(m.tipo) + " " + m.nroExp + " — " + m.paciente;
+    $("mj-obs-txt").value = ""; $("mj-obs-msg").textContent = "";
+    $("mj-obs-ov").style.display = "flex";
+    setTimeout(function(){ $("mj-obs-txt").focus(); }, 30);
+  }
+  function obsCerrar(){ $("mj-obs-ov").style.display = "none"; obsPara = null; }
+  async function obsEnviar(){
+    var m = obsPara, txt = $("mj-obs-txt").value.trim(), btn = $("mj-obs-env"), msg = $("mj-obs-msg");
+    if(!m) return;
+    if(txt.length < 3){ msg.style.color = "#b91c1c"; msg.textContent = "Escribí la observación."; return; }
+    btn.disabled = true;
+    try{
+      var t = ahora(), id = "o_" + t.ms + "_" + Math.random().toString(36).slice(2, 7);
+      await db.collection(COL_OBS).doc(id).set({ mesaId: m._id, nroExp: m.nroExp, paciente: m.paciente, tipo: m.tipo, texto: txt,
+        autor: "Jorge", creadoMs: t.ms, creadoTxt: t.txt, leido: false, leidoPor: "", leidoUsuario: "", leidoMs: null, leidoTxt: "", respuesta: "" });
+      await db.collection(COL).doc(m._id).set({ historial: historial(t, "Observación enviada a mesa: " + txt) }, { merge: true });
+      obsCerrar();
+    }catch(e){ msg.style.color = "#b91c1c"; msg.textContent = "No se pudo enviar: " + (e && e.message || e); }
+    btn.disabled = false;
+  }
+  var _leidaT = null;
+  function avisoLeida(o){
+    var box = $("mj-leida"); if(!box) return;
+    box.innerHTML = "✅ <b>" + esc(o.leidoPor || "Mesa de Entradas") + "</b> leyó tu observación de <b>" + esc(o.nroExp || "") + "</b> (" + esc(o.paciente || "") + ") el " + esc(o.leidoTxt || "") + " hs." +
+      (o.respuesta ? '<div style="margin-top:6px;padding:7px 9px;background:#f0fdf4;border-radius:8px">💬 ' + esc(o.respuesta) + "</div>" : "");
+    box.style.display = "";
+    clearTimeout(_leidaT); _leidaT = setTimeout(function(){ box.style.display = "none"; }, 15000);
+  }
+  document.addEventListener("keydown", function(e){ var o = $("mj-obs-ov"); if(e.key === "Escape" && o && o.style.display !== "none") obsCerrar(); });
+
+  /* ---------- Usuarios de Mesa de Entradas ---------- */
+  function msgU(cls, txt){ var m = $("mj-u-msg"); if(m){ m.style.color = cls === "ok" ? "#166534" : "#b91c1c"; m.textContent = txt; } }
+  function renderUsuarios(){
+    var l = $("mj-u-lista"); if(!l) return;
+    if(!usuarios.length){ l.innerHTML = '<div class="rg-vacio">Todavía no hay usuarios. Creá uno por cada persona de Mesa de Entradas.</div>'; return; }
+    l.innerHTML = usuarios.map(function(u){
+      var on = u.activo !== false;
+      return '<div class="mj-u' + (on ? "" : " off") + '"><div class="mj-u-txt"><b>👤 ' + esc(u.nombre || u._id) + "</b><br><span>Usuario: <b>" + esc(u._id) + "</b>" + (on ? "" : " · desactivado") + (u.creadoTxt ? " · creado el " + esc(u.creadoTxt) : "") + "</span></div>" +
+        '<button type="button" class="mj-btn mj-gris" data-mju="clave" data-id="' + esc(u._id) + '">🔑 Nueva contraseña</button>' +
+        '<button type="button" class="mj-btn ' + (on ? "mj-rojo" : "mj-verde") + '" data-mju="activo" data-id="' + esc(u._id) + '">' + (on ? "⛔ Desactivar" : "✅ Activar") + "</button>" +
+        '<button type="button" class="mj-btn mj-rojo" data-mju="borrar" data-id="' + esc(u._id) + '" title="Eliminar usuario">🗑️</button></div>';
+    }).join("");
+  }
+  async function crearUsuario(){
+    var nom = $("mj-u-nom").value.trim().replace(/\s+/g, " "), u = normUser($("mj-u-usr").value), pw = $("mj-u-pw").value;
+    if(!nom){ msgU("er", "Escribí el nombre y apellido."); return; }
+    if(!u || u.length < 3){ msgU("er", "El usuario debe tener al menos 3 letras o números (sin espacios)."); return; }
+    if(!pw || pw.length < 4){ msgU("er", "La contraseña debe tener al menos 4 caracteres."); return; }
+    if(usuarios.some(function(x){ return x._id === u; })){ msgU("er", "Ya existe el usuario “" + u + "”."); return; }
+    try{
+      var h = await hashClave(u + "|" + pw);
+      await db.collection(COL_U).doc(u).set({ nombre: nom, hash: h, activo: true, creadoMs: Date.now(), creadoTxt: ahora().fecha });
+      $("mj-u-nom").value = ""; $("mj-u-usr").value = ""; $("mj-u-pw").value = "";
+      msgU("ok", "✅ Usuario “" + u + "” creado para " + nom + ".");
+    }catch(e){ msgU("er", e && e.code === "permission-denied" ? "Sin acceso: falta la regla de Firestore de genres_mesa_usuarios." : "No se pudo crear: " + (e && e.message || e)); }
+  }
+  async function accionUsuario(acc, id){
+    var u = usuarios.filter(function(x){ return x._id === id; })[0]; if(!u) return;
+    try{
+      if(acc === "clave"){
+        var pw = prompt("Nueva contraseña para " + (u.nombre || id) + " (usuario " + id + "):");
+        if(pw === null) return;
+        if(pw.length < 4){ alert("La contraseña debe tener al menos 4 caracteres."); return; }
+        await db.collection(COL_U).doc(id).set({ hash: await hashClave(id + "|" + pw) }, { merge: true });
+        msgU("ok", "🔑 Contraseña cambiada para " + (u.nombre || id) + ". Tiene que volver a ingresar.");
+      } else if(acc === "activo"){
+        await db.collection(COL_U).doc(id).set({ activo: u.activo === false }, { merge: true });
+      } else if(acc === "borrar"){
+        if(!confirm("¿Eliminar el usuario " + id + " (" + (u.nombre || "") + ")?\nLo que cargó queda registrado con su nombre.")) return;
+        await db.collection(COL_U).doc(id).delete();
+      }
+    }catch(e){ msgU("er", "No se pudo guardar: " + (e && e.message || e)); }
+  }
+  document.addEventListener("click", function(e){
+    var el = e.target && e.target.closest ? e.target.closest("[data-mju]") : null; if(!el) return;
+    accionUsuario(el.getAttribute("data-mju"), el.getAttribute("data-id"));
+  });
+  function ojo(id, btn){
+    var i = $(id); if(!i) return;
+    var ver = i.type === "password"; i.type = ver ? "text" : "password";
+    btn.textContent = ver ? "🙈" : "👁️"; btn.title = ver ? "Ocultar contraseña" : "Mostrar contraseña";
+  }
+
+  /* ---------- Feriados ---------- */
+  function msgF(ok, txt){ var m = $("mj-fer-msg"); if(m){ m.style.color = ok ? "#166534" : "#b91c1c"; m.textContent = txt; } }
+  async function guardarFeriados(){
+    var r = K.parseLista($("mj-fer-ta").value);
+    if(r.malas.length){ msgF(false, "Revisá estos renglones (fecha dd/mm/aaaa al principio): " + r.malas.slice(0, 4).join(" | ")); return; }
+    if(!r.lista.length){ msgF(false, "La lista está vacía."); return; }
+    try{
+      await db.collection(COL_CFG).doc("feriados").set({ lista: r.lista, actualizadoMs: Date.now(), actualizadoTxt: ahora().txt });
+      $("mj-fer-ta").value = K.listaATexto(r.lista);
+      msgF(true, "✅ Guardados " + r.lista.length + " feriados. Los contadores se actualizan solos en tu panel y en Mesa de Entradas.");
+    }catch(e){ msgF(false, e && e.code === "permission-denied" ? "Sin acceso: falta la regla de Firestore de genres_mesa_config." : "No se pudo guardar: " + (e && e.message || e)); }
+  }
+  function feriadosSugeridos(){ $("mj-fer-ta").value = K.listaATexto(K.DEF); msgF(true, "Lista sugerida cargada. Revisala y tocá 💾 Guardar feriados."); }
+
+  /* ---------- Otros ---------- */
+  function copiarLink(){
+    var url = location.origin + "/mesa";
+    try{ navigator.clipboard.writeText(url).then(function(){ alert("Link copiado:\n" + url); }, function(){ prompt("Copiá el link:", url); }); }
+    catch(_){ prompt("Copiá el link:", url); }
+  }
+  function exportar(){
+    var cols = ["Tipo","Expediente","Paciente","Teléfono","Ingreso","Cargado por","Vence","Estado","N° OC","Tomado","OC a mesa","Entregada al paciente","Entregada por","Observaciones"];
+    var filas = mesa.slice().sort(function(a, b){ return (a.ingresoMs || 0) - (b.ingresoMs || 0); }).map(function(m){
+      var r = regDe(m), ef = efectivo(m, r), sit = K.situacion(m, feriados);
+      var est = ef === "entregado" ? "Entregada" : ef === "en_mesa" ? "OC en mesa" : ef === "trabajo" ? "En trabajo" : "Sin tomar";
+      if((ef === "ingresado" || ef === "trabajo") && sit.restantes < 0) est += " (vencido)";
+      return [tipoTxt(m.tipo), m.nroExp, m.paciente, m.telefono || "", m.ingresoTxt, m.usuarioNombre || m.usuario || "", K.fmt(sit.vence), est,
+              m.ocNro || ocsDe(r).join(" / "), m.trabajoTxt || "", m.enMesaTxt || "", m.entregadoTxt || (r && r.entregadoFecha ? r.entregadoFecha + " " + (r.entregadoHora || "") : ""), m.entregadoPor || "",
+              obs.filter(function(o){ return o.mesaId === m._id; }).map(function(o){ return o.creadoTxt + ": " + o.texto + " — " + (o.leido ? "leída por " + o.leidoPor + " el " + o.leidoTxt + (o.respuesta ? " (resp.: " + o.respuesta + ")" : "") : "SIN LEER"); }).join(" | ")];
+    });
+    var csv = [cols].concat(filas).map(function(f){ return f.map(function(v){ v = String(v == null ? "" : v); return /[;"\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; }).join(";"); }).join("\r\n");
+    var blob = new Blob(["\ufeff" + csv], { type: "text/csv;charset=utf-8" });
+    var a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = "Mesa_de_Entradas_" + ahora().fecha.replace(/\//g, "-") + ".csv";
+    document.body.appendChild(a); a.click(); setTimeout(function(){ URL.revokeObjectURL(a.href); a.remove(); }, 500);
+  }
+
+  return { abrir: abrir, cerrar: cerrar, tab: tab, render: render, crearUsuario: crearUsuario, ojo: ojo,
+           obsCerrar: obsCerrar, obsEnviar: obsEnviar, guardarFeriados: guardarFeriados, feriadosSugeridos: feriadosSugeridos, copiarLink: copiarLink, exportar: exportar };
+})();
+</script>
+
 <!-- Botón flotante "Volver al inicio": vuelve a la pantalla de ingreso -->
 <button type="button" id="btn-volver" onclick="volverInicio()" title="Volver a la pantalla de inicio" aria-label="Volver a la pantalla de inicio">&#8592; Volver al inicio</button>
 <script src="/actualizador-html.js"></script>
