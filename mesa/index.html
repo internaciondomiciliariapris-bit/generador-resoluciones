@@ -103,7 +103,7 @@ button,input,select{font-family:inherit}
 .obs-it{padding:16px 20px;border-bottom:1px solid #f1f5f9}
 .obs-exp{font-size:17px;font-weight:800;color:#1a56a0}.obs-pac{font-size:15px;font-weight:700;margin-left:8px}
 .obs-cuando{font-size:12px;color:#64748b;margin-top:3px}
-.obs-txt{margin-top:10px;padding:12px 14px;background:#fffbeb;border:1.5px solid #fde68a;border-radius:10px;font-size:16px;line-height:1.5;white-space:pre-wrap;color:#1a2b4a}
+.obs-txt{margin-top:10px;padding:12px 14px;background:#fffbeb;border:1.5px solid #fde68a;border-radius:10px;font-size:16px;font-weight:700;line-height:1.5;white-space:pre-wrap;color:#1a2b4a}
 .obs-resp{width:100%;margin-top:10px;padding:9px 11px;border:1.5px solid #cbd5e1;border-radius:9px;font-size:14px;font-family:inherit;min-height:44px;resize:vertical}
 .obs-chk{display:flex;align-items:center;gap:9px;margin-top:10px;font-size:15px;font-weight:700;cursor:pointer}
 .obs-chk input{width:20px;height:20px;accent-color:#16a34a}
@@ -868,7 +868,7 @@ if(typeof module !== "undefined" && module.exports) module.exports = MesaCal;
   function obsTarjeta(mesaId){
     var l = obsDe(mesaId); if(!l.length) return "";
     return '<div class="it-obs">' + l.map(function(o){
-      return '<div class="it-obs-r' + (o.leido ? " leida" : "") + '">📨 <b>Observación de ' + esc(o.autor || "Jorge") + "</b> (" + esc(o.creadoTxt || "") + "): " + esc(o.texto || "") +
+      return '<div class="it-obs-r' + (o.leido ? " leida" : "") + '">📨 <b>Observación de ' + esc(o.autor || "Jorge") + "</b> (" + esc(o.creadoTxt || "") + "): <b>" + esc(o.texto || "") + "</b>" +
         "<i>" + (o.leido ? "✅ Leída por " + esc(o.leidoPor || "") + " el " + esc(o.leidoTxt || "") + " hs" + (o.respuesta ? " · Respuesta: " + esc(o.respuesta) : "") : "⏳ Sin leer") + "</i></div>";
     }).join("") + "</div>";
   }
