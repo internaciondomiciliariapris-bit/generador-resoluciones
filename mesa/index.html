@@ -913,11 +913,19 @@ if(typeof module !== "undefined" && module.exports) module.exports = MesaCal;
     var k = C.clave(p.num, p.cod);
     var dup = mesa.filter(function(m){ return claveDe(m) === k && (!p.anio || !m.anio || String(m.anio) === p.anio); })[0];
     if(dup){
-      msg("av", "⚠️ Este expediente <b>ya fue ingresado</b> el " + esc(dup.ingresoTxt) + " por " + esc(dup.usuarioNombre || dup.usuario) + " (" + esc(dup.paciente) + "). Lo dejé abierto en <b>Expedientes</b>.");
+      msg("er", "⛔ <b>Este N° de expediente ya fue ingresado</b> el " + esc(dup.ingresoTxt) + " por " + esc(dup.usuarioNombre || dup.usuario) + " (" + esc(dup.paciente) + "). Lo dejé abierto en <b>Expedientes</b>.");
       $("ls-q").value = dup.nroExp || k; $("ls-f").value = "todos"; cambiarTab("lista"); return;
     }
-    var r = regDe(p);
-    if(r && ocsDe(r).length && !confirm("Este expediente ya tiene la ORDEN DE COMPRA N° " + ocsDe(r).join(" / ") + " (" + (r.paciente || "") + ").\n\nSi el paciente viene a RETIRARLA, buscalo en Expedientes.\n\n¿Registrarlo igual como un ingreso nuevo?")) return;
+    // ¿Ya existe en el sistema? (registro de órdenes: cuadro, resolución, OC o entregada)
+    var r = regDe(Object.assign({}, p, { anio: p.anio || String(new Date().getFullYear()) }));
+    if(r && !(r.etapa === "mesa" && r.origen === "mesa" && !ocsDe(r).length && !r.entregado)){
+      var oc = ocsDe(r).join(" / ");
+      var est = r.entregado ? "la orden de compra" + (oc ? " N° " + oc : "") + " <b>ya fue ENTREGADA</b> al paciente" + (r.entregadoFecha ? " el " + esc(r.entregadoFecha) : "")
+        : oc ? "<b>ya tiene orden de compra N° " + esc(oc) + "</b>" + (r.fechaOC ? " (" + esc(r.fechaOC) + ")" : "")
+        : "<b>ya se está gestionando</b> (" + (r.etapa === "resolucion" ? "resolución generada" : r.etapa === "proceso" ? "resolución en proceso" : r.etapa === "cuadro" ? "cuadro comparativo hecho" : "cargado en el sistema") + ")";
+      msg("er", "⛔ <b>Este N° de expediente ya existe en el sistema</b>: " + esc(r.nroExp || expTxt) + " — " + esc(r.paciente || "") + ", " + est + ".<br>No se puede ingresar de nuevo. Lo dejé abierto en <b>Expedientes</b>. Si creés que es un error, avisale a Jorge.");
+      $("ls-q").value = r.nroExp || expTxt; $("ls-f").value = "todos"; cambiarTab("lista"); return;
+    }
     var btn = $("in-btn"); btn.disabled = true; btn.textContent = "Guardando…";
     try{
       var t = ahora(), anio = p.anio || String(new Date().getFullYear());
