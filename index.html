@@ -3977,8 +3977,9 @@ if(typeof module !== "undefined" && module.exports) module.exports = EntConsulta
         <span>🔍</span>
         <input id="mj-q" type="text" autocomplete="off" oninput="MesaJ.render()" placeholder="Apellido y nombre · 8871/410 · OC20552">
         <select id="mj-f" onchange="MesaJ.render()" title="Ver">
-          <option value="pend">Por trabajar (sin OC en mesa)</option>
-          <option value="nuevos">🆕 Nuevos sin tomar</option>
+          <option value="nuevos">🆕 Por empezar</option>
+          <option value="trabajo">🛠️ En trabajo</option>
+          <option value="pend">Todo lo pendiente (sin OC en mesa)</option>
           <option value="vencidos">🔴 Vencidos / vencen hoy</option>
           <option value="en_mesa">📦 OC en mesa</option>
           <option value="entregados">✅ Entregados</option>
@@ -4195,6 +4196,24 @@ var MesaJ = (function(){
     }, function(err){ console.warn("Mesa J feriados:", err); });
   });
 
+  /* ---------- Automático: si el expediente ya se empezó en el generador, pasa a "En trabajo" ----------
+     (cuadro comparativo hecho, resolución en proceso o generada, u OC cargada en el registro) */
+  var autoHecho = {};
+  function autoTrabajo(){
+    if(estado !== "ok" || !db) return;
+    mesa.forEach(function(m){
+      if(m.estado !== "ingresado" || autoHecho[m._id]) return;
+      var r = regDe(m); if(!r) return;
+      var empezado = r.etapa === "cuadro" || r.etapa === "proceso" || r.etapa === "resolucion" || ocsDe(r).length;
+      if(!empezado) return;
+      autoHecho[m._id] = true;
+      var t = ahora(), que = ocsDe(r).length ? "OC cargada" : r.etapa === "cuadro" ? "cuadro comparativo" : "resolución";
+      db.collection(COL).doc(m._id).set({ estado: "trabajo", trabajoMs: t.ms, trabajoTxt: t.txt, vistoJorge: true, trabajoAuto: que,
+        historial: firebase.firestore.FieldValue.arrayUnion(t.txt + " · Pasa a En trabajo (" + que + " en el generador)") }, { merge: true })
+        .catch(function(e){ autoHecho[m._id] = false; console.warn("Mesa J auto:", e); });
+    });
+  }
+
   /* ---------- Aviso sonoro y título de la pestaña ---------- */
   function sonar(){
     try{
@@ -4275,7 +4294,7 @@ var MesaJ = (function(){
   }
 
   function render(){
-    chip();
+    chip(); autoTrabajo();
     var box = $("mj-lista"), sub = $("mj-sub"); if(!box) return;
     if(estado === "sin-acceso"){ if(sub) sub.textContent = "Sin acceso a la base"; box.innerHTML = '<div class="rg-vacio">Sin acceso: falta la regla de Firestore para <b>genres_mesa</b> (y que el login anónimo esté habilitado).</div>'; return; }
     if(estado !== "ok"){ box.innerHTML = '<div class="rg-vacio">Conectando…</div>'; return; }
@@ -4288,12 +4307,14 @@ var MesaJ = (function(){
     var venc = pend.filter(function(x){ return x._sit.restantes <= 0; }).length;
     var enMesa = items.filter(function(x){ return x._ef === "en_mesa"; }).length;
     var obsSL = obs.filter(function(o){ return !o.leido; }).length;
-    if(sub) sub.textContent = pend.length + " por trabajar" + (venc ? " · " + venc + " vencido(s) o vencen hoy" : "") + " · " + enMesa + " OC en mesa" + (obsSL ? " · 📨 " + obsSL + " observación(es) sin leer" : "");
+    var porEmp = items.filter(function(x){ return x._ef === "ingresado"; }).length;
+    if(sub) sub.textContent = porEmp + " por empezar · " + (pend.length - porEmp) + " en trabajo" + (venc ? " · " + venc + " vencido(s) o vencen hoy" : "") + " · " + enMesa + " OC en mesa" + (obsSL ? " · 📨 " + obsSL + " observación(es) sin leer" : "");
     var q = $("mj-q").value.trim(), f = $("mj-f").value, lista;
     if(q) lista = EntConsulta.buscar(items, q);
     else lista = items.filter(function(x){
       if(f === "pend") return x._ef === "ingresado" || x._ef === "trabajo";
       if(f === "nuevos") return x._ef === "ingresado";
+      if(f === "trabajo") return x._ef === "trabajo";
       if(f === "vencidos") return (x._ef === "ingresado" || x._ef === "trabajo") && x._sit.restantes <= 0;
       if(f === "en_mesa") return x._ef === "en_mesa";
       if(f === "entregados") return x._ef === "entregado";
@@ -4304,7 +4325,7 @@ var MesaJ = (function(){
       return a._sit.restantes - b._sit.restantes || (a._m.ingresoMs || 0) - (b._m.ingresoMs || 0);
     });
     box.innerHTML = lista.length ? lista.map(tarjeta).join("") :
-      '<div class="rg-vacio">' + (q ? "No se encontró nada con “" + esc(q) + "”." : f === "pend" ? "No hay ingresos por trabajar. 🎉" : "No hay ingresos en esta vista.") + "</div>";
+      '<div class="rg-vacio">' + (q ? "No se encontró nada con “" + esc(q) + "”." : f === "nuevos" ? "No hay ingresos por empezar. 🎉" : f === "pend" ? "No hay ingresos pendientes. 🎉" : "No hay ingresos en esta vista.") + "</div>";
   }
   function tarjeta(x){
     var m = x._m, ef = x._ef, sit = x._sit, sem = K.semaforo(sit, ef), ocTxt = x.ocs.join(" / ");
