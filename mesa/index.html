@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+<!-- ===== ARCHIVO: mesa/index.html (MESA DE ENTRADAS) — va DENTRO de la carpeta mesa ===== -->
 <html lang="es">
 <head>
 <meta charset="UTF-8">
@@ -93,6 +94,26 @@ button,input,select{font-family:inherit}
 .mini:hover{background:#f1f5f9}
 .mini.wa{border-color:#86efac;background:#f0fdf4;color:#166534}
 .sec{font-size:12px;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:#334155;margin:18px 0 10px}
+/* ---- Observaciones de Jorge ---- */
+#obs-ov{position:fixed;inset:0;z-index:10000;background:rgba(15,23,42,.62);display:flex;align-items:flex-start;justify-content:center;padding:5vh 14px 14px;overflow:auto}
+.obs-box{background:#fff;width:100%;max-width:620px;border-radius:18px;box-shadow:0 24px 70px rgba(0,0,0,.45);overflow:hidden;animation:obsEntra .3s ease-out}
+@keyframes obsEntra{from{transform:translateY(24px);opacity:0}to{transform:none;opacity:1}}
+.obs-head{display:flex;align-items:center;gap:12px;padding:16px 20px;background:linear-gradient(120deg,#b45309,#dc2626);color:#fff}
+.obs-head b{font-size:19px;display:block}.obs-head span{font-size:13px;opacity:.92}
+.obs-it{padding:16px 20px;border-bottom:1px solid #f1f5f9}
+.obs-exp{font-size:17px;font-weight:800;color:#1a56a0}.obs-pac{font-size:15px;font-weight:700;margin-left:8px}
+.obs-cuando{font-size:12px;color:#64748b;margin-top:3px}
+.obs-txt{margin-top:10px;padding:12px 14px;background:#fffbeb;border:1.5px solid #fde68a;border-radius:10px;font-size:16px;line-height:1.5;white-space:pre-wrap;color:#1a2b4a}
+.obs-resp{width:100%;margin-top:10px;padding:9px 11px;border:1.5px solid #cbd5e1;border-radius:9px;font-size:14px;font-family:inherit;min-height:44px;resize:vertical}
+.obs-chk{display:flex;align-items:center;gap:9px;margin-top:10px;font-size:15px;font-weight:700;cursor:pointer}
+.obs-chk input{width:20px;height:20px;accent-color:#16a34a}
+.obs-ok{margin-top:10px;width:100%;padding:12px;border:none;border-radius:10px;background:#16a34a;color:#fff;font-size:15px;font-weight:800;cursor:pointer}
+.obs-ok:disabled{background:#cbd5e1;cursor:default}
+.it-obs{margin-top:10px;border-top:1px dashed #e2e8f0;padding-top:8px}
+.it-obs-r{font-size:13px;line-height:1.45;padding:7px 10px;border-radius:9px;margin-top:6px;background:#fffbeb;border:1px solid #fde68a}
+.it-obs-r.leida{background:#f8fafc;border-color:#e2e8f0}
+.it-obs-r i{display:block;font-style:normal;font-size:12px;color:#64748b;margin-top:3px}
+.hdr-obs{display:none;background:#dc2626;color:#fff;border-radius:999px;padding:5px 11px;font-size:12px;font-weight:800;cursor:pointer;border:none}
 @media(max-width:600px){.it{flex-wrap:wrap}.it-acc{flex-direction:row;width:100%}.tipos{grid-template-columns:1fr}}
 @media print{body>*{display:none!important}}
 </style>
@@ -132,6 +153,7 @@ button,input,select{font-family:inherit}
       <div class="hdr-k">Mesa de Entradas · PRIS</div>
       <h1>👓🎧 Prestaciones Ópticas y Auditivas</h1>
     </div>
+    <button type="button" class="hdr-obs" id="hdr-obs" onclick="mostrarObs(true)" title="Observaciones sin leer">📨 0</button>
     <div class="hdr-user">👤 <span id="hdr-nombre"></span><button type="button" onclick="cerrarSesion()">Cerrar sesión</button></div>
   </div>
 
@@ -145,8 +167,8 @@ button,input,select{font-family:inherit}
     <div class="stit">Paciente que viene por primera vez a iniciar el trámite</div>
     <div class="f">
       <label for="in-exp">N° de expediente <span>*</span></label>
-      <input type="text" id="in-exp" autocomplete="off" placeholder="Ej. 8871/410/U/2026">
-      <div class="hint">Como figura en la carátula. Si no tiene año, se toma el año actual.</div>
+      <input type="text" id="in-exp" autocomplete="off" maxlength="20" placeholder="Ej. 8871/410/U/2026" onkeydown="expKeydown(this,event)" style="text-transform:uppercase">
+      <div class="hint">Escribí cada parte y apretá <b>Tab</b>: pone la barra sola (8871 Tab 410 Tab U Tab 2026). Si no tiene año, se toma el año actual.</div>
     </div>
     <div class="f">
       <label for="in-pac">Apellido y nombre del paciente <span>*</span></label>
@@ -182,6 +204,14 @@ button,input,select{font-family:inherit}
     </div>
     <div class="resumen" id="ls-res"></div>
     <div id="ls-lista"><div class="vacio">Conectando…</div></div>
+  </div>
+</div>
+
+<!-- Observaciones de Jorge sin leer: no se cierra hasta confirmar la lectura -->
+<div id="obs-ov" style="display:none" role="alertdialog" aria-label="Observaciones de Jorge">
+  <div class="obs-box">
+    <div class="obs-head"><div style="font-size:30px">📨</div><div><b id="obs-tit">Observación de Jorge</b><span>Leela y confirmá la lectura: queda registrado con tu nombre, fecha y hora.</span></div></div>
+    <div id="obs-lista"></div>
   </div>
 </div>
 
@@ -620,7 +650,8 @@ if(typeof module !== "undefined" && module.exports) module.exports = MesaCal;
     appId: "1:957519453967:web:e6c2bfac7a4da10fed287a",
     measurementId: "G-GHDRCXE81C"
   };
-  var COL = "genres_mesa", COL_U = "genres_mesa_usuarios", COL_CFG = "genres_mesa_config", COL_REG = "genres_registro_oc";
+  var COL = "genres_mesa", COL_U = "genres_mesa_usuarios", COL_CFG = "genres_mesa_config", COL_REG = "genres_registro_oc", COL_OBS = "genres_mesa_obs";
+  var obs = [], obsConocidas = null;
   var SES_KEY = "mesa_pris_sesion";
   var C = EntCore, K = MesaCal;
   var db = null, usuario = null, mesa = [], reg = [], feriados = null;
@@ -716,7 +747,7 @@ if(typeof module !== "undefined" && module.exports) module.exports = MesaCal;
   };
   window.cerrarSesion = function(){
     try{ localStorage.removeItem(SES_KEY); }catch(_){}
-    usuario = null;
+    usuario = null; window.mostrarObs();
     $("app").style.display = "none"; $("login").style.display = "";
     $("lg-user").value = ""; $("lg-err").textContent = "";
     setTimeout(function(){ $("lg-user").focus(); }, 30);
@@ -724,7 +755,7 @@ if(typeof module !== "undefined" && module.exports) module.exports = MesaCal;
   function entrar(){
     $("login").style.display = "none"; $("app").style.display = "";
     $("hdr-nombre").textContent = usuario.n;
-    escuchar(); cambiarTab("nuevo"); render();
+    escuchar(); cambiarTab("nuevo"); render(); window.mostrarObs();
     setTimeout(function(){ $("in-exp").focus(); }, 50);
   }
   async function sesionGuardada(){
@@ -753,6 +784,14 @@ if(typeof module !== "undefined" && module.exports) module.exports = MesaCal;
         reg = snap.docs.map(function(d){ var x = d.data(); x._id = d.id; return x; }).filter(function(r){ return !r.descartado; });
         estado.reg = "ok"; render();
       }, function(err){ console.warn("Registro OC (mesa):", err); estado.reg = "sin-acceso"; render(); });
+      db.collection(COL_OBS).onSnapshot(function(snap){
+        obs = snap.docs.map(function(d){ var x = d.data(); x._id = d.id; return x; }).filter(function(o){ return !o.anulada; });
+        obs.sort(function(a, b){ return (a.creadoMs || 0) - (b.creadoMs || 0); });
+        var nuevas = obs.filter(function(o){ return !o.leido && obsConocidas && !obsConocidas[o._id]; });
+        if(nuevas.length) sonar();
+        obsConocidas = obsConocidas || {}; obs.forEach(function(o){ obsConocidas[o._id] = true; });
+        mostrarObs(false); render();
+      }, function(err){ console.warn("Observaciones (mesa):", err); });
       db.collection(COL_CFG).doc("feriados").onSnapshot(function(d){
         var x = d.exists ? d.data() : null;
         feriados = x && x.lista && x.lista.length ? x.lista : null; render();
@@ -773,6 +812,66 @@ if(typeof module !== "undefined" && module.exports) module.exports = MesaCal;
     return m.estado || "ingresado";
   }
 
+  /* ---------- Observaciones de Jorge ----------
+     Aparecen en una mini pantalla que NO se cierra hasta que alguien de mesa tilda "Leí la observación".
+     Se registra quién la leyó, fecha y hora (y una respuesta opcional para Jorge). */
+  function sonar(){
+    try{
+      var Ctx = window.AudioContext || window.webkitAudioContext; if(!Ctx) return;
+      var ac = new Ctx();
+      [0, 0.22, 0.44].forEach(function(t0, i){
+        var o = ac.createOscillator(), g = ac.createGain();
+        o.type = "sine"; o.frequency.value = [880, 660, 880][i];
+        g.gain.setValueAtTime(0.0001, ac.currentTime + t0);
+        g.gain.exponentialRampToValueAtTime(0.25, ac.currentTime + t0 + 0.02);
+        g.gain.exponentialRampToValueAtTime(0.0001, ac.currentTime + t0 + 0.2);
+        o.connect(g); g.connect(ac.destination); o.start(ac.currentTime + t0); o.stop(ac.currentTime + t0 + 0.22);
+      });
+      setTimeout(function(){ try{ ac.close(); }catch(_){ } }, 1100);
+    }catch(_){}
+  }
+  function obsSinLeer(){ return obs.filter(function(o){ return !o.leido; }); }
+  function obsDe(mesaId){ return obs.filter(function(o){ return o.mesaId === mesaId; }); }
+  window.mostrarObs = function(){
+    var ov = $("obs-ov"), l = $("obs-lista"), b = $("hdr-obs"); if(!ov) return;
+    var sl = obsSinLeer();
+    if(b){ b.style.display = sl.length ? "" : "none"; b.textContent = "📨 " + sl.length; }
+    if(!usuario || !sl.length){ ov.style.display = "none"; return; }
+    // No redibujar lo que se está escribiendo/tildando
+    var abiertas = {}; Array.prototype.forEach.call(l.querySelectorAll("[data-obs]"), function(el){ abiertas[el.getAttribute("data-obs")] = { chk: el.querySelector("input[type=checkbox]").checked, resp: el.querySelector("textarea").value }; });
+    $("obs-tit").textContent = sl.length === 1 ? "Observación de Jorge" : sl.length + " observaciones de Jorge";
+    l.innerHTML = sl.map(function(o){
+      var prev = abiertas[o._id] || { chk: false, resp: "" };
+      return '<div class="obs-it" data-obs="' + esc(o._id) + '">' +
+        '<div><span class="obs-exp">' + tipoIco(o.tipo) + " " + esc(o.nroExp || "") + '</span><span class="obs-pac">' + esc(o.paciente || "") + "</span></div>" +
+        '<div class="obs-cuando">Enviada por ' + esc(o.autor || "Jorge") + " el " + esc(o.creadoTxt || "") + " hs</div>" +
+        '<div class="obs-txt">' + esc(o.texto || "") + "</div>" +
+        '<textarea class="obs-resp" placeholder="Respuesta para Jorge (opcional). Ej.: ya le pedimos al paciente que traiga el certificado.">' + esc(prev.resp) + "</textarea>" +
+        '<label class="obs-chk"><input type="checkbox" data-acc="obs-chk"' + (prev.chk ? " checked" : "") + "> Leí la observación</label>" +
+        '<button type="button" class="obs-ok" data-acc="obs-ok" data-id="' + esc(o._id) + '"' + (prev.chk ? "" : " disabled") + ">✅ Confirmar lectura</button></div>";
+    }).join("");
+    ov.style.display = "flex";
+  };
+  async function confirmarObs(id, btn){
+    var o = obs.filter(function(x){ return x._id === id; })[0]; if(!o) return;
+    var cont = btn.closest("[data-obs]"), resp = cont ? cont.querySelector("textarea").value.trim() : "";
+    btn.disabled = true; btn.textContent = "Guardando…";
+    try{
+      var t = ahora();
+      var ref = db.collection(COL_OBS).doc(id), ya = await ref.get();
+      if(ya.exists && ya.data().leido){ mostrarObs(); return; }
+      await ref.set({ leido: true, leidoUsuario: usuario.u, leidoPor: usuario.n, leidoMs: t.ms, leidoTxt: t.txt, respuesta: resp }, { merge: true });
+      if(o.mesaId) await db.collection(COL).doc(o.mesaId).set({ historial: firebase.firestore.FieldValue.arrayUnion(t.txt + " · Observación leída por " + usuario.n + (resp ? " — respuesta: " + resp : "")) }, { merge: true });
+    }catch(e){ btn.disabled = false; btn.textContent = "✅ Confirmar lectura"; alert("No se pudo registrar la lectura: " + (e && e.message || e)); }
+  }
+  function obsTarjeta(mesaId){
+    var l = obsDe(mesaId); if(!l.length) return "";
+    return '<div class="it-obs">' + l.map(function(o){
+      return '<div class="it-obs-r' + (o.leido ? " leida" : "") + '">📨 <b>Observación de ' + esc(o.autor || "Jorge") + "</b> (" + esc(o.creadoTxt || "") + "): " + esc(o.texto || "") +
+        "<i>" + (o.leido ? "✅ Leída por " + esc(o.leidoPor || "") + " el " + esc(o.leidoTxt || "") + " hs" + (o.respuesta ? " · Respuesta: " + esc(o.respuesta) : "") : "⏳ Sin leer") + "</i></div>";
+    }).join("") + "</div>";
+  }
+
   /* ---------- Pestañas ---------- */
   window.cambiarTab = function(t){
     $("tab-nuevo").classList.toggle("on", t === "nuevo"); $("tab-lista").classList.toggle("on", t === "lista");
@@ -785,6 +884,20 @@ if(typeof module !== "undefined" && module.exports) module.exports = MesaCal;
   };
   function tipoElegido(){ var r = document.querySelector('input[name="in-tipo"]:checked'); return r ? r.value : ""; }
   function msg(cls, html){ var m = $("in-msg"); m.className = "msg " + cls; m.innerHTML = html; }
+
+  /* ---------- N° de expediente: Tab pone la barra (igual que en el generador) ----------
+     8871 [Tab] 410 [Tab] U [Tab] 2026 [Tab] → 8871/410/U/2026 y recién ahí pasa al nombre.
+     Con el campo vacío o con Shift+Tab, el Tab funciona normal. */
+  window.expKeydown = function(el, e){
+    if(e.key !== "Tab" || e.shiftKey) return;
+    var v = el.value.trim().toUpperCase();
+    if(!v) return;
+    var parts = v.split("/");
+    if(parts.length < 4 || (parts.length === 4 && parts[3].length === 0)){
+      e.preventDefault();
+      if(parts.length < 4 && v.slice(-1) !== "/") el.value = v + "/";
+    }
+  };
 
   /* ---------- Nuevo ingreso ---------- */
   window.registrar = async function(){
@@ -956,7 +1069,7 @@ if(typeof module !== "undefined" && module.exports) module.exports = MesaCal;
         '<div class="it-dato">Ingresó el ' + esc(m.ingresoTxt) + " hs · cargado por " + esc(m.usuarioNombre || m.usuario || "") +
           (ef !== "entregado" ? " · vuelve a partir del <b>" + esc(K.fmtLargo(sit.vence)) + "</b>" : "") +
           (m.telefono ? " · 📞 " + esc(m.telefono) : "") + "</div>" +
-        est +
+        est + obsTarjeta(m._id) +
       "</div>" +
       '<div class="it-acc">' +
         (wa ? '<a class="mini wa" href="' + esc(wa) + '" target="_blank" rel="noopener" title="Avisar al paciente por WhatsApp">📲 WhatsApp</a>' : "") +
@@ -1021,11 +1134,13 @@ if(typeof module !== "undefined" && module.exports) module.exports = MesaCal;
     var el = e.target; if(!el || !el.getAttribute) return;
     var acc = el.getAttribute("data-acc");
     if(acc === "entregar") entregar(el.getAttribute("data-id"), el);
+    else if(acc === "obs-chk"){ var c = el.closest("[data-obs]"), b = c && c.querySelector(".obs-ok"); if(b) b.disabled = !el.checked; }
     else if(acc === "entregar-reg") entregarReg(el.getAttribute("data-id"), el);
   });
   document.addEventListener("click", function(e){
     var el = e.target && e.target.closest ? e.target.closest("[data-acc],[data-f]") : null; if(!el) return;
     if(el.hasAttribute("data-f")){ $("ls-q").value = ""; $("ls-f").value = el.getAttribute("data-f"); window.render(); return; }
+    if(el.getAttribute("data-acc") === "obs-ok"){ confirmarObs(el.getAttribute("data-id"), el); return; }
     if(el.getAttribute("data-acc") === "tirilla"){ var m = porId(el.getAttribute("data-id")); if(m) imprimirTirilla(m); }
   });
   // El contador de días hábiles cambia solo al pasar la medianoche.
