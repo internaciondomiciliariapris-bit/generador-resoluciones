@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+<!-- ===== ARCHIVO: index.html de la RAÍZ (GENERADOR de Jorge) — NO va en la carpeta mesa ===== -->
 <html lang="es">
 <head>
 <meta charset="UTF-8">
@@ -3928,12 +3929,32 @@ if(typeof module !== "undefined" && module.exports) module.exports = EntConsulta
 .mj-u.off{opacity:.6;background:#f8fafc}
 .mj-ta{width:100%;min-height:260px;padding:10px 12px;border:1.5px solid #cbd5e1;border-radius:10px;font-size:13px;font-family:Consolas,monospace;line-height:1.5}
 .mj-msg{margin:10px 0 0;font-size:13px;font-weight:600}
+.mj-obs{margin-top:7px;font-size:12.5px;line-height:1.45;padding:6px 9px;border-radius:8px;background:#fffbeb;border:1px solid #fde68a}
+.mj-obs.leida{background:#f0fdf4;border-color:#bbf7d0}
+.mj-obs i{display:block;font-style:normal;font-size:12px;color:#475569;margin-top:2px}
+#mj-obs-ov{position:fixed;inset:0;z-index:10003;background:rgba(15,23,42,.55);display:flex;align-items:flex-start;justify-content:center;padding:10vh 14px 14px}
+.mj-obs-box{background:#fff;width:100%;max-width:520px;border-radius:16px;box-shadow:0 24px 70px rgba(0,0,0,.4);overflow:hidden}
+.mj-obs-box textarea{width:100%;min-height:120px;padding:10px 12px;border:1.5px solid #cbd5e1;border-radius:10px;font-size:15px;font-family:inherit;resize:vertical}
+#mj-leida{position:fixed;right:24px;bottom:84px;z-index:10002;width:360px;max-width:calc(100vw - 32px);background:#fff;border-radius:14px;box-shadow:0 18px 50px rgba(0,0,0,.30);border-left:6px solid #16a34a;padding:12px 14px;font-size:13px;line-height:1.5;animation:mesaEntra .35s ease-out}
 @media(max-width:640px){.mj-f{grid-template-columns:1fr}.mj-it{flex-wrap:wrap}.mj-acc{flex-direction:row;flex-wrap:wrap;width:100%}}
-@media print{#mesa-chip,#mesa-alerta,#mesa-modal{display:none!important}}
+@media print{#mesa-chip,#mesa-alerta,#mesa-modal,#mj-obs-ov,#mj-leida{display:none!important}}
 </style>
 
 <button type="button" id="mesa-chip" onclick="MesaJ.abrir()" title="Ingresos de Mesa de Entradas">📥 Mesa de entradas <span class="mesa-badge" id="mesa-chip-n">0</span></button>
 <div id="mesa-alerta" style="display:none" role="alert"></div>
+<div id="mj-leida" style="display:none" role="status"></div>
+<div id="mj-obs-ov" style="display:none" onclick="if(event.target===this) MesaJ.obsCerrar()">
+  <div class="mj-obs-box" role="dialog" aria-label="Enviar observación a Mesa de Entradas">
+    <div class="ma-head"><span style="font-size:20px">📨</span><b>Observación para Mesa de Entradas</b><button type="button" onclick="MesaJ.obsCerrar()" title="Cancelar">✕</button></div>
+    <div style="padding:14px 16px">
+      <div id="mj-obs-dest" style="font-size:14px;font-weight:700;color:#1a56a0;margin-bottom:8px"></div>
+      <textarea id="mj-obs-txt" placeholder="Ej.: Falta el certificado médico con firma y sello. Pedirle al paciente que lo traiga."></textarea>
+      <div class="hint" style="margin-top:6px">Les aparece en una mini pantalla apenas la abran y no se cierra hasta que tilden que la leyeron. Queda registrado quién la leyó, fecha y hora.</div>
+      <div class="mj-msg" id="mj-obs-msg"></div>
+    </div>
+    <div class="ma-foot"><button type="button" class="mj-btn mj-gris" onclick="MesaJ.obsCerrar()">Cancelar</button><button type="button" class="mj-btn mj-verde" id="mj-obs-env" onclick="MesaJ.obsEnviar()">📨 Enviar</button></div>
+  </div>
+</div>
 
 <div class="reg-ov" id="mesa-modal" style="display:none" onclick="if(event.target===this) MesaJ.cerrar()">
   <div class="rg-box" role="dialog" aria-label="Mesa de Entradas">
@@ -4100,7 +4121,8 @@ var MesaJ = (function(){
     appId: "1:957519453967:web:e6c2bfac7a4da10fed287a",
     measurementId: "G-GHDRCXE81C"
   };
-  var COL = "genres_mesa", COL_U = "genres_mesa_usuarios", COL_CFG = "genres_mesa_config", COL_REG = "genres_registro_oc";
+  var COL = "genres_mesa", COL_U = "genres_mesa_usuarios", COL_CFG = "genres_mesa_config", COL_REG = "genres_registro_oc", COL_OBS = "genres_mesa_obs";
+  var obs = [], obsLeidas = null, obsPara = null;
   var C = EntCore, K = MesaCal;
   var db = null, mesa = [], usuarios = [], reg = [], feriados = null, estado = "conectando", primeraCarga = true;
   var conocidos = {}, ocultaHasta = 0, tituloBase = document.title;
@@ -4156,6 +4178,15 @@ var MesaJ = (function(){
       reg = snap.docs.map(function(d){ var x = d.data(); x._id = d.id; return x; }).filter(function(r){ return !r.descartado; });
       render();
     }, function(err){ console.warn("Mesa J registro:", err); });
+    db.collection(COL_OBS).onSnapshot(function(snap){
+      obs = snap.docs.map(function(d){ var x = d.data(); x._id = d.id; return x; }).filter(function(o){ return !o.anulada; });
+      obs.sort(function(a, b){ return (a.creadoMs || 0) - (b.creadoMs || 0); });
+      // Aviso cuando mesa confirma la lectura de una observación (no en la primera carga)
+      var recien = obs.filter(function(o){ return o.leido && obsLeidas && !obsLeidas[o._id]; });
+      obsLeidas = obsLeidas || {}; obs.forEach(function(o){ if(o.leido) obsLeidas[o._id] = true; });
+      if(recien.length && desbloqueado()) avisoLeida(recien[recien.length - 1]);
+      render();
+    }, function(err){ console.warn("Mesa J observaciones:", err); });
     db.collection(COL_CFG).doc("feriados").onSnapshot(function(d){
       var x = d.exists ? d.data() : null;
       feriados = x && x.lista && x.lista.length ? x.lista : null;
@@ -4256,7 +4287,8 @@ var MesaJ = (function(){
     var pend = items.filter(function(x){ return x._ef === "ingresado" || x._ef === "trabajo"; });
     var venc = pend.filter(function(x){ return x._sit.restantes <= 0; }).length;
     var enMesa = items.filter(function(x){ return x._ef === "en_mesa"; }).length;
-    if(sub) sub.textContent = pend.length + " por trabajar" + (venc ? " · " + venc + " vencido(s) o vencen hoy" : "") + " · " + enMesa + " OC en mesa";
+    var obsSL = obs.filter(function(o){ return !o.leido; }).length;
+    if(sub) sub.textContent = pend.length + " por trabajar" + (venc ? " · " + venc + " vencido(s) o vencen hoy" : "") + " · " + enMesa + " OC en mesa" + (obsSL ? " · 📨 " + obsSL + " observación(es) sin leer" : "");
     var q = $("mj-q").value.trim(), f = $("mj-f").value, lista;
     if(q) lista = EntConsulta.buscar(items, q);
     else lista = items.filter(function(x){
@@ -4285,6 +4317,7 @@ var MesaJ = (function(){
     if(ef === "ingresado") acc = b("tomar", "mj-verde", "▶ Tomar", "Empezar a trabajarlo") + b("mesa", "mj-azul", "📦 OC a mesa", "Ya llevé la orden de compra a Mesa de Entradas");
     else if(ef === "trabajo") acc = b("mesa", "mj-azul", "📦 OC a mesa", "Ya llevé la orden de compra a Mesa de Entradas") + b("nuevo", "mj-gris", "↩ Sin tomar");
     else if(ef === "en_mesa") acc = b("deshacer", "mj-gris", "↩ Deshacer", "Quitar la entrega a mesa");
+    if(ef !== "entregado") acc += b("obs", "mj-gris", "📨 Observación", "Enviar una observación a Mesa de Entradas");
     acc += b("anular", "mj-rojo", "🗑️", "Anular este ingreso");
     return '<div class="mj-it ' + sem.cls + (!m.vistoJorge && ef === "ingresado" ? " nuevo" : "") + '">' +
       '<div class="mj-ico">' + tipoIco(m.tipo) + "</div>" +
@@ -4293,6 +4326,7 @@ var MesaJ = (function(){
         '<div class="mj-tit"><span class="mj-exp">' + esc(m.nroExp) + '</span><span class="mj-pac">' + esc(m.paciente) + "</span></div>" +
         '<div class="mj-sem ' + sem.cls + '">' + esc(sem.txt) + (ef === "ingresado" || ef === "trabajo" ? " · vence el " + esc(K.fmtLargo(sit.vence)) : "") + "</div>" +
         '<div class="mj-dato">' + estadoTxt + "<br>Ingresó el " + esc(m.ingresoTxt) + " hs · cargado por " + esc(m.usuarioNombre || m.usuario || "") + (m.telefono ? " · 📞 " + esc(m.telefono) : "") + "</div>" +
+        obsHtml(m._id) +
       "</div>" +
       '<div class="mj-acc">' + acc + "</div></div>";
   }
@@ -4321,6 +4355,7 @@ var MesaJ = (function(){
       if(!confirm("¿Quitar la entrega de la OC a Mesa de Entradas de " + m.paciente + "?")) return;
       return guardar(id, { estado: m.trabajoMs ? "trabajo" : "ingresado", enMesaMs: null, enMesaTxt: "", historial: historial(t, "Se quitó la entrega a Mesa de Entradas") });
     }
+    if(acc === "obs") return obsAbrir(m);
     if(acc === "anular"){
       if(!confirm("¿Anular el ingreso de " + m.paciente + " (Expte. " + m.nroExp + ")?\nDeja de aparecer en Mesa de Entradas.")) return;
       return guardar(id, { anulado: true, historial: historial(t, "Ingreso anulado") });
@@ -4330,6 +4365,45 @@ var MesaJ = (function(){
     var el = e.target && e.target.closest ? e.target.closest("[data-mj]") : null; if(!el) return;
     accion(el.getAttribute("data-mj"), el.getAttribute("data-id"));
   });
+
+  /* ---------- Observaciones para Mesa de Entradas ---------- */
+  function obsHtml(mesaId){
+    return obs.filter(function(o){ return o.mesaId === mesaId; }).map(function(o){
+      return '<div class="mj-obs' + (o.leido ? " leida" : "") + '">📨 <b>' + esc(o.creadoTxt || "") + "</b>: " + esc(o.texto || "") +
+        "<i>" + (o.leido ? "✅ Leída por <b>" + esc(o.leidoPor || "") + "</b> el " + esc(o.leidoTxt || "") + " hs" + (o.respuesta ? " · 💬 " + esc(o.respuesta) : "") : "⏳ Todavía no la leyeron") + "</i></div>";
+    }).join("");
+  }
+  function obsAbrir(m){
+    obsPara = m;
+    $("mj-obs-dest").textContent = tipoIco(m.tipo) + " " + m.nroExp + " — " + m.paciente;
+    $("mj-obs-txt").value = ""; $("mj-obs-msg").textContent = "";
+    $("mj-obs-ov").style.display = "flex";
+    setTimeout(function(){ $("mj-obs-txt").focus(); }, 30);
+  }
+  function obsCerrar(){ $("mj-obs-ov").style.display = "none"; obsPara = null; }
+  async function obsEnviar(){
+    var m = obsPara, txt = $("mj-obs-txt").value.trim(), btn = $("mj-obs-env"), msg = $("mj-obs-msg");
+    if(!m) return;
+    if(txt.length < 3){ msg.style.color = "#b91c1c"; msg.textContent = "Escribí la observación."; return; }
+    btn.disabled = true;
+    try{
+      var t = ahora(), id = "o_" + t.ms + "_" + Math.random().toString(36).slice(2, 7);
+      await db.collection(COL_OBS).doc(id).set({ mesaId: m._id, nroExp: m.nroExp, paciente: m.paciente, tipo: m.tipo, texto: txt,
+        autor: "Jorge", creadoMs: t.ms, creadoTxt: t.txt, leido: false, leidoPor: "", leidoUsuario: "", leidoMs: null, leidoTxt: "", respuesta: "" });
+      await db.collection(COL).doc(m._id).set({ historial: historial(t, "Observación enviada a mesa: " + txt) }, { merge: true });
+      obsCerrar();
+    }catch(e){ msg.style.color = "#b91c1c"; msg.textContent = "No se pudo enviar: " + (e && e.message || e); }
+    btn.disabled = false;
+  }
+  var _leidaT = null;
+  function avisoLeida(o){
+    var box = $("mj-leida"); if(!box) return;
+    box.innerHTML = "✅ <b>" + esc(o.leidoPor || "Mesa de Entradas") + "</b> leyó tu observación de <b>" + esc(o.nroExp || "") + "</b> (" + esc(o.paciente || "") + ") el " + esc(o.leidoTxt || "") + " hs." +
+      (o.respuesta ? '<div style="margin-top:6px;padding:7px 9px;background:#f0fdf4;border-radius:8px">💬 ' + esc(o.respuesta) + "</div>" : "");
+    box.style.display = "";
+    clearTimeout(_leidaT); _leidaT = setTimeout(function(){ box.style.display = "none"; }, 15000);
+  }
+  document.addEventListener("keydown", function(e){ var o = $("mj-obs-ov"); if(e.key === "Escape" && o && o.style.display !== "none") obsCerrar(); });
 
   /* ---------- Usuarios de Mesa de Entradas ---------- */
   function msgU(cls, txt){ var m = $("mj-u-msg"); if(m){ m.style.color = cls === "ok" ? "#166534" : "#b91c1c"; m.textContent = txt; } }
@@ -4405,13 +4479,14 @@ var MesaJ = (function(){
     catch(_){ prompt("Copiá el link:", url); }
   }
   function exportar(){
-    var cols = ["Tipo","Expediente","Paciente","Teléfono","Ingreso","Cargado por","Vence","Estado","N° OC","Tomado","OC a mesa","Entregada al paciente","Entregada por"];
+    var cols = ["Tipo","Expediente","Paciente","Teléfono","Ingreso","Cargado por","Vence","Estado","N° OC","Tomado","OC a mesa","Entregada al paciente","Entregada por","Observaciones"];
     var filas = mesa.slice().sort(function(a, b){ return (a.ingresoMs || 0) - (b.ingresoMs || 0); }).map(function(m){
       var r = regDe(m), ef = efectivo(m, r), sit = K.situacion(m, feriados);
       var est = ef === "entregado" ? "Entregada" : ef === "en_mesa" ? "OC en mesa" : ef === "trabajo" ? "En trabajo" : "Sin tomar";
       if((ef === "ingresado" || ef === "trabajo") && sit.restantes < 0) est += " (vencido)";
       return [tipoTxt(m.tipo), m.nroExp, m.paciente, m.telefono || "", m.ingresoTxt, m.usuarioNombre || m.usuario || "", K.fmt(sit.vence), est,
-              m.ocNro || ocsDe(r).join(" / "), m.trabajoTxt || "", m.enMesaTxt || "", m.entregadoTxt || (r && r.entregadoFecha ? r.entregadoFecha + " " + (r.entregadoHora || "") : ""), m.entregadoPor || ""];
+              m.ocNro || ocsDe(r).join(" / "), m.trabajoTxt || "", m.enMesaTxt || "", m.entregadoTxt || (r && r.entregadoFecha ? r.entregadoFecha + " " + (r.entregadoHora || "") : ""), m.entregadoPor || "",
+              obs.filter(function(o){ return o.mesaId === m._id; }).map(function(o){ return o.creadoTxt + ": " + o.texto + " — " + (o.leido ? "leída por " + o.leidoPor + " el " + o.leidoTxt + (o.respuesta ? " (resp.: " + o.respuesta + ")" : "") : "SIN LEER"); }).join(" | ")];
     });
     var csv = [cols].concat(filas).map(function(f){ return f.map(function(v){ v = String(v == null ? "" : v); return /[;"\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; }).join(";"); }).join("\r\n");
     var blob = new Blob(["\ufeff" + csv], { type: "text/csv;charset=utf-8" });
@@ -4420,7 +4495,7 @@ var MesaJ = (function(){
   }
 
   return { abrir: abrir, cerrar: cerrar, tab: tab, render: render, crearUsuario: crearUsuario, ojo: ojo,
-           guardarFeriados: guardarFeriados, feriadosSugeridos: feriadosSugeridos, copiarLink: copiarLink, exportar: exportar };
+           obsCerrar: obsCerrar, obsEnviar: obsEnviar, guardarFeriados: guardarFeriados, feriadosSugeridos: feriadosSugeridos, copiarLink: copiarLink, exportar: exportar };
 })();
 </script>
 
