@@ -1,0 +1,1043 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mesa de Entradas — Prestaciones Ópticas y Auditivas — PRIS</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:"Segoe UI",Arial,sans-serif;background:#f0f4f8;min-height:100vh;color:#1a2b4a}
+button,input,select{font-family:inherit}
+/* ---- Ingreso ---- */
+#login{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;padding:24px;background:linear-gradient(135deg,#0f766e 0%,#0f3a70 100%);overflow:auto}
+.lg-card{background:#fff;border-radius:16px;box-shadow:0 20px 60px rgba(0,0,0,.30);max-width:440px;width:100%;padding:34px 34px 26px;text-align:center}
+.lg-logos{display:flex;flex-direction:column;align-items:center;gap:14px;margin-bottom:16px}
+.lg-logos img{max-width:270px;width:80%;height:auto}
+.lg-logos img+img{max-width:250px}
+.lg-kick{display:inline-block;background:#ccfbf1;color:#0f766e;font-size:12px;font-weight:800;letter-spacing:1.2px;text-transform:uppercase;border-radius:999px;padding:4px 12px;margin-bottom:8px}
+.lg-tit{font-size:21px;font-weight:800;color:#1a56a0;line-height:1.25}
+.lg-sub{font-size:13px;color:#64748b;margin:6px 0 18px}
+.lg-f{text-align:left;margin-bottom:12px}
+.lg-f label{display:block;font-size:12px;font-weight:700;color:#374151;margin-bottom:5px}
+.lg-f input{width:100%;padding:11px 13px;border:1.5px solid #d1d5db;border-radius:9px;font-size:15px;outline:none}
+.lg-f input:focus{border-color:#0f766e;box-shadow:0 0 0 3px rgba(15,118,110,.12)}
+.pw-wrap{position:relative}
+.pw-wrap input{padding-right:46px}
+.pw-ojo{position:absolute;right:6px;top:50%;transform:translateY(-50%);width:36px;height:34px;border:none;background:transparent;font-size:18px;cursor:pointer;border-radius:7px}
+.pw-ojo:hover{background:#f1f5f9}
+.lg-rec{display:flex;align-items:center;gap:7px;font-size:13px;color:#475569;margin:2px 0 12px;cursor:pointer;text-align:left}
+.lg-err{min-height:18px;font-size:13px;color:#b91c1c;font-weight:600;margin-bottom:8px}
+.lg-btn{width:100%;padding:14px;background:#0f766e;color:#fff;border:none;border-radius:10px;font-size:16px;font-weight:700;cursor:pointer}
+.lg-btn:hover{background:#0d6460}.lg-btn:disabled{opacity:.6;cursor:default}
+.lg-foot{font-size:11px;color:#94a3b8;margin-top:16px}
+/* ---- App ---- */
+.app{max-width:860px;margin:0 auto;padding:22px 16px 60px}
+.hdr{background:linear-gradient(120deg,#0f766e 0%,#1a56a0 100%);color:#fff;border-radius:14px;padding:18px 22px;display:flex;align-items:center;gap:14px;flex-wrap:wrap;box-shadow:0 4px 24px rgba(0,0,0,.10)}
+.hdr-txt{flex:1;min-width:220px}
+.hdr-k{font-size:11px;font-weight:800;letter-spacing:1.2px;text-transform:uppercase;opacity:.85}
+.hdr h1{font-size:20px;font-weight:800;margin-top:2px}
+.hdr-user{display:flex;align-items:center;gap:10px;background:rgba(255,255,255,.14);border-radius:10px;padding:7px 8px 7px 12px;font-size:13px;font-weight:700}
+.hdr-user button{border:1px solid rgba(255,255,255,.55);background:rgba(255,255,255,.12);color:#fff;border-radius:8px;padding:6px 10px;font-size:12px;font-weight:700;cursor:pointer}
+.hdr-user button:hover{background:rgba(255,255,255,.25)}
+.tabs{display:flex;gap:8px;margin:16px 0 12px}
+.tab{flex:1;padding:12px;text-align:center;font-size:15px;font-weight:700;border-radius:10px;cursor:pointer;background:#fff;color:#64748b;border:1.5px solid #e2e8f0}
+.tab.on{background:#1a56a0;color:#fff;border-color:#1a56a0}
+.card{background:#fff;border-radius:14px;box-shadow:0 4px 24px rgba(0,0,0,.08);padding:22px 24px}
+.stit{font-size:11px;font-weight:800;color:#94a3b8;text-transform:uppercase;letter-spacing:1px;margin-bottom:12px}
+.f{margin-bottom:14px}
+.f label{display:block;font-size:13px;font-weight:700;color:#374151;margin-bottom:6px}
+.f label span{color:#dc2626}
+.f input[type=text],.f input[type=tel]{width:100%;padding:11px 13px;border:1.5px solid #d1d5db;border-radius:9px;font-size:16px;outline:none}
+.f input:focus{border-color:#1a56a0;box-shadow:0 0 0 3px rgba(26,86,160,.1)}
+.hint{font-size:12px;color:#94a3b8;margin-top:4px}
+.tipos{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.tipo{display:flex;align-items:center;justify-content:center;gap:10px;padding:16px 10px;border:2px solid #e2e8f0;border-radius:12px;font-size:17px;font-weight:800;color:#475569;cursor:pointer;background:#f8fafc;user-select:none}
+.tipo input{width:20px;height:20px;accent-color:#1a56a0}
+.tipo.on{border-color:#1a56a0;background:#eff6ff;color:#1a56a0}
+.btn{padding:13px 16px;border:none;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer}
+.btn:disabled{opacity:.6;cursor:default}
+.btn-verde{background:#0f766e;color:#fff;width:100%}.btn-verde:hover:not(:disabled){background:#0d6460}
+.msg{margin-top:12px;padding:11px 14px;border-radius:9px;font-size:14px;display:none;line-height:1.5}
+.msg.ok{display:block;background:#f0fdf4;color:#166534;border:1px solid #bbf7d0}
+.msg.er{display:block;background:#fef2f2;color:#991b1b;border:1px solid #fecaca}
+.msg.av{display:block;background:#fffbeb;color:#92400e;border:1px solid #fde68a}
+/* ---- Listado ---- */
+.bar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+.bar input{flex:1;min-width:200px;padding:11px 13px;border:1.5px solid #cbd5e1;border-radius:10px;font-size:15px;outline:none;background:#fff}
+.bar input:focus{border-color:#1a56a0;box-shadow:0 0 0 3px rgba(26,86,160,.12)}
+.bar select{padding:10px;border:1.5px solid #cbd5e1;border-radius:10px;font-size:14px;background:#fff}
+.resumen{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+.chip{font-size:12px;font-weight:800;border-radius:999px;padding:5px 11px;cursor:pointer;border:1.5px solid transparent}
+.chip.verde{background:#dcfce7;color:#166534}.chip.ambar{background:#fef3c7;color:#92400e}.chip.rojo{background:#fee2e2;color:#991b1b}.chip.azul{background:#dbeafe;color:#1e40af}.chip.gris{background:#f1f5f9;color:#475569}
+.vacio{padding:26px 6px;text-align:center;color:#64748b;font-size:14px;line-height:1.7}
+.it{display:flex;gap:14px;background:#fff;border:1.5px solid #e2e8f0;border-left:6px solid #94a3b8;border-radius:14px;padding:14px 16px;margin-bottom:12px}
+.it.verde{border-left-color:#16a34a}.it.ambar{border-left-color:#d97706}.it.rojo{border-left-color:#dc2626;background:#fffafa}.it.azul{border-left-color:#1a56a0;background:#f5f9ff}.it.gris{border-left-color:#94a3b8;background:#f8fafc}
+.it-ico{font-size:28px;line-height:1}
+.it-main{flex:1;min-width:0}
+.it-kick{font-size:11px;font-weight:800;letter-spacing:.8px;text-transform:uppercase;color:#64748b}
+.it-tit{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 12px;margin-top:3px}
+.it-exp{font-size:19px;font-weight:800;color:#1a56a0}
+.it-pac{font-size:16px;font-weight:700;color:#1a2b4a}
+.it-sem{display:inline-flex;align-items:center;gap:6px;margin-top:8px;font-size:13px;font-weight:800;border-radius:999px;padding:4px 11px}
+.it-sem.verde{background:#dcfce7;color:#166534}.it-sem.ambar{background:#fef3c7;color:#92400e}.it-sem.rojo{background:#fee2e2;color:#991b1b}.it-sem.azul{background:#dbeafe;color:#1e40af}.it-sem.gris{background:#e2e8f0;color:#475569}
+.it-dato{font-size:13px;color:#475569;margin-top:6px;line-height:1.55}
+.it-estado{margin-top:10px;padding:10px 12px;border-radius:10px;font-size:14px;line-height:1.5;background:#f8fafc;border:1px solid #e2e8f0}
+.it-estado.azul{background:#eff6ff;border-color:#bfdbfe;color:#1e3a8a}
+.it-estado.ok{background:#f0fdf4;border-color:#bbf7d0;color:#166534}
+.it-oc{font-size:22px;font-weight:900;letter-spacing:.5px}
+.it-ent{display:flex;align-items:flex-start;gap:10px;margin-top:10px;padding:11px 12px;border-radius:10px;background:#fff7ed;border:1.5px solid #fed7aa;cursor:pointer;font-size:14px;line-height:1.45}
+.it-ent input{width:20px;height:20px;margin-top:1px;accent-color:#16a34a;flex-shrink:0}
+.it-ent.ok{background:#f0fdf4;border-color:#bbf7d0}
+.it-acc{display:flex;flex-direction:column;gap:6px}
+.mini{border:1.5px solid #e2e8f0;background:#fff;border-radius:9px;padding:7px 9px;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap;color:#334155;text-decoration:none;text-align:center}
+.mini:hover{background:#f1f5f9}
+.mini.wa{border-color:#86efac;background:#f0fdf4;color:#166534}
+.sec{font-size:12px;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:#334155;margin:18px 0 10px}
+@media(max-width:600px){.it{flex-wrap:wrap}.it-acc{flex-direction:row;width:100%}.tipos{grid-template-columns:1fr}}
+@media print{body>*{display:none!important}}
+</style>
+</head>
+<body>
+
+<!-- ===== INGRESO CON USUARIO ===== -->
+<div id="login">
+  <div class="lg-card">
+    <div class="lg-logos"><img id="lg-logo1" alt="Programa Integrado de Salud"><img id="lg-logo2" alt="Ministerio de Salud Pública de Tucumán"></div>
+    <div class="lg-kick">📥 Mesa de Entradas</div>
+    <div class="lg-tit">👓🎧 Prestaciones Ópticas y Auditivas</div>
+    <div class="lg-sub">Ingresos y retiros de órdenes de compra</div>
+    <div class="lg-f">
+      <label for="lg-user">👤 Usuario</label>
+      <input type="text" id="lg-user" autocomplete="username" autocapitalize="none" spellcheck="false" placeholder="Tu usuario" onkeydown="if(event.key==='Enter'){event.preventDefault();document.getElementById('lg-pass').focus();}">
+    </div>
+    <div class="lg-f">
+      <label for="lg-pass">🔒 Contraseña</label>
+      <div class="pw-wrap">
+        <input type="password" id="lg-pass" autocomplete="current-password" placeholder="Tu contraseña" onkeydown="if(event.key==='Enter'){event.preventDefault();ingresar();}">
+        <button type="button" class="pw-ojo" id="lg-ojo" onclick="verClave()" title="Mostrar contraseña" aria-label="Mostrar contraseña">👁️</button>
+      </div>
+    </div>
+    <label class="lg-rec"><input type="checkbox" id="lg-rec" checked> Recordarme en esta computadora</label>
+    <div class="lg-err" id="lg-err"></div>
+    <button type="button" class="lg-btn" id="lg-btn" onclick="ingresar()">Ingresar</button>
+    <div class="lg-foot">Internación Domiciliaria · PRIS · SI.PRO.SA.</div>
+  </div>
+</div>
+
+<!-- ===== PANEL DE MESA DE ENTRADAS ===== -->
+<div class="app" id="app" style="display:none">
+  <div class="hdr">
+    <div style="font-size:30px">📥</div>
+    <div class="hdr-txt">
+      <div class="hdr-k">Mesa de Entradas · PRIS</div>
+      <h1>👓🎧 Prestaciones Ópticas y Auditivas</h1>
+    </div>
+    <div class="hdr-user">👤 <span id="hdr-nombre"></span><button type="button" onclick="cerrarSesion()">Cerrar sesión</button></div>
+  </div>
+
+  <div class="tabs">
+    <div class="tab on" id="tab-nuevo" onclick="cambiarTab('nuevo')">➕ Nuevo ingreso</div>
+    <div class="tab" id="tab-lista" onclick="cambiarTab('lista')">📋 Expedientes (<span id="cnt-act">0</span>)</div>
+  </div>
+
+  <!-- Nuevo ingreso -->
+  <div class="card" id="p-nuevo">
+    <div class="stit">Paciente que viene por primera vez a iniciar el trámite</div>
+    <div class="f">
+      <label for="in-exp">N° de expediente <span>*</span></label>
+      <input type="text" id="in-exp" autocomplete="off" placeholder="Ej. 8871/410/U/2026">
+      <div class="hint">Como figura en la carátula. Si no tiene año, se toma el año actual.</div>
+    </div>
+    <div class="f">
+      <label for="in-pac">Apellido y nombre del paciente <span>*</span></label>
+      <input type="text" id="in-pac" autocomplete="off" placeholder="Ej. PÉREZ, JUAN CARLOS" style="text-transform:uppercase">
+    </div>
+    <div class="f">
+      <label>¿Qué solicita? <span>*</span></label>
+      <div class="tipos">
+        <label class="tipo" id="tp-anteojos"><input type="radio" name="in-tipo" value="anteojos" onchange="marcarTipo()"> 👓 Anteojos</label>
+        <label class="tipo" id="tp-audio"><input type="radio" name="in-tipo" value="audio" onchange="marcarTipo()"> 🎧 Audífonos</label>
+      </div>
+    </div>
+    <div class="f">
+      <label for="in-tel">Teléfono / WhatsApp del paciente (opcional)</label>
+      <input type="tel" id="in-tel" autocomplete="off" placeholder="Ej. 381 5123456">
+      <div class="hint">Sirve para avisarle por WhatsApp cuando la orden de compra esté lista.</div>
+    </div>
+    <button type="button" class="btn btn-verde" id="in-btn" onclick="registrar()">💾 Registrar ingreso e imprimir tirilla</button>
+    <div class="msg" id="in-msg"></div>
+  </div>
+
+  <!-- Expedientes -->
+  <div class="card" id="p-lista" style="display:none">
+    <div class="bar">
+      <input type="text" id="ls-q" autocomplete="off" oninput="render()" placeholder="🔍 Apellido y nombre · 8871/410 · OC20552">
+      <select id="ls-f" onchange="render()">
+        <option value="activos">En curso (sin entregar)</option>
+        <option value="en_mesa">📦 OC lista en mesa</option>
+        <option value="vencidos">🔴 Vencidos sin OC</option>
+        <option value="entregados">✅ Entregados</option>
+        <option value="todos">Todos</option>
+      </select>
+    </div>
+    <div class="resumen" id="ls-res"></div>
+    <div id="ls-lista"><div class="vacio">Conectando…</div></div>
+  </div>
+</div>
+
+<iframe id="print-frame" title="Impresión" style="position:fixed;width:0;height:0;border:0;right:0;bottom:0;visibility:hidden"></iframe>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore-compat.js"></script>
+<script>
+var LOGO1 = "data:image/png;base64,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";
+var LOGO2 = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAgwAAACDCAYAAADh/0MrAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAAIdUAACHVAQSctJ0AAEUwSURBVHhe7Z0JfBXV9cfnuS/VurdatWq1ti61LVqXWqm2KlWLgsmbmRc2F3BD3PclFUiQolUUkzdzJwkEEMF9QxYVRZK44r6L/gWSIO4ryOL7n3Pnzsssd96bl7wlhPP9fM4H3txz79yZzNz7m7sqBEEQRWcA21vR2ZlKgt2q6NZURTcfVzTWAP8fq2hmmaIbOwhPgiAIgiDWK/paW4EoGBHTjddjCSuV2cw1IB6eANNEbIIgCIIgejTlMzZUdDY8ppmfOYJgqzMbU4eMnp062WhJ7XnpffzYwaNmpU6saUrtf+3DqU0G1afFg6KZ7yhq8jiRGkEQBEEQPY5yY3dFsxY4lf++Vz2YGjLt1dSYlva0bXfWVB7Wa+Ss9LGRzyxNnVr3fOoXw+/qEA66Waf0MjYWKRMEQRAE0SNIsF4x3VqGlf3Ph04OCAW0q+Z+lBYEu4yYHggftaA19e9kc2rDijohGthLIEJ+Ls5AEARBEMQ6jZY8OKaZX2Mlv88VD6Qqn1ocEANo6sQX04JhgwordcWcD6V+lz72QWpb0RKh6ObrJBoIgiAIYl2nrPZXTsvCX6pmp0YvaJWKALRdL7ibi4ADzr+B/3vEjY9L/dCun7c4teuFtr+SMJ4TZyMIgiAIYp2DD3A05mGlvs8V92cUC2dMf41X/rsOHZd64ZE9+f+3OG1S6tonP5b6o131+EeprYdOtkWDbo4VZyUIgiAIouSgCFDNkxX1jt3EkXB0diZW5jhmIawbAu2G+UtTO547jVf8N9Uen0q9sGGq77XD+e8/3/CYNI5j597/FveL6eaPSkXdfuLM4SRYL0WrP0b8IgiCIAgi75xy+/bwJT+bf9Fr5pviqJyK8VvHdOtz9B049RVpZe/YETfO5ZU+dkWsenYTLhgWzd0ptfEAg49lqGhcKI3n2FE3Pem0Mjwuzi6nn7krFxe4roNmjhNHCYIgCILIG/Hag2Ia+9CucG1TdKO3CA0St1sXdrvoHmkl71h/6zme1haDalILH92DiwXHzPqjeNhmQyamhj/4jjQ+GnZb2DMnQAiotXuIHATR2EVO3tGwu0RJ1GwrQgmCIAiC6BJq8riYZn7jrmx5hauye4RHkIT1HPpUTH5ZWsmj4UJN6LNRhZlqnHSERyw4dnrVadwHxzOc+8Db0nTQ/jbuCZEnk4kceCm7eXMQPF+gj9sUnX2gJOr2El4EQRAEQXQK3Tg1prPV/oqWm2aukH6hi6b/LU+flBrdFBzoiGMWDq2aw9NAsTDy9n9LxQLamuc2Sg0adQb33XhgfaofezaQHtoFD7/LfRTVelvkwkvCOornWWIQtkzRG34nPAmCIAiCyAnduiBULKDp7CulfMLPhHcHqlGO4Qdc90igYh8wZWFqh3Pu5PGxG2JK4+FSoeA2FA3Dx1akz7vHJfemzr7vLU+6OANjk0ENEG6uUU4ythA56SBec5gTX2qa+Q3k+wjhTRAEQRBEJDSzTFqxCuODHlXzt8Lbi85Goc/xtz3DK/PLZi1KHX/7M6mdxEwItD9dcH3qjVm7SgVCmN0/7c+pHU+/JZ3G3pffnzrVej51zZP/x8+DUzfxeOheEwnzpJhqfOfEDxgXDcnfCG+CIAiCIDKCYiFDywLOlJC2LDjoZiP6YUvCz05v9MTd+5zqlFHXWyoIoti3TZunrrzl1NQ2Q27zpIvTMnH6Jv4f8n+eyEmQMrZ3TDUXueO6TdGsT0g0EARBEEQ29OThIBa+lVWmaIrOpiu9KzcS3lJiCTbLH+/3w0elZt19oFQEdMa+bd48NWnSXz3ncAwq/RtEVuRo7Bfg96o/nmP2QEiaPUEQBEEQcirMXWO62S6rRNGUuDleeIZyQ3Nb78HTXv10wOSFqbPufZOvwYBxj778MmnF3xX7oWUznvbPzmhMXfLY+6mhd7/B96MYdvebL49paQ+fXon0tbZSVLPZfX1uwzDhSRAEQRClY+MB9bM3qqi/WPwsPb0bNlMS1ouyyhMNvsonCU8p5TNSG1a1tFU7gxAdu3jm+zz+AcNvkFb6XbHFT27P097+7Kmec6JVtbR+U93UqovsyQHRENON8JaGhFEvPAmCIAiiNGwysOH1jQdMHCl+lh6dmbJKEw2+tu/J1A1R2bx4u6oFbXP9lTbaDfOX8DS2HFQjrfS7Yi0P/YanvXvI4lBVza1rIF+3iGzK6VezU0y3PnBfb9o0tlbRjNOFJ0EQBEEUn24lGFSmSitMMEVjLZkGOI5sWbIPVMxvyCpsx3YZMYOn9eIj3pUcu2pG/d95utn2mxjd1PbgsBdf3FhkOQgOhAwbt6GZXyvlxu7CkyAIgiCKS7cRDGr9blApfimtLHWzHcTCL4VnAC4WWtpaZZW025y9Hq6+pb+04u+sHXXZ5TzdgVPDV5N0rLq5bX5G0aDXHem5dpcpuvWq8CIIgiCI4tJtBINmnSirJHFapRI3DxNeAca2LI8kFtCG3fMGT3P/PI5jcMYvbDa4IeO22W6ramp7JrNosM713APHdPa98CAIgiCI4tJtBAOOTdCT9/krSag8Qwdkjl3w6S5RxQJaVVNr6udDp/B059//W6kAyNXG1fbh6clWk8xkVc3tT4vLkFC5gZKwHnLfBz6OQTe7z+BUgiAIYv2iW41hQNGgGfc6laSimU+KkADjZrdvOaap/U1ZZZzJTqhp4mkffvHVUgGQiy17apvUloPu4Ftfj3gofBfLMKtuXjpZXE6QsvE7xnSDb8tNYoEgCIIoOSUXDBq7OYZ7QejGKfw3Fw3mVKgkX4av7F/zYxKqm1sfkVXC2azy6cXpVob6iUdKhUBUGzz6dJ7Ovlc+KD1XFBvV1HqluKQgqvm3mG69i9th2wdSMRAON8VU9incm3L7GEEQBEEUgZIKBtX8LY5R4F/ROFZBt2zRkIXqprbrZJVvVKtoXMgr+q0HT0i9MvPXUjGQzSZOtFd33GzwxNRVcz+SnieKVTW3rRzV1HaUuLQMVG6gaMbN/F6BKQlzsQggCIIgiMJTWsFgPepUgNxQNGhmPxEqZVTT0iOqm1tXyyrfXOwvVbP5Ofc8+8bUu3N2loqCMJs54w+pjQcYvCsi3vCCNP1cDMdhYBeLuEQJKBZYWiw4pujm1cKBIAiCIApLyQRDOevlrwC5qaxNeAQY90r7ltVNrR/KKt1c7Yb5S/kuk3jOHU6/NfXQXX+UigO34fbWoyaclM7rMbc8JU27M1bd3DZLXGYQtXaP9P1xmZKwlgkPgiAIgigsJRMMGpsprQQ1NkV4BBjd1HabrLLtrKFoOPC6R9LnPuHqC1Pz7vt9QCh837JZqnHSEan9h4/kftiy0Od2e8vsfFpVc3tcXKqXk4wtwvbWUHR2jfAiCIIgiMJREsGgJQ+WVX68S6J/zV7Cy0N1S/uhsko2H9Y32ZLa4vRJ6XzscdbY1MdP7MDFAu5sid0PTth2Z09NnTHjdWk6XbXqptZlw15MyddnSJgnO3lwG7UyEARBEEWhJIIhwaZJKz/VYsLDQ+W8eRuNaW5/XlbJ5suuffLjVJ8JC1I7nHMnz8uvQTSw+qPSYmHPS+9Llde/EHlxps5aVXNbnbhsL70rNwttZVDZOcKLIAiCIApD0QWDZu0S08wVgYovQ+vC6AVLh8gq10LYyPlLU/tc8YAnb/+49WmpbyGsqqX9h6qWZb8Ql+5FrZW3MujWB8KDIAiCIApDCQTDDSGV3p3Cw0PlvI82q2pqWyKrXAtlKBoOHzOXD4rsa7RIfQppVS1tc8Xle+kzflMQVsHNqfhultafhBdBEARB5J9iC4aYbi4OVHhgUOEdLFw8VDe3XiirVHuygUBaNWrBx78Rt8CLag6R3z9jnvAgCIIgiPxTVMGgWsdJKzudPSs8PODYhWK3LnQXq25qmyNugxfd2EF2D2Oa+Y3wIAiCIIj8U1TBoLM7ZZUdfB2fLjw8jGpaMlBWma4PlnEsg25Nlt5Hte4M4UEQBEEQ+aVogmFww2ZQqX3lr+RiOvtBOXacdJXD6ub2F2SV6fpiVS1t0lkjSrzuoMB9BFN083XhQRAEQRD5pWiCQbNOlFZyGpskPDyMXvDpwbJKdH2yqpbWT8Tt8DLM2Fg6+BHFF0EQBLGOo9buoVQkdxa/ug1FEwy6Je+OiLMThIeHqualhqwSXd/sxpZP+otb4iVhVEnvp2oNFB4EQfRYElYlN43J+y1lqMYRdhxrqDjCienWPDSlrGZfcajTdKRVu584tG6gm4/wfKtsmDhSUuwCnb0ofnYbiiYYVLPZX7nFNOMbnCooPNLYUynbP5VVoFHt3PvfSvUaNatbmCx/UW10c2uzuC1e4H0M3E8weO4bhUeBScXgb3oSCMHxSoLN4u8aTo3VrNEgWv4hnKIQ4xuOaexWKMseU3RjHvy/Aa7jCvgdur15Gs20y02ZaeaFkKdTlDK2nfAOot6xW9q/snIDcdRGZ1d60stmZTdvLmJi+XOZ1Cdt5hAlbh0gvIPgNFn009gl/F5nQ00eZ/tn3ryNE08eDemPgTzcz/9uCTbNvo/mH4VH58C8eq5RmGaer2h1caXM3FN4ZkaWRiZbH0m/8FCwikOZ4aOlzR9FIfGCOMpJp6UlpVPVciGdlp48XBzKjd7Yd80+gofmTXGkOOjM7i/X2I3iSEmx7+N6LBjw+dHYw7hAU8czxaaLUA9Vz7T1l1WeuZje+BI/R3cwWf6iWlVz63fS5aJxTQbx/nPD7gjVZBkrx3yhsT7wXi1xX6Pf4G/7vBKv/auIISduVsQ08/9k8bnp5k+KZtTLRKUD+kjj+ozfm/IZG4poHSRq/5r2GWZ47jPk7Wt3GtlMOeX27UVUzNdymU/A8D5p5v4iWgeqeYbjg/8XR8PRzZvs9IzJ4kgQva43iIIX0ueWGNQrc0B8yKf0ZgGeiTZZmm6DZ+dlyGuFiCJFFi+TiWjrF54boCVHiMMhgOLEL2jH3ycY4Kv679z6WluJI53HSavP+K3FkdzAjXN4Htm34khx0I0jeb4T8tUDi439t1qPBYNDubE7PK9jobJr5i1kEqpb2ifJKs9c7LLZi1Jl9S+kfiN2pOx/6+Op5BPvFMUOvPI+fs5Dq+fwPMjyl4tVLWj1tCCmUdlwuJcL+Rdc+YSfiaOFJWFcaj/LaOaPUAFY/GsZTTcvht9zXeFrQr6iofxiE9J+uvU9XENNRzrsP1DhvuKEw7v8OaQrbXl1BAN8Md8Q/PoEsQH3J30elT2DUeyYggiCAdKaAedvyGrHNqYH7zqCAa7nfqmvbs2H6xbiGe5jWZ23BdclGHg68eSfRYicbIJBM8/rWGEVzqezO8HOEn+3yyA/89Ln08zv4O92tIgZGUcwQHqP+653Cgijlzqul/vMxLpBRPWQ9ol639dHnJvEDR5UKAB+KYKCaEZftz/cfK9g6E6USjB0M+y/1XoqGLClS2enZfpSdNPV7gi3HTZmLn9H/vvIa6liceJNc/g59UkvSfOUq1UvaH9K3JrMYOuCagwv2FgZve5I+znm7/P80I8I1fwtVJivQyW+QBzxEmdn8XSwBSFhsdDnotzUXeeTDuhMC4belRuJQ0G05Hlpv75jvR9RUQRDhbmrOBSZtGCo8AkBN3CfoMK2FzLTrXc9LSA+wQBC4HNsVRahQTIJBtX6B1TmqzAc7vec0OcDWyA0y24lQNFQxvYWIZHoEAzs3+KQl7LaX0Fekjx9nhf2hOxvnw7HjwtCDr9JGvsC+wT5zdJYiwjyUla3IypEoRL5ixcQDAnWi39du8Gpa3hMN37Hf1dY+8JDeTFX4tj3FPZgY1+aPy0HPI9mXAT5uB7yMEjR6/cRITYYL24eb+cRm0zht2OJCcH+Scwb9jvyPJmV8KIeJkK8YN8mpuHuE9PYsTwf5ZWb8N+J5IHcJ1NBwvtg667j59ONcxW91pv/XElYR8E9uUqkNxzu3S4iJLNgwK9D7OPjX0VgKlOjVq5dpRiCwSk8oVCEQs+8KfCcuKh+btnhskrzb+OeTG171tScbdPBDbzw2XZoY2qPEXcVxbYYYp9zy9MbpXnKZAOmLAxc+5jm9uXi9kjA1kbjSHhuZtjPGC8PForA/HHYzZvD328lTz8RIX2s/GTPMG6i5eQzZIaMB/iy7vBPBr4mIwkGRLe+534VvvEVpRQMCIorzVrLffu5zuPukki3VrBn/XlMk1Ew2N0+UD6iyMtcrkDZCvXQJ9xfZdGEqiCrYHDQzQqntYGXvz74dWAYCYZw+E1CwQCVB9zMj/kN05iva6KjKwIeAqbEjUP4/wNjGNiL/LgbzdxfpDkJvkL+g//3mrkGfG4V3mkgTy08nht8OXV2XyAN/GLAvIhlfgPhLoNzXcvTsoHrsibK/OBezMM5/MLPRmXX2WFsFH8BNGOB459umk2I+3Rywzb8txvd0OA+8JfCb3Bf7/cMXooCKn/NfFqanm78B++X/VsiGLTkACiYvvHH418UqvEv4VUwCi4Y+kMB5L82MPh6OVZ4eBjVtPTaQIUJhoMHZen0NIs3yLswRi9YKh+Qppkj/WnAO9gqQvOHbp3C00fh39nuSSRh1th5zGEKKO/C4tf1kziSJmfBgB8SbkotGADn/Yeywv6YQ9yCQUseCj68OwHuwXjh4SVMMGBXhJMOvIviaGa02o6WnfLoAyEjCwZEPAf8earwPk8d5ybBEAq/SSgYEI39wf7t65pQ7T3x4SFYxH93QjDAg9yOXwrwAlXzL3DNPAbO918extNiZ4kYHKlgUK0L+DEcoFlRfwj/0teSJ4ICnsKFh9Nvif1jKhsmfFfw347BNXIfAB6aZ9Pp6ebx9hRE8zBIbxovECDPwtXGLRh0w2nSexXiJztaGEIEQwLzY67hYQlWxfvR8XwJ8wy4J2/ZaRnLw/rXApTP2ASuxW7GwwFMKEbwC1qzToT/T8avB7gmXuAFBEO8dhD/usBlffG+42AjbKbUzYvheuwCrqz2L8K7IBRcMKgsYV+71+D+SFd3hK/p2bIK0xEMI+9/OfXR8m9ysutmvMjjDql9iv/++6hH+O/6ee8EfHOx5xct5+lsP2wy/31n0/v892HXPRjwzWbH3Tibxw0TDFVNrf8Vt8iLbt2F8TymsVUiNG9Amm9i2vCcNolDuZMWzpBO3LpBHI1CLB3PN5I/kmDANUA6/LwfH6UWDKfcvn36/CdDOeTgFgz8d/Kc9O+EVc6PuQkTDGJ2Etzvu8WRaEAdw+Np7CpxJCs5CYZ+NTtBGWe3Mviuh18HHifBEA6/SY5gQDTG51lDhfYc/+10RYDSxMqfH+uUYGCrpdOe4obG48AfXRzhyARDTIUXSbXkhZJ/KlS2MQxiQR8o+N4QR7xo5pM8PM5OE0dcgsFYZodJRt3KBEPF5K35PcTjspHJiMqe4uG6ORt+ZZ/OBH62P5suLbTipi0KwMcjGEDYwN/ySx5X1ldoj0RfCy/Vx1m/nrpAwQWDXnebfe1eA7F0kPDwUN3S+q2swnQEwx1z3xYjBaJzy8zXedwRE5v57xPG2mk9uvBj/ruzLPvqB57OTmdP4b+ffKOV/0ZBkiv9bnmCxw0TDNULWu1ywE+C9cd4fgOx2lt4dJ0+OCNDpKuZZeJo7pxUycsCrLyzNo37cM4P74SnFTQtBNTkP+Dd7ejy5B9DbDDkd2q6yT9hniyidRBp0CO7COJ2fOzIzHc9kQUDfGTw82O528t1fr9gQNLiELujXa0RSIhggHzwDyrIY/DaM+G0IOvmY+JIVvAa+LmiCAYA6qKXhP8ocYjDz8uPY5e55F471pVncV2H3yS3YLBf0jf4jVOTONbgUXETbxIenRIM8K98eqOo2OGP+L04woE8yQUDfjmrddmbzDMLhhgKIF6AlBs/F8e84H1wCgUHRzDY6cofTplgUNksfixuni+OBMEXX6yip+g3hQ8yEqRbAsLyj+jGHPTxCAbduoLH08zwylqzXrbzWxM+X7uLFF4w2ILKb7IKY2TzsgNllSVasQXD5GfeSw1JPp0a9/Cr4kiQYgqGquY2eTdD3DoA4/kNnrnrhUfX6TMehLZIVzauqO/Yrdzn9hjOgHDA7lZ+DD5acgTKADFrwtuv7pQNWU0171EU3zoLSATBEMXcUyoRyJctGFC0+IWMLWYugX/TU1NBIPxNRLWRCQZEZW/z4/gh4S7bwgSDZn7G09Ct3KbFd6T3ljiSlVwFA9RpfNwNCLI7xBEOP28kYx+JKOsf/Aa4BQMCKlIctxWyZr4jQmw6Ixh0c6I4EoCfK+HtW5QJBnhoVe6LFb3G5ip68kxsYhKhXjIJBtFECWGrebdAmDlfCM4L7xYMYYuayASD88WQrQ9WZ03cD7trMgFfyTwfOI0oE+WsF/fzCAZ7uhf8Df8pvWY0nfGvc3gONBEr7xRaMECB9Y597S5T2csi2EN187IKWWWJVkzBMGn+ex15Bbt48rMixEsxBcOYltbVlTPesLvb3GjsF04+3QbPzhPCo+sMaNwynW5eBIO5RhyJDDxHvDUOyqMHxCFOWjBgyyBODQzaW2kfPhPhRq+wjyQYzGZfmgHzlylwTi4YshqW6QnJFMYwwYBd1Lr1OT8OH0Dp1sdsggFFSi5ohmWn561bMpGzYHDG44UJBqx7JPfaMYg3TURZ/xA3yCsYEFCiPAxfPH+fTqkEA2I3tb9vx8G8W2vhwX9IiTPvYi2ZBEMvY+N0/AimlJfb047SXRIZVrWTCAZsPeHH9psRLHjdaMZF3C/BVHFEjmoMt/PBJogjoXA/bwuDPV4igkEhfaGIlXcKLhhcc6/T1xPyolc3t90qryyLIxhWrlqTqpnzVurnZ0xKbXNGY+q2WW+kdh8+LbXJwHo+DuK7lauFp01xBUN7alTTkqCADXmH4H3P30JpQtjb6bIqcTQz5cbPeRy3YLBbTe10oOwSRyPRcX7zbHGI44iBjN12WG6qxnM8DRQN7paGAo9hgLLheazcOsx8PX0+vW5QukzzEyYYkDLWB9Kxu1ahLOTHQgQDlDPvcj++YmQO6Gy+nb6ZFEeykqtggHvzkZ038zxxiMOvA4/TGIZw+E2SCQZ4iOHhWAhf2e5ZBTalFAw2MUWtx+WpR6ZfBGwtSLhEQ5QWBhwo6UwpzGR4PiQtGLx9Xx5kLQxOVwPkSRyRIxaVgS/7U8QROTo7gedDM+4SR+RUJHfmfl7BYHc36ew26bW6LWx6aR4oqGDAKVr8ur0G1/wf4eHh0scWzbx89qKUzA64zh6oWCjBMHXB+6nfXjwjncebHrG7Ima+sjh9bLuhjamauW+lfly9locVQjCcWNMkvX60S2Ytkv6dYqr5npPHtOlsqQjOC1AR8W41KIc+FIcyIxMMkAzki6/AChXYS+JYdo5j29lpmT/5Z0zhMZ5eJsGAoFjRLHstAveCdgUWDNIxDKKixAozbKfWjIIBcbeyYgtFmGDQ2AP8uGotUXrPizYWqmz8jnDt3/G0oyw1LchJMGjJPjxf/BzWn8RRTvo4CYZw+E2SCQYkbMXG0gsGN7h622ncV2Mdu+xlHMNQuYHIU25NlJ0VDBr70M6f9wENgDNJbL/0OgpS4O/CZ1zgrBOcLRFG3Pwfz69HMLDp/Bx6MlrzXYEoqGCIG/+0r9tr2DolPDxsdeaUrH3GuQiG6S2LeOW990XTedxdz7uT/94eKn78feAV9/LfB1x+Tzr9g695IDX39aUiBZvXF3+R6nPjY2mfXYfb6RxR+RD/jS0Q+PuPV9orPG5zZiP/PWKSLVCi4AiGTLbxgPonxa3yAJVTY8AfKjsRnB/K6uy9KzS2Fv5+2QWsXDDAc19vi2z+kVDvneIYArw39peoGiwfIwsGAO7JCu7rLhNKIRjU2j3SFbLK7pF2q2YTDIhuzrR9zB+hvLPX4fALhnj9n3kZhemEzEwKAGnwtHDxphym0EYWDFifaaY960a1AoN5+bkxjARDOPYfKEQwhFGyMQz1u4n/ecGR/+iL0wQdMgoGQGOTeLhqVosjQXAhIzedFQyq8S9ewKCgkQy646hGOffBqZXuUcthwJecfc0hL6N2+y7w4ol1FtyCoX4fyP9qfMlCWzxw9kSB9wYorGBInmlft9dQSAgPDxsNYHZfcwbLRTDc/Ohr0jRkttcF07nAyMTjr7emDrv+QWl8mR018mERMztRBMNGgxq8Y5gcNHZ5wB+7CPMJtgY6427w/c5WiZZP+CXPh18wlM/YEN4te3YTpoPTiDOhm3whO3wnlTIrsJkef1cxrWyCIZE8EO8J93Ut4VwSwYCo5pB0fuD/4mgHUQQD5ld0OaTNLxgQ1eAD5rmwwGnrmdDZOR0Cw5QvSR5CJMGAY93SM0OsVbKPNzuvkA4JhnDsG7gOCIZjx20JL9IK+KNPT6+34CDm3HtUo9Nvybsq0l8UsY6VHis3wPR4gYArNbrB5kfNHGOHmWPFUTxP5wQDoomHFZeu1Zl3jQMteSG+VDxe1N05NfMYXvFjHJVd6Sl0+EqS5nI4Dx9E6REMSJzdzeNp5tN8kKMb3GUPBzfhaGhnMaoCUFDBoJtX29ftNdmUykNHztlH5uu3XATD4s++Tc17sy11XkMTj9v/f3P570Ove4D/HvPgy/z3/LfbU6vW2N0MDmMfejV14OX3pi5qbBFHbNasXZta8O4yHu++5z/i6WCLAv7+nxAo2NKAvxd+9JmIlZ0ogmHTwZPkKz5qZj+Zf96XiNZu/QW2pvH0sQxQ2TkB4X3KpO3hub8M3gl7VUj8SvUDFQF/53k+zTXwflyHLRIi1CaePJoPZEQf/v7LZ31gGD9PmGAYCJUO7rUh3lHIf1HHMGScVonrzDjnDqySG0EwIGryN5DPjoXfZIIBy0CnGwTTS5g1gUWccIEm0erJfbB89+/emYW0YMA1bdyDt9Gc9X7EPeViIQHlo4R0HkgwhGPfxHVAMAyGhy9hPWH7Yp7NRfASzoOXm/ejwnm+9s+YgMKDD6CxX254cLGwca/0qLLfwzExChrFgxgg5JxDtd72rL7YFcGABZxY20Gk8TE/l2gihP+vVBJ10i/gUHRzkCM0MD78/wVIj49OBnsVC0P7/z7BgDh9jNzgC84eGMW7RDBNeHEL2mVRYMFgfx36jG8p7OPPNzzG1+PIZoUc9OiALQnuc94csg9FIcYwZLJNBzV4v9YdKszDZP5QIfUSHvkDKyidfdBxHuyS4xsL4Tv7quf8OAMgbAtneAaclgZuWDZgpYZTiZ2yQBwHIR+6GZ9dpgjfbAbvun9VwSiCIaq5n2vIV3bBgIgFkrCy9XQ9RxUMCBeMdquAVDAgtmiwP5Ycw9ZRlb0GcXheHYP0bsddhkXMyDiCIbuxtzPtZCqPE24i2noG7roVYbS9B77CIu7YZXr3BE/Ab/8uXrjxBz9H8kxxJAhPyzDELxus2P1pIThvWLNuhz/YcygCwO9NqCDGSadXolJNmDgw8hUoED6E65wJaaZXeuRgawLuUqdZIFCg4MDCAwohSNczKppTZvTleVJZf3EkCM4sQJ+w5n41mYD8P4z5Eed7HoTQaOXkW7wCIyq4N4du1kGe3xXpNcE9uiK98iTmBf8uMnBgEQoHXnjwuC/xe1moTYRcFFgwBPvW8QWXbDN84PUPD5X5FtLCBMOVdz3v8es9Ui4AHMFQLNtkUL18/QKolGT+8EwNFh75Bb/mNeNyeHc6Zkk5hl0h+AGTYAnhnQEoF1Rc1ZR5m9W5wYcL7qjoXwjOR1bBgKIE90TQ2EWelgWHUgsG+PoGP3swtmbcmx7PkItgQMIGPfrBTeDg7+Ok3WH4cWI9lqkiz0ZGwQAflIpu3AVlXZns/XcjjZ/BRDSCIApNQQVDgt0T9QXf69J7gv3wBbYwwXDp1Gc9fkf+Rz4WodiCYYMKFthLgRMmGFQ2THgUDhS16QWJ4COiYnLkQXIeeNO1SCdeJ10FlMgjZXU7KnxZfLzfxiGhY7oyMaBRvvYOQRA9k6ILBtyxUkLbNz9cL+rhvJNrl8TMlzumUqJdM/0FEeIln10SURG3ywuOCXDl1zGoDAovGIj1k37JnWM6+0rR2bNKwhiYbkklCKLnUlDBoLERvIvFZVCJeVZ1c5j1RlslDhQshDmDHqMKhtVr16YubGzmW1UPqpmXWiXWXfATJhicQY/5ticgfekAWHsFxRd99/o9JdflgAkiKgl7mf206eZieN6Ce/oQBNFzKKhgyIGDr7l/tKcAKoBFFQxRCRMMhbSDrn4g8kI6BFEQ1GRgB1oFFxcM2x6AIIieQXcRDENq54/EpvxCmLNwUzbBsHrN2tT7y77mX/MPv/RxquHpd7nNeW1p6tn3P0kt/2aF8LQJEwzOwk2FsEHGM5G3GyaIvIMzvtKzuFxiocDrxRAE0Q3oLl0SpRzDcG59U+oPV9yb2nhAXboQDDNcLbJiwrzU8q9/KMkYhkc+/mpbccs64F0SZrPvXr+Hm54JD4LIDwl7oT3H+MwK95R3giB6LjToMeXNX0R7a+kXNOiRWL/AxbU0ZoE1CLuVxAJRWPTafRTVvAMeNu86DERJKLpgwIpMAgmGaIjb5aWU0yp7AjgV1L0qoSI2uSOITuPfQVBn54iQ0uLPV67bmBaVyg1wKg4v0HAFt4T1qKJZfUWgF/91oXXlRdbZlYH03FvLJqzyQLhm7i9CeywFFQw5LNz0wWcrLxB1Yt7pKYJh1Zo18v0hCr1wE3Z52Cs5dtngmXhEpArpVm4SCNfYXBGaGS05OBg34uZKiGadqOjWZHuxtOC9g/ReVfS62/gaBWFo5tRAHlTrOBGaGdV6NBD3JGMHEdqBvRic109jD+c0jVFj04JpWPUiNDoaa/B1e+GCfboIjYwkL/eGLrDnwx+Xxw+Aq2Vp5khFN+Z5MquyWXBDxyrx5FHCs2AEHyjzdRFUUgL5wiVGcwE3WOpoYspkFlS61+W8bLIbiO/JK4oG3bpJhHrw+AmTrtQWlYRlCxV3eu6XTrf3dfCEJ3ybXvVACiwYIi8N/dbyFUNFvZh3eopgWLFqdchKjwVeGvrEmm1l6XfG4D37SqSqYHN2IBxXHIyCZlb648LHSPhS8Q66cSTcl+B24BlMUc37cd0BkUIHniWyhW/CGihCMwJCpWP/BycursbrR2Ov+f24r87CV+x1Ax+Qsvg511+6sQPc3x+C6VgfeD68IhBIAyywwnAI0rhpBjRuCQ9GjcwpYLjkcEWBlkIFAufrKYJB8tJmNdxlTmO5jdZO76cgzG5h6NhPwofHVxgJhvxTYMEQefOpF5Z8e7SoF/NOTxEMP6xa07ELrBstKd2HI29Li/cUwaBZN+DS1YF4UQz3mPF/mJZQMPClnPtm2X5/QM1OcL1fSOPnLBisamk6YHyFzxyQpYEWpbVCGo+DzZbuTYIiGsR5uhDzQQPnWp8FgzB4YV6KuKRoDF64jvXiUSyoxnARJsV9HsdIMOSfggqGHLa3fqX9251EvZh3eopgWLlqTau4XV4Kvb11TxAMujkWy51AnFwMRcNJlR1N5yUVDOCvGg9lLBN1ewM+qeVYf8G9/ViaDhiIibuFWyRkaXDTjG+UeI18szKBLJ4dosq/TrIZPEhvhm512gUC5yLBwE3BjV2y0d/6NfY1oWG3ErxoWXdglJ6rsILhP04e03lNWEeL0B5LYQWD8U//Pef3PW4OEh4esMld1I1ZST7+dmrAHfN45fynq+5L7XvJ3fz/6m1PpO6Y86bwsim1YMClpoeyZ/jxv1z7QGqvC6fz/59885zUmAdfEV7ZWb1mzcviVnmAsig4VgR3jc0XfcZv7e4K9phuLg6eG7/iJb5gWAGKVIsnGOJmRUaxoLP58HFwK7zvlVD53RlT2acyv8CW9yUWDGgQfqzw9KLW/Su9g6XMcqm/tOQAaRouU/rX7CW8syKL7xj8Xd9Rjh23pXANII3DAyQPIm890NlweKiGoKDA3x4fna1UNOtPPIE84zkPP1cPFgy4RbOv8oRCILgzHRp+yYRtYdsFZOcqqGBYTymoYEiAUPTdc37fQZwJDw9frlz9iagbs7LnBXcF0nVst+F3Ci+bUgsGFDHuuG7bfmij8MrONz/+OEfcKg8x1Qz2yetsqQguLNi37T+3Zn4nQjNTLMGgi63nfYZf4HzWlgyVJeAc6W22sQIWIR10A8EA9VB7YMMv3HUzQ4sAt1zqL509K03DZXCvIpchsvhug7QahWsAqT//IvUfRLEgoyx5IA5K4T44KC+M8oZfKqoxEB6S8fBHneOuDOGPMgmExtmBvdJd+PMTuOH+QYK6VS1CvCTgwfP7hsHHcCQvgbTSgz0h/6+Apbc+DuQrD4IB8iRPQ6s7FNL/JOhvNfFw2QDKhFnDw/z4/TTDM2rXfw5+HkcwJNjlkG7HQjV8AxR2lXLK7dvzcBnZBEPcPD6Qp0zplc/YBJ7JsyHdhyAPUHCk89IEhc0dOBBNeAbBrbDV5DlwDgv+tk94nkXVZJCu7t9qt1AUVDAAcE2rA/c9waaJYA9frlyzQNSNWVkfBcOiz1cGywp452TpwjP0pvAoLN1dMKhmMuAHBnVFbXor6TCwu1Vlz8B7erk44qU7CAYwKH/HCG8bKH9kfh6LKhg09gd/XC4g/CJMZ99L9zmR4IkXYvBcnSvcPUh9wbl34CAWrpnAbTrDEIIiq8EfEXzPELE8BHx9NzwQnmBviyAvUNn5fUWIF908PqYbn/t904YvJVQsweMFFAxI/5q9Av6qaP6UpiVvGvX7Qb49fa6BcDA+Ulk3WmVh3DRzBeR9gEjCS9YuCfPiQHjYXvzw9RE6mMhlfH97/0sEBZDMN2D45QDvgYhVMAovGIKFakxl0qb1FavXjhZ1Y1bWR8HwUtv3p4pb1YHGfiFLFwr1J4RHYenugkFnKyV+H8um9uZMNxEMaOm+f934HVxf8Jr9FlUwyMZ24ceVbj0WOK7Luxr9+ONJTWer4Vn4o4iSRuaLD8P+gQCdfQvHO7fxisYeCKSXwaCgD8znDfgVUjCo1j/8PlLT2CrJscIKhj7nb+r3TxcQBRYMKAikx32mxNlZIpkO8iUYdON6u4/W6xtq2CfX19pKxIZn0Voi9QuxbIOAukqhBQPc19nS65IMlv3o65UXiroxK+ubYFi1OmQNhlMlZSUYPqfCo7B0Z8GAswQkYxeURPJA4dE1SicYgmMssOUZyzOdvRQIk6URRTCcZGwBvt9647JPeetnPHm09zhYRBESiIcmK9s1c5G/lTfgA8abgmKqIa8c4I8ED8toJW4drfRu2EykkxndOFWaVpjh8rW+hSSCPgUSDP3gIYeXxu8T2QotGAY3bOb3TxcQhRYMOVhg3nQ+BAO26OQ4LQuevcmeQbgaLn4i95WaZr1fiEG8DoUXDHW3ya5LOrVy+Xd/FvVjVtY3wbBi1erPxG3ykmD9ZenCc1fw1ilOdxYMunVuwAdM2c/13neFEgkGnN6J9zhwXGcP+o9BPfqdkpAMPo5SuUM9648HH9Md3TMqezsQjutcZMEfh8dTjQukx90LfQFSH45m1MsCPYYPJtwkuLB4xkL15IZtwHcFXAyuNIaDJeO8CyNhngR/kJuhUA58qcNxz5oO/vCCCQbNHOkP55Wpbk3k/eIDzD3BpwxejqCStH0LKxg085iAv7M/QDEEAzbVl5s6X8I1XncQnPsmaSWuW8+LpGzyIxi+9vtAfl6BZ0lVytjecN+OVTSrBo7x0cnYbBd4LvX6ffgcalwMRmMj4Pn9N38WdUsDuwvvg/8c4PtbETvvFFwwYPeN73r4NYWsyvftytUrRR2ZkfVOMKxe85y4RV7wmfGnq7FVIrTwdGfBIOuKxnogX5RKMGDZp7Gr/MdlBs/HKdiiEgiLIhhU4//88TyLrkn+Bvg8itBQ/HF4PESz7pWGqdalPByQhnNOmbQ9nPwtmYPUcOEmLHTD6BM+oBFvqj89eBimi1COP7wgggEqMHjofU1AmBcQOX7s5qIX/b4FEwxY8Wnm2X5f29+YxH0KLRjwZS+bHtzsRK07SSYaIM8dLVBdFQzw0PrDuViQrUOhWv+AuI/i/RBHvPSeFy5udfMm/3mg4DtJhOadggsGyQBmfk1l8ulgX65Y/YyoIzOyvgmG9z77ISlukRfJBwY8Q/L1GgpBdxYMCfOxgE+CPSNCu04pBQOiszf8YW7jHyU4ULwzgkE3NH8crNBFqA2UxdLrCBv7JfD78zhI37FbSet8HM8gFs0KhIHxuBy+O5ZRjxFkjjKDE14hYgfBgS58VgV80fGvurojsZ8Ll7aEc3gqFKjYZ4lYHHcYt0IIhkSdZEAhe0+EBlGTv/H750Mw2CPbxah/NM0MKM0OgxfcmdZTYMGgxOv/LIKDaOzDgP+Axo4FvLosGIL3IP3idgY8t548vONZtA7nYx24aPR2SSkV5oUiVt4puGAA4HqW82vBliic766y34ugAJ/9sOo6UUdmZH0SDGvWrv2ppX1FyLOWiilx6yh4Vmc4acKzvFAEFp51TTD0lBYGBN4jKJ+DyzWj4Zg/ZwHDzggGjbX44/D60o90wTsL9/0Jxe/P4zjEaw/C5yfgo1ltkCf5AN8AWHDjV7bOnpdF8JtS5uu/06xdII2amCppUkbTjPe7hWDQrD8FwjQ2RYQGAQHk98+LYIhquGKjbl4mUiq8YMi0DkOFWRbwr7BOFKFdFwya+ZknnM8M6cS6EOWsFzzHD8L1Bgesomns5Z4mGBQteTBc82lRNph5cdnXh4l6MiPrk2BYsWrNF+L2ZAbLOVxBNV9LQkehZIIBynNf3IBg0K3AO43Gp3/ng7wLhrodRXAHmQQDkmBV/nDuo5llwiN3wcCFiGTRJ53NB9GfngLOTTPeCfpZX+HfVqQWIOAPJoJsdCZfITZsAHVGQGXABSXgRk3CpSSlCajsHuGN/n+AP45cKGSwkgiGuHFIIEyXjPh3AX9E71iGYgkG3VwD99Y7P7nggiHDbpV8bIDPP4+CAV4C3xRXQ96nnAk+aDJEKGSwdV4wuCk3dod7XQ0FUjNUbkeIox6+XbH6K1FXhrI+CYbvVq6eL26NF80aCvdyITxXQ6POgc87eRYMUJ7JN9jyoxsL/XGhPPLu1DvQ2B0/agJ++VpoTvoVzq4UoRnB8jMQ1z2byiGbYECgLvKE69Ycz8dMroJBM4LjYnI0LOtEagGk/n50c6LMT2YiRgRwoSWdBUdh41Q2BL/ANfPNQHjC+hTiTYc/RgO8dDjlMjBNpXCCwRzj9xUhWABIWhiMDNuQpmKBGRWFFgxYGPCFriRbPxdcMGRYaCVhnhTwL6RgUNmnIiga5TM2gXiBPPBnFWdS4LOICloyvahHCAbcJlhn92GFkL4u3zghh69Xrq4VdWUodz/3Yarh6XelNuPZRcLL5s0lX/Djz75vLyQ557Wl/PeSz77jv933OqqhYPjhx9U8nWnNH/B02r78nv9+7JXF/LfDvLfa+HGZ3dlkx83Ea59+H/xowJlk7ndfZz8oqnmHUsa2Ex7FoSuCQbboFLZaJiZk7APnQHnhj4sVowjtQLbKY87rMISUOwl2qyTtpVlbHuPstEA83rIiOU8UweDpmoB0sKXJTS6CAcfGdeIDO2Aha60gMn8R1AHOgNStV2W+fhMxgAS7CG6YfK1sBxQF/sJcs5bwsDL2F89xMKjA5mLFxsMdcAyDanj2Re+yYHBmDviA8zzq9xVBkN+afQNhuvWWCA0CX2t+/3wIBrhHX0IFPMRjuCBSRYa94RF5WrId9kDoeP0iCYZEXfh65Squ/Ojzx69Zhy53SQTXT1DKxgebEMNIsGGB+Jo5LlBI4BgGX9dZjxAMkr8P32xGMmj0reXfnSjqyqIQyFcEQ8FQDFauXiPvcy+r3U+WL0UF8VlMuiIYZOUAGLwr4eO2ENU8GYVFIF6vYcGuhpBF+0CsZl/pEUmwKbwukHVj6MH6hacdT4aPtUKk2x74BhQ6RBEMiMb+y8PiRnDgfy6CAXf09Pt20sJaEKW+MrDVWDIJwG+2szMdi4+QNMcrgxu2sQN8VCR3BoHgbeYFZcLDNLOf5ziYUpY8nIf5wEEVHj98SFy4w7j5BYMqmxdreFdmU+t38/twPwdQVYEWAwxPSFaftJdhftjvmx/BkGMaDpK04G+xmg8sdSNZbjSKYIB73o5BtocL3u0k+eJwC8OuCgaV1QbD2TTplwouG82/9lzn15kZiH+SsYMI9QDP/Pcev54gGHBTH9c1pa8tzk4QHh6+XbHqG1FnFhxZvrJZsQTDdytXy5fETxjyvms1Wh963uiaYMDnIjArCMUAvC8ThIcXjfWBdzW4kZQ9mDFYNmBLTMigeTjHndJxAwjuHaGbH6V9E9Ys2XLtUL4FKzTc1VK2DgZ2OWgh/fCaeYzw8hJVMCC47YGsdSM3wRAYPA73rwmuyTt2IWCS8RyaNVWk6sHvx33DiLCGEo6U/Gtg4SZ8IFDt4ZeuM7Ic53InLMniEdZEfjKZYNDM83iYG0mmchYMCeO5gA9+XWvGVSKvQ0FUeFoxHBNJ2MCLEvQxf4Rrqub7YaAqxiUz+R4Gfj+wUgqG/eDr2JcWTw9H7KpsmP13g4pZ0uweSTCg8b00LFv08Vk05vlwf2QDdD7GZLgf0lXBAC87pBlYchX+rveC4YZnMV4g4JbYYuMXyNuTadEgEwxlE/bmYW4S1u0Bv54hGAJTl/m1hSz5/s2K1f8TdWbBkeUrmxVLMLzS/l1wSi1UXPAsSioq9oPnmS4GXRUMvGvFF98xlX0Bz0cDvBOV8P7cAh91L0v9wOAd7Oh+9ANlMIoQWTw0LEsh/g38PPb+LtLpilBGzA7c3wxbSENZ8BSEjxP5vxv/PjI/Xk/IposjuQiGMKIKBmy58fvhwnGVEQZ3l5t/DMQFw49k4ZFG6pcJ2bADl8HXviHfGTGK4RdtGfsLPxFO0fCH80rcvNauxM1+8AetC/iA5SoY4KKuDPhENJGCTT9zV5lPZCulYADg/IEHPJJFFQwRDZtsRVI2XRUMiGj2y8XSokE1hwTC8T7jJiv4LGK3T0jh0yMEA64QChVJ4PqwkpNsZ7vwk+8OWr1m7U+i3iwo/7nnpZxt+dc/iNiFY8WqNdiiFkRWAYDB8yP/aiwkXRUMSNyQfCTlYJrxf5BK5u6FBJsmjZuL6cZyEDje9Xz4JnTywfdRTVGN4E6YDsUVDMFu3Tg7TYRmRxYfd5X24ffhfpnANYAy7JiJLQP7y25UFIN4N4vT2ETd7MdnOQsGPp5AMsDGb5JWBpFCBwlroN9HaqXYSyIbcesAf3oBk63MGK1LIvQrwW2BZwDJh2BANDbX75fR3HtJOOsR5Gg9QjAgOpN3S0j2bkG+iriIU09lydcr5Tu9qiEfOXFLusNfQcmHYMBWUzWkxTSb4XirCNN1OaqVjFqGBAx3/xw4Sb57bdz4J4TLtzLIYlDXjck4lqJYggHSDLTUatYqJVGzrfDIjmYO9cTnaZifcVHlIuADJoLCqYAPaVWyh0Y6LvYNa2yEf2xBqOFYB1Wyz36ZuSekkXHDHzjPw10d9MiJW4HVsdwGFVANpJt5aWgHnZ2VUYDobCX8gYq/W2UU4ub//GmmDfsnVWN44HgEwQD39xSp2HAZ3OPRGN1OxUW+BAOim+Ol3SA+g7/hTM9UKZX9PaZbnvEJfoPK88YeOegRKUue6L6u9PXh9uQS9rvmweDzvZ7YxgOsFbPbfwq0vOBmPDJ/KJhlg4sLT14EAwKVplaXUwseL6OdLr+oJFgiV+EOcW4MLPHuR2d/gXc3ess4DvhVrSEQM3PLSLEEg8am+H3gmm4TodHoPW8jFAiBdLCb1oU/nPtEQTX+lT0ujqJWzZMVzaqHSuU1FAZpZ1R1uvEqXGwVzjAQMYKc3LAN/HGqIe676bh8YIo1DyrdOPfRzcaOARx4nP2XHxe4w+zwkOmOuHofNi2nB0Gaa+D3C+nRqzqICn9aYeACLIm62yDf6cE34P8VvFhTFG0in9YYSMu9BkUUoNLschoydAvHhXSM64CKHu8L/C3/hsGBc2LTvQt/OPeBw7wSx24kEDUd98RYBg/lJLBedmwJ+Dfxp+cuBBJGeSAc1/wIQ2/4HT4DcG7viGcsCFAoaEnsU5UJl1/DPWDwwnbE491k1gMQxpc/hfM+7M2HaxGWPFNUwQB4rttlcP0HCxcP2wxtfE/m39Ntx/OmPSRugRdZ1xYYPIvh5UghgS/QmHtVWDB4Xt8UobnD98pht8I7EVwQiBumzxpQfIsYnQPHwtllglzA48B5zbpW+XeGMkCGDuU8X5gtuDCTnS5rgr/hFZG/3BNsVuD+9hu/qwiNBp99500D3sPZIpQD5enLfh++V0+uqLjGii8dHBzuwh/OfaICf5NOxyWIbgF8ZXHVX8wV9vJEsQUDvPDSaVtQeDcKDw9VTa2njGlpT61PVtXS+s24V9qDrQt8xL/hW0BM3D974G3PA98rx3CQcyEYaOzOP2T4oGz8eu/ECq4yBk38lSf/sg8IgiCIdYUSCIZdeMugv9LDLsX+NdJ1NkY8+Pb8oXe/kVpf7Io5i+QbTam1wVHsYIpufSA8CIIgCKIwFF0wICEj1hXVYsLDw16X3huYHt1TbZNB9d/+YdzsYOtC78rNYrrZLosDX8bnCC+CIAiCKAwlEQxa8mBZxZeplWGfK+6fs9dl96V6uu1+4Qz5Tn8JyRx5MCVhLRMeBEEQBFE4SiIYEI3NlFaAumkvuuZjdPNnv6pubvtS1uffUwyuT77+fqbWBZ1dI7wIgiAIonCUTDCUs16yCjCmhk/pHTrjtav+eevTqZ5ox932zJqqptbfiUv1ouIc+eC9otYFgiAIomiUTDAgquXdiA27JHD11QxsNXRypB3s1jXbecRd0lkiNpUbKBq72R9H0YOr6BEEQRBEQSipYKio2w9FAq8AUSzo1ikiJJQ/Vs7c72/jHl8u+0pfV+3IsXPfEJeXARQNRlo0KAlzsQggCIIgiMJTUsGA4Jezzr5SdMMWC7iYlmZOVTSrRSmr/RU/5qPqmdZjZWMA1klrbl8+rqndu5urg2r+LYYr8mnsIvtAKqbo5k0xlX2qJKxy+xhBEARBFIGSCwY3XCwY93Y0uRtzREiAo2+ed7NslsG6ZPtc9sBafepC6fbefAloZ5EmXDZdNy8WIQRBEARRfLqNYOA70iXvc8RCWjQk2AjhEWDbYVOe8PuvK7ZBgv2007l3XisuxUflBop/+3oSDQRBEEQp6TaCQbOkG1PxsQ1x8zDh5WHv8TM3VRtffEq2WmJ3t1Prnx8rLiOIbp0bci++Fx4EQRAEUVy6jWBQ63eLaeaX0opSs5Yo5RN+KTw9XDK7fcvqBUufko4P6KZW3bQkg1ioO1J6D8BASLwqvAiCIAiiuHSrMQwqS8gqSjRFYy0gGn4mPD30umneDpufNmmdmG75y/On3SmyHaTc2D2mW9LNpUBMfY3hwpMgCIIgiku3EgwIbhkuqzDBFNW8h491kLD3+TM33easKY/L4nUHwzELvzz/rjEiu0H61ewEYuEDWVw+fkEzTheeBEEQBFF8up1g6N2wmaKbr0grTjCoOA3hKaW6pe0aWTdAie3LkQuWyGdDIH2trZSE+YLsetEU3ZIul00QBEEQRaPbCQakzNwzbO8ENCVujheeUqqalv5jxMPvfCIbbFhsu3Tm+6+AYNhDZC0IigXVbJZdJxqGCU+CIAiCKB3dUjAgfNEi9q2sEkXjizuFdE8gvSrn7r7NWVNny+IWwzZM1K3d6dxpt4nsyNHYL5REBrGgs4+VRM22wpsgCIIgSke3FQyIZpbhtEpZZYqmJIxHwwZCOux24d3xnUfcvVS2cFKhbPtz7lzwx8pZR4gsyClje8dUc5HsutAUzfpEUZO/Ed4EQRAEUVq6tWBAEuYQWYXqGIiKN5X+NXsJbynlM1IbVje3VlQ3t73tG1uQX2tun31j0yeZhQKim8fHNPaF7Hq4aeY3Srz2IOFNEARBEKWn2wsGRLcukFasjuFeFFlaGhxGP/fJ8ec+8PZTx0+Yv1a2EVSu9u9k88pLZ33QWNXUfoA4RWbixiHSa3AMxYJqZBcdBEEQBFFM1gnBgKhMDe2ewNUgc+zrP6xy1na7XXzPBVsPm/LgNkMnh3/t+2zDCvbTtmdNad1qaKP5u2sfHiSSi07COkqWLhqELVO05MHCkyAIgiC6DxtV1B+y6eCG8FH83QmdnYBf4IGKVmX38PBjx20JPnfjMtP8dw4cOeaZbQ8e+Vjf317xwHk7nz/9ii1Om3Q9VOCVmw2ZeC3+3vfqh87uVTXrWOEenV7GxorGLoF83cJ/l928eUw1vwtcg2Z9qCTqMnatEARBEAQRlXjtQTHdXOypbHWjNw/TrQrXsXlKOevFj5eEyg3EoM13eZ40tgoXZ+JBGrvIySfPq2Y+TbMhCIIgCCLf4HRE3eRTJvmgRwfVfMZdEfNw3ZislFn7Co/ioLFjFc1aEMyLWD+in7mrfcxcA/kfx48RBEEQBFEAymdsCALhZFzkif/Wjd/5K+i06dZqRbdAONT+ivsWigrjEDjPPGkewHi3g4NuHa5o9ceIXwRBEARBFAXNqpRV0h7T2Ur4+p+C4kLEyg9q8jgQAHOk5/SZoiUPFbEIgiAIgig6mnlMxrUN3MZbHIy7cIqjiJ07lXyMQr9Myzr7DUTN+3xgJkEQBEEQJQQHFapWMqZZq2QVtswUjc1VEuZJIoXsDGjcUlHrhsU08x1ZelLTzC9xoKMyzNhYpEIQBEEQRMnRa/fBqZbSyjvMdPaBopkXKqfcvr1IxUvZ+B0V3bwJ/L6SxpeZZn4HQuG/ysm3bCNSIQiCIAii2xE3D8MWBGllHma69T3EsXDzK5FKBwnrKCVh1sR0s1UaN23mj4rOTEWtXTfWtyAIgiAIAtCNI3MWDmCKbr0L8a5S1PrdREo2OH4hDuJBZXd41oTQQSholkFCgSAIgiDWZRLsr4pq3u8WBdHMXAPi4Cklzk5Tyo2fi9Q6wAWisDsjYf1aHCEIgiAIYp3nVHN/qNzrcxkcmTZsRdDZTLAzlYrkziJFgiAIgiB6DOUzNhH/syk3dlc0divOYpCKg6yGKzVaC3i3RSJ5oEiVIAiCIIh1Do39ASr18xXVeBSEwdeKzt7grQNlN28uPEA4TPiZkrDOjunGW3JhENF0tlTRzUY418DAuAeCIAiCILoJfcZvChX1EVBpXwwi4d6Ybn0urdjRVPapopmVuK+DiG2DKzHytRwiLgKVyVRjEeSlDs4zlAsXgiAIgiBKDN/6ujNjEthKRbfuUvS6I0VKNrhAk25pSoJNB5/vpXFzNBAxbbR4E0EQBEGUkjj7t6ySjmya9QUIhMtEal5wZoTGBuNgx06JEsd063ORIkEQBEEQJeHYcVvGdPaDtKIOM91cDF/9tytx83ild+VGIqXMVIzfWtHMOLZK5DpYEuI9LVIhCIIgCKJkqNajsoo6bXy3SvNJRTWvVuK1B4lYnaeXsTFfwEljVTGNvSY9p8vgvGeImARBEARBlAyokD2VtM5Wg4h4TtGtsUqcneCZGVEIyth2isoSis7MmMre9uRFM1fQTpUEQRAE0R3A7gIUBzq7UklYRyuDGzYTIaUBBYQOQkUzxyi4WyVBEHlGUf4f3XFz7c40z50AAAAASUVORK5CYII=";
+</script>
+<script>
+var EntCore = (function(){
+  "use strict";
+  // Saca tildes pero CONSERVA la Ñ (ACUÑAS sigue siendo ACUÑAS).
+  function sinTildes(s){ return String(s==null?"":s).replace(/ñ/g,"\u0001").replace(/Ñ/g,"\u0002").normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/\u0001/g,"ñ").replace(/\u0002/g,"Ñ"); }
+  function normNombre(s){ return sinTildes(s).toUpperCase().replace(/[^A-ZÑ ]+/g," ").replace(/\s+/g," ").trim(); }
+  function soloNum(s){ var m = String(s==null?"":s).match(/\d+/); return m ? String(parseInt(m[0],10)) : ""; }
+  var MESES = ["enero","febrero","marzo","abril","mayo","junio","julio","agosto","septiembre","octubre","noviembre","diciembre"];
+  var RE_TIPO = /\b(ANTE?OJOS?|ANTEJOS?|ANTOJOS?|AUD[IÍ]FONOS?|AUDIFONOS?|AUDIOFONOS?)\b/i;
+  function tipoDe(s){ var m = sinTildes(s).toUpperCase().match(RE_TIPO); if(!m) return ""; return /^AUD/.test(m[1]) ? "audio" : "anteojos"; }
+
+  /* Nombre de archivo:
+     OC:  "8871-410 URAGA ALEXIS MIGUEL OC 20552"  (a veces con texto extra al final)
+     EXP: "EXPEDIENTE 8871 - 410 LETRA U AÑO 2026 URAGA ALEXIS MIGUEL ANTEOJOS X2 ALTA GRADUACION" */
+  // Calificativos que a veces quedan pegados al nombre en el archivo ("PEREA MARIA ISABEL BAJA Y
+  // LABORATORIO", "… ALTA GRADUACION", "… PROGRAMA CONTEXTO DE ENCIERRO"): van a "extra", no al nombre.
+  var RE_CALIF = /\s+\b(?:ALTA\s+GRADUACION|BAJA\s+GRADUACION|ALTA\s+Y\b|BAJA\s+Y\b|LABORATORIO|PROGRAMA|CONTEXTO\s+DE\s+ENCIERRO|BIFOCAL(?:ES)?|MULTIFOCAL(?:ES)?)\b.*$/;
+  function separarCalif(pac){
+    var p = String(pac || ""), m = p.match(RE_CALIF);
+    return m ? { pac: p.slice(0, m.index).trim(), calif: m[0].trim() } : { pac: p.trim(), calif: "" };
+  }
+  function leerNombreArchivo(nombre){
+    var s = String(nombre||"").replace(/\.pdf$/i,"").replace(/_/g," ").replace(/\s+/g," ").trim();
+    var u = sinTildes(s).toUpperCase();
+    var m = u.match(/EXPEDIENTE\s+(\d{1,6})\s*[-\/]\s*(\d{2,4})\s+LETRA\s+([A-Z])\s+A(?:Ñ|N|NI)?O\s+(\d{4})\d?\s+(.+)$/);
+    if(m){
+      var resto = m[5], t = resto.match(RE_TIPO), pac = t ? resto.slice(0, t.index) : resto, desp = t ? resto.slice(t.index + t[0].length) : "";
+      var x = desp.match(/\bX\s*(\d{1,2})\b/);
+      var sc = separarCalif(normNombre(pac));
+      return { rol:"expediente", num:soloNum(m[1]), cod:soloNum(m[2]), letra:m[3], anio:m[4], paciente:sc.pac,
+               tipo: t ? tipoDe(t[0]) : "", cantidad: x ? parseInt(x[1],10) : null,
+               extra: [sc.calif, desp.replace(/\bX\s*\d{1,2}\b/,"").trim()].filter(Boolean).join(" ") };
+    }
+    m = u.match(/^(\d{1,6})\s*-\s*(\d{2,4})\s+(.+?)\s+O\.?\s*C\.?\s*(?:N[°ºO]?\.?\s*)?(\d{4,6})\b\s*(.*)$/);
+    if(m){ var so = separarCalif(normNombre(m[3])); return { rol:"oc", num:soloNum(m[1]), cod:soloNum(m[2]), paciente:so.pac, oc:m[4], extra:[so.calif, m[5].trim()].filter(Boolean).join(" ") }; }
+    return { rol:"", paciente:"" };
+  }
+
+  /* Contenido (capa de texto del PDF; vacío si es escaneado). */
+  function leerContenido(texto){
+    var t = sinTildes(String(texto||"")).toUpperCase();
+    if(!t.trim()) return { rol:"" };
+    var r = { rol:"" }, m;
+    if(/ORDEN\s+DE\s+COMPRA/.test(t) && /EXPTE/.test(t)){
+      r.rol = "oc";
+      m = t.match(/EXPTE\.?\s*:?\s*(\d{1,6})\s*\/\s*(\d{2,4})\s*\/\s*([A-Z])\s*\/\s*(\d{4})/);
+      if(m){ r.num = soloNum(m[1]); r.cod = soloNum(m[2]); r.letra = m[3]; r.anio = m[4]; }
+      m = t.match(/PACIENTE\s*:?\s*([A-ZÑ ,.'-]{4,80}?)\s*(?:\n|$|\.\s)/);
+      if(m) r.paciente = normNombre(m[1]);
+      // N° de OC: el número suelto que el sistema imprime junto a "Nro:" del encabezado, antes de "ORDEN DE COMPRA".
+      var cab = t.slice(0, Math.max(0, t.indexOf("ORDEN DE COMPRA")) + 400);
+      var c = cab.match(/LIBRAMIENTO\s*:?\s*\d+\s+(\d{4,6})\b/) || cab.match(/\bNRO\s*:?\s*(\d{5,6})\b/) || cab.match(/^\s*(\d{5,6})\s*$/m);
+      if(c) r.oc = c[1];
+      // Fecha de la OC: "SAN MIGUEL DE TUCUMAN, 6 de Octubre de 2026"
+      m = t.match(/SAN\s+MIGUEL\s+DE\s+TUCUMAN\s*,\s*(\d{1,2})\s+DE\s+([A-Z]+)\s+DE\s+(20\d{2})/);
+      if(m){ var mes = MESES.indexOf(m[2].toLowerCase()); if(mes >= 0) r.fechaOC = String(m[1]).padStart(2,"0") + "/" + String(mes + 1).padStart(2,"0") + "/" + m[3]; }
+      // Proveedor: el sistema lo imprime dos veces (Proveedor y Nombre Fantasía); es el renglón
+      // de razón social que se repite.
+      var cuenta = {};
+      t.split(/\n/).map(function(l){ return l.trim(); }).forEach(function(l){
+        if(l.length >= 4 && l.length <= 60 && /^[A-Z0-9Ñ .,&'-]+$/.test(l) && /[A-Z]{3}/.test(l) && !/^(TUCUMAN|ORIGINAL|INMEDIATA|CHEQUE|TRANSFERENCIAS|ORDEN DE COMPRA)$/.test(l)) cuenta[l] = (cuenta[l] || 0) + 1;
+      });
+      var rep = Object.keys(cuenta).filter(function(l){ return cuenta[l] >= 2; });
+      var conSoc = rep.filter(function(l){ return /\b(S\.?R\.?L|S\.?A|SAS|SOCIEDAD|OPTICA|GRUPO)\b/.test(l); });
+      if(conSoc.length || rep.length) r.proveedor = (conSoc[0] || rep[0]).replace(/\s+/g, " ");
+      m = t.match(/SOLICITUD\s+DE\s+(\d{1,2})\s*-?\s*(?:ANTE|AUD)/);
+      if(m) r.cantidad = parseInt(m[1],10);
+      r.tipo = tipoDe(t);
+      return r;
+    }
+    if(/EXPEDIENTE/.test(t) && /LETRA/.test(t)){
+      r.rol = "expediente";
+      var lin = (t.split(/\n/).filter(function(l){ return /EXPEDIENTE/.test(l) && /LETRA/.test(l); })[0]) || "";
+      if(lin){
+        var lm = lin.match(/LETRA\s+([A-Z])\b/); if(lm) r.letra = lm[1];
+        var cm = lin.match(/\/\s*(\d{2,4})\b/); if(cm) r.cod = soloNum(cm[1]);
+        // pdf.js a veces desordena el renglón ("EXPEDIENTE 2026 / 410 LETRA U AÑO 8871"):
+        // el año es el 20xx, el código va después de "/", el número es el que queda.
+        var nums = (lin.match(/\d+/g) || []).filter(function(n){ return n !== (cm ? cm[1] : null); });
+        var anios = nums.filter(function(n){ return /^20\d{2}$/.test(n); });
+        if(anios.length){ r.anio = anios[anios.length === 1 ? 0 : anios.length - 1]; }
+        var resto = nums.filter(function(n){ return n !== r.anio; });
+        if(!resto.length && anios.length > 1) resto = [anios[0]];
+        if(resto.length) r.num = soloNum(resto[0]);
+      }
+      m = t.match(/CAUSANTE\s+(.+?)\s*(?:\n|ASUNTO)/); if(m) r.paciente = normNombre(m[1]);
+      m = t.match(/ASUNTO\s+(.+?)\s*(?:\n|SELLOS|$)/); if(m){ r.asunto = m[1].trim(); r.tipo = tipoDe(m[1]); }
+      return r;
+    }
+    return r;
+  }
+
+  /* Une nombre de archivo + contenido. Manda el CONTENIDO (es lo que dice el documento);
+     si el nombre del archivo dice otra cosa, queda una alerta. */
+  function combinar(nombreArchivo, texto){
+    var a = leerNombreArchivo(nombreArchivo), c = leerContenido(texto), r = {}, alertas = [];
+    r.rol = c.rol || a.rol || "otro";
+    ["num","cod","letra","anio","oc","tipo","cantidad","paciente","fechaOC","proveedor"].forEach(function(k){
+      var vc = c[k], va = a[k];
+      r[k] = (vc != null && vc !== "") ? vc : (va != null && va !== "" ? va : (k==="cantidad" ? null : ""));
+      if(vc && va && String(vc) !== String(va)){
+        if(k === "paciente"){ if(!mismaPersona(vc, va)) alertas.push("El nombre del archivo dice \u201c"+va+"\u201d y el documento \u201c"+vc+"\u201d."); }
+        else if(k === "num" || k === "cod" || k === "oc" || k === "anio") alertas.push("El nombre del archivo dice "+etq(k)+" "+va+" y el documento "+vc+".");
+      }
+    });
+    if(a.extra) r.extra = a.extra;
+    r.leidoDe = c.rol ? "contenido" : (a.rol ? "nombre" : "nada");
+    r.alertas = alertas;
+    return r;
+  }
+  function etq(k){ return k==="num" ? "N\u00b0 de expediente" : k==="cod" ? "c\u00f3digo" : k==="oc" ? "N\u00b0 de OC" : k==="anio" ? "a\u00f1o" : k; }
+  // Mismo paciente: las palabras de enlace (DE, DEL, LA, LOS, Y…) NO cuentan, y el APELLIDO (primera
+  // palabra) tiene que estar en los dos. Antes "CARRIZO MARCELA DEL CARMEN" y "LEIVA CLAUDIA DEL CARMEN"
+  // daban iguales por "DEL" + "CARMEN".
+  var ENLACE = { DE:1, DEL:1, LA:1, LAS:1, LOS:1, Y:1, E:1, VDA:1, VIUDA:1 };
+  function palabrasNombre(s){ return normNombre(s).split(" ").filter(function(w){ return w.length > 1 && !ENLACE[w]; }); }
+  function mismaPersona(a, b){
+    var x = palabrasNombre(a), y = palabrasNombre(b);
+    if(!x.length || !y.length) return false;
+    if(y.indexOf(x[0]) < 0 && x.indexOf(y[0]) < 0) return false;          // el apellido tiene que coincidir
+    var comunes = x.filter(function(w){ return y.indexOf(w) >= 0; }).length;
+    return comunes >= Math.min(2, Math.min(x.length, y.length));
+  }
+  function clave(num, cod){ return (num && cod) ? (soloNum(num)+"/"+soloNum(cod)) : ""; }
+
+  /* Agrupa archivos analizados en entregas (OC + expediente del mismo paciente). */
+  /* Agrupa los PDF leídos en pacientes. REGLAS (cada OC es única para su expediente y su paciente):
+     1) Mismo N° de OC = mismo PDF repetido → se cuenta una sola vez.
+     2) Dos OC con N° distinto NUNCA van juntas, aunque digan el mismo expediente.
+     3) Mismo N° de expediente pero OTRO paciente → registros separados y aviso de conflicto
+        (ej. la OC 20304 de CARRIZO figura con el expediente 9585/410 de VALENZUELA).
+     4) Expediente y OC se unen por N° de expediente + paciente; si el N° no coincide, por nombre
+        (único) con aviso. */
+  function agrupar(items){
+    function tiene(g, rol){ return g.items.some(function(i){ return i.rol === rol; }); }
+    function ocDe(g){ var x = g.items.filter(function(i){ return i.rol === "oc" && i.oc; })[0]; return x ? x.oc : ""; }
+    function pacDe(g){ var x = g.items.filter(function(i){ return i.rol === "oc" && i.paciente; })[0] || g.items.filter(function(i){ return i.paciente; })[0]; return x ? x.paciente : ""; }
+    // 1) PDF repetidos de la misma OC
+    var vistos = {}, lista = [];
+    items.forEach(function(it){
+      if(it.rol === "oc" && it.oc){ if(vistos[it.oc]){ vistos[it.oc].repetidos = (vistos[it.oc].repetidos || 0) + 1; return; } vistos[it.oc] = it; }
+      lista.push(it);
+    });
+    var grupos = [];
+    lista.forEach(function(it){
+      var k = clave(it.num, it.cod), g = null;
+      if(k){
+        g = grupos.filter(function(h){
+          if(h.clave !== k) return false;
+          if(it.rol === "oc" && it.oc && ocDe(h) && ocDe(h) !== it.oc) return false;   // 2)
+          if(it.rol === "oc" && tiene(h, "oc")) return false;
+          if(it.rol === "expediente" && tiene(h, "expediente")) return false;
+          var p = pacDe(h);
+          return !p || !it.paciente || mismaPersona(p, it.paciente);                    // 3)
+        })[0] || null;
+      }
+      if(!g){ g = { clave: k, items: [], alertas: [] }; grupos.push(g); }
+      g.items.push(it);
+    });
+    // 4) Grupos incompletos: pareja por NOMBRE (única)
+    for(var i = 0; i < grupos.length; i++){
+      var g = grupos[i]; if(!g) continue;
+      var falta = tiene(g,"oc") && !tiene(g,"expediente") ? "expediente" : (!tiene(g,"oc") && tiene(g,"expediente") ? "oc" : "");
+      if(!falta) continue;
+      var pac = pacDe(g);
+      var cands = [];
+      for(var j = 0; j < grupos.length; j++){
+        var h = grupos[j]; if(!h || h === g) continue;
+        if(!tiene(h, falta) || tiene(h, falta === "oc" ? "expediente" : "oc")) continue;
+        if(mismaPersona(pac, pacDe(h))) cands.push(j);
+      }
+      if(cands.length !== 1) continue;
+      var hh = grupos[cands[0]];
+      if(g.clave !== hh.clave){
+        var kExp = falta === "oc" ? g.clave : hh.clave, kOc = falta === "oc" ? hh.clave : g.clave;
+        g.alertas.push("Se asociaron por nombre: el expediente figura como " + kExp + " y la OC como " + kOc + ". Revis\u00e1 cu\u00e1l es el correcto.");
+      }
+      g.items = g.items.concat(hh.items); grupos[cands[0]] = null;
+    }
+    grupos = grupos.filter(Boolean);
+    // 3) Avisos de conflicto: el mismo expediente en pacientes distintos
+    grupos.forEach(function(g){
+      if(!g.clave) return;
+      grupos.forEach(function(h){
+        if(h === g || h.clave !== g.clave) return;
+        var otro = pacDe(h), oco = ocDe(h);
+        if(otro && pacDe(g) && mismaPersona(otro, pacDe(g))){
+          g.alertas.push("Este paciente tiene otra OC" + (oco ? " (" + oco + ")" : "") + " con el mismo expediente. Cada OC es \u00fanica: si una est\u00e1 anulada, eleg\u00ed la v\u00e1lida en \u00abCruzar y revisar\u00bb.");
+          return;
+        }
+        g.alertas.push("El expediente " + g.clave + " tambi\u00e9n figura para " + (otro || "otro paciente") + (oco ? " (OC " + oco + ")" : "") + ". Cada OC es \u00fanica: revis\u00e1 con Compras cu\u00e1l es el expediente correcto.");
+      });
+    });
+    return grupos.map(function(g){
+      var get = function(rol, k){ var it = g.items.filter(function(x){ return x.rol === rol && x[k]; })[0]; return it ? it[k] : ""; };
+      var exp = g.items.filter(function(x){ return x.rol === "expediente"; })[0] || {};
+      var oc = g.items.filter(function(x){ return x.rol === "oc"; })[0] || {};
+      g.datos = {
+        num: exp.num || oc.num || "", cod: exp.cod || oc.cod || "",
+        letra: exp.letra || oc.letra || "", anio: exp.anio || oc.anio || "",
+        oc: get("oc","oc"), paciente: oc.paciente || exp.paciente || (g.items[0]||{}).paciente || "",
+        tipo: exp.tipo || oc.tipo || "", cantidad: oc.cantidad || exp.cantidad || null, extra: exp.extra || oc.extra || "",
+        fechaOC: oc.fechaOC || "", proveedor: oc.proveedor || "",
+        // Todos los N° de expediente con que figura (si la OC y la carátula no coinciden, se encuentra por los dos)
+        claves: g.items.map(function(x){ return clave(x.num, x.cod); }).filter(function(k, ix, arr){ return k && arr.indexOf(k) === ix; })
+      };
+      g.items.forEach(function(it){ (it.alertas||[]).forEach(function(a){ if(g.alertas.indexOf(a) < 0) g.alertas.push(a); }); });
+      g.repetidos = g.items.reduce(function(s, it){ return s + (it.repetidos || 0); }, 0);
+      if(!tiene(g,"oc")) g.alertas.push("Falta la orden de compra.");
+      if(!tiene(g,"expediente")) g.alertas.push("Falta el PDF del expediente.");
+      return g;
+    });
+  }
+
+  function expedienteTexto(d){
+    if(!d || !d.num) return "";
+    return d.num + "/" + (d.cod||"") + (d.letra ? "/"+d.letra : "") + (d.anio ? "/"+d.anio : "");
+  }
+  /* "8871/410/U/2026" (formato del generador) → partes */
+  function partirExpediente(s){
+    var m = sinTildes(String(s||"")).toUpperCase().match(/(\d{1,6})\s*[\/\-]\s*(\d{2,4})(?:\s*[\/\-]\s*([A-Z]))?(?:\s*[\/\-]\s*(\d{4}))?/);
+    return m ? { num:soloNum(m[1]), cod:soloNum(m[2]), letra:m[3]||"", anio:m[4]||"" } : null;
+  }
+  return { normNombre:normNombre, leerNombreArchivo:leerNombreArchivo, leerContenido:leerContenido, combinar:combinar,
+           agrupar:agrupar, mismaPersona:mismaPersona, clave:clave, expedienteTexto:expedienteTexto,
+           partirExpediente:partirExpediente, tipoDe:tipoDe, soloNum:soloNum };
+})();
+if(typeof module !== "undefined" && module.exports) module.exports = EntCore;
+
+/* ===== Interpretación de lo que escribe el usuario en el buscador =====
+   Entiende, entre otros: "OC12345", "OC 12345", "O.C. N° 12.345", "orden 12345", "OC-12345",
+   "8871/410", "8871-410", "8871 410", "8871/410/U/2026", "Expte 8871", "EXP8871/410",
+   "88714102026" no (ambiguo), "uraga", "alexis uraga", "Uraga, Alexis", "acuna" (= ACUÑA). */
+var EntConsulta = (function(){
+  "use strict";
+  function fold(s){ return String(s == null ? "" : s).toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/Ñ/g, "N"); }
+  var STOP = { DE:1, DEL:1, LA:1, LAS:1, LOS:1, Y:1, EL:1, PACIENTE:1, PARA:1, SR:1, SRA:1 };
+  function sinCeros(n){ var s = String(n || "").replace(/^0+(?=\d)/, ""); return s; }
+  function interpretar(q){
+    var t = fold(q);
+    // Separa letras pegadas a números: "OC12345" → "OC 12345", "EXP8871" → "EXP 8871"
+    t = t.replace(/([A-Z])(?=\d)/g, "$1 ").replace(/(\d)(?=[A-Z]{2,})/g, "$1 ");
+    // Puntos de miles dentro de un número: "20.552" → "20552" (no toca "8871/410")
+    t = t.replace(/(\d)\.(?=\d{3}(?!\d))/g, "$1");
+    var r = { oc: [], exp: [], nums: [], palabras: [], tipo: "" };
+    // N° de OC con prefijo: OC / O.C. / ORDEN (DE COMPRA) / OCN° …
+    t = t.replace(/\b(?:O\s*\.?\s*C\s*\.?|ORDEN(?:ES)?(?:\s+DE\s+COMPRA)?)\s*(?:N\s*[°ºO]?\s*\.?|NRO\.?|NUM(?:ERO)?\.?|#)?\s*[:\-]?\s*(\d{3,7})\b/g, function(_, n){ r.oc.push(sinCeros(n)); return " "; });
+    // Expediente: 8871/410(/U)(/2026) con / - o espacio; con o sin "EXPTE"
+    t = t.replace(/\b(?:EXP(?:TE|EDIENTE)?\s*\.?\s*(?:N\s*[°ºO]?\s*\.?|NRO\.?)?\s*[:\-]?\s*)?(\d{1,6})\s*[\/\-\s]\s*(\d{2,4})(?:\s*[\/\-\s]\s*([A-Z]))?(?:\s*[\/\-\s]\s*(20\d{2}))?\b/g,
+      function(m, n, c, l, a){
+        // "20552 2026" no es expediente; un código de 4 cifras solo si viene "/" o "-"
+        if(c.length === 4 && !/[\/\-]/.test(m)) return m;
+        r.exp.push({ num: sinCeros(n), cod: sinCeros(c), letra: l || "", anio: a || "" }); return " ";
+      });
+    // Expediente con prefijo pero solo el número: "EXPTE 8871"
+    t = t.replace(/\bEXP(?:TE|EDIENTE)?\s*\.?\s*(?:N\s*[°ºO]?\s*\.?|NRO\.?)?\s*[:\-]?\s*(\d{1,6})\b/g, function(_, n){ r.exp.push({ num: sinCeros(n), cod: "", letra: "", anio: "" }); return " "; });
+    // Números sueltos: pueden ser N° de expediente o de OC
+    t = t.replace(/\b\d{1,8}\b/g, function(n){ r.nums.push(sinCeros(n)); return " "; });
+    t.split(/[^A-Z]+/).forEach(function(w){
+      if(!w || STOP[w]) return;
+      if(/^(ANTE?OJOS?|ANTEJOS?|LENTES?)$/.test(w)){ r.tipo = "anteojos"; return; }
+      if(/^(AUDIFONOS?|AUDIOFONOS?|AUDIFONO)$/.test(w)){ r.tipo = "audio"; return; }
+      if(/^(OC|O|C|EXP|EXPTE|EXPEDIENTE|ORDEN|ORDENES|COMPRA|NRO|NUM|NUMERO|N)$/.test(w)) return;
+      if(w.length >= 2) r.palabras.push(w);
+    });
+    r.vacia = !r.oc.length && !r.exp.length && !r.nums.length && !r.palabras.length;
+    return r;
+  }
+  /* Puntaje de un registro para la consulta (0 = no coincide). */
+  function puntaje(rec, q){
+    var num = sinCeros(rec.num), cod = sinCeros(rec.cod);
+    // Expedientes alternativos (OC y carátula con N° distinto): "9585/410", "9589/410"…
+    var alt = (rec.claves || []).map(function(k){ var p = String(k).split("/"); return { num: sinCeros(p[0]), cod: sinCeros(p[1] || "") }; });
+    if(!alt.some(function(x){ return x.num === num && x.cod === cod; })) alt.unshift({ num: num, cod: cod });
+    var ocs = (rec.ocs && rec.ocs.length ? rec.ocs : (rec.oc ? [rec.oc] : [])).map(sinCeros);
+    var nomW = fold(rec.pacienteNorm || rec.paciente).split(/[^A-Z]+/).filter(Boolean);
+    var p = 0, i;
+    if(q.tipo && rec.tipo && rec.tipo !== q.tipo) return 0;
+    for(i = 0; i < q.oc.length; i++){
+      var o = q.oc[i];
+      if(ocs.indexOf(o) >= 0) p += 100; else if(o.length >= 4 && ocs.some(function(x){ return x.indexOf(o) === 0; })) p += 40; else return 0;
+    }
+    for(i = 0; i < q.exp.length; i++){
+      var e = q.exp[i];
+      var hit = alt.filter(function(x){ return x.num === e.num && (!e.cod || e.cod === x.cod); });
+      if(!hit.length) return 0;
+      var principal = hit.some(function(x){ return x.num === num && x.cod === cod; });
+      if(principal && e.letra && rec.letra && e.letra !== String(rec.letra).toUpperCase()) return 0;
+      if(principal && e.anio && rec.anio && e.anio !== String(rec.anio)) return 0;
+      p += principal ? 90 : 60;
+    }
+    for(i = 0; i < q.nums.length; i++){
+      var n = q.nums[i];
+      if(ocs.indexOf(n) >= 0) p += 80;
+      else if(n === num) p += 70;
+      else if(cod && n === num + cod) p += 70;              // "8871410"
+      else if(alt.some(function(x){ return x.num === n || (x.cod && n === x.num + x.cod); })) p += 50;
+      else if(n.length >= 4 && ocs.some(function(x){ return x.indexOf(n) === 0; })) p += 30;
+      else if(n.length >= 3 && num.indexOf(n) === 0) p += 20;
+      else return 0;
+    }
+    for(i = 0; i < q.palabras.length; i++){
+      var w = q.palabras[i];
+      if(nomW.indexOf(w) >= 0) p += 20;
+      else if(w.length >= 3 && nomW.some(function(x){ return x.indexOf(w) === 0; })) p += 10;
+      else return 0;
+    }
+    if(!q.oc.length && !q.exp.length && !q.nums.length && !q.palabras.length) return q.tipo ? 1 : 0;
+    return p;
+  }
+  function buscar(lista, texto){
+    var q = interpretar(texto);
+    if(q.vacia && !q.tipo) return [];
+    return lista.map(function(r){ return { r: r, p: puntaje(r, q) }; })
+      .filter(function(x){ return x.p > 0; })
+      .sort(function(a, b){ return b.p - a.p || (b.r.creadoMs || 0) - (a.r.creadoMs || 0); })
+      .map(function(x){ return x.r; });
+  }
+  return { interpretar: interpretar, puntaje: puntaje, buscar: buscar, fold: fold };
+})();
+if(typeof module !== "undefined" && module.exports) module.exports = EntConsulta;
+</script>
+<script>
+/* ===== Calendario de días hábiles — Mesa de Entradas (anteojos / audífonos) =====
+   Lógica pura (sin DOM). Plazo del trámite: 10 días hábiles contados desde el día SIGUIENTE al ingreso.
+   No cuentan sábados, domingos ni los feriados de la lista (editable desde el panel de Jorge). */
+var MesaCal = (function(){
+  "use strict";
+  var PLAZO = 10;
+  var NOMBRES = {
+    "2026-01-01":"Año Nuevo", "2026-02-16":"Carnaval", "2026-02-17":"Carnaval",
+    "2026-03-23":"Día no laborable", "2026-03-24":"Día de la Memoria",
+    "2026-04-02":"Malvinas", "2026-04-03":"Viernes Santo", "2026-05-01":"Día del Trabajador",
+    "2026-05-25":"Revolución de Mayo", "2026-06-15":"Paso a la Inmortalidad de Güemes",
+    "2026-07-09":"Día de la Independencia", "2026-07-10":"Día no laborable",
+    "2026-08-17":"Paso a la Inmortalidad de San Martín", "2026-09-24":"Batalla de Tucumán (provincial)",
+    "2026-10-12":"Diversidad Cultural", "2026-11-23":"Soberanía Nacional", "2026-12-07":"Día no laborable",
+    "2026-12-08":"Inmaculada Concepción", "2026-12-25":"Navidad",
+    "2027-01-01":"Año Nuevo", "2027-02-08":"Carnaval", "2027-02-09":"Carnaval",
+    "2027-03-24":"Día de la Memoria", "2027-03-26":"Viernes Santo", "2027-04-02":"Malvinas",
+    "2027-05-25":"Revolución de Mayo", "2027-07-09":"Día de la Independencia",
+    "2027-09-24":"Batalla de Tucumán (provincial)", "2027-12-08":"Inmaculada Concepción", "2027-12-25":"Navidad"
+  };
+  var DEF = Object.keys(NOMBRES).sort();
+  var DIAS = ["domingo","lunes","martes","miércoles","jueves","viernes","sábado"];
+  function pad(n){ return String(n).padStart(2, "0"); }
+  function iso(d){ return d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate()); }
+  function fmt(d){ return pad(d.getDate()) + "/" + pad(d.getMonth() + 1) + "/" + d.getFullYear(); }
+  function fmtLargo(d){ return DIAS[d.getDay()] + " " + fmt(d); }
+  function hora(d){ return pad(d.getHours()) + ":" + pad(d.getMinutes()); }
+  function dia(ms){ var d = new Date(ms); return new Date(d.getFullYear(), d.getMonth(), d.getDate()); }
+  function sig(d){ return new Date(d.getFullYear(), d.getMonth(), d.getDate() + 1); }
+  function conjunto(l){ var s = {}; (l && l.length ? l : DEF).forEach(function(x){ s[x] = 1; }); return s; }
+  function habil(d, s){ var w = d.getDay(); return w !== 0 && w !== 6 && !s[iso(d)]; }
+  /* Fecha del día hábil N contado desde el día siguiente a "desdeMs". */
+  function sumarHabiles(desdeMs, n, lista){
+    var s = conjunto(lista), d = dia(desdeMs), c = 0, g = 0;
+    while(c < n && g < 4000){ d = sig(d); if(habil(d, s)) c++; g++; }
+    return d;
+  }
+  /* Días hábiles cumplidos entre el día del ingreso (no cuenta) y "hastaMs" (cuenta). */
+  function habilesEntre(desdeMs, hastaMs, lista){
+    var s = conjunto(lista), a = dia(desdeMs), b = dia(hastaMs), c = 0, g = 0;
+    while(a < b && g < 4000){ a = sig(a); if(habil(a, s)) c++; g++; }
+    return c;
+  }
+  function situacion(m, lista, ahoraMs){
+    var plazo = m.plazo || PLAZO;
+    var trans = habilesEntre(m.ingresoMs, ahoraMs || Date.now(), lista);
+    return { transcurridos: trans, restantes: plazo - trans, plazo: plazo, vence: sumarHabiles(m.ingresoMs, plazo, lista) };
+  }
+  function dh(n){ return n === 1 ? "1 día hábil" : n + " días hábiles"; }
+  /* Semáforo según el estado efectivo (entregado / en_mesa / ingresado / trabajo). */
+  function semaforo(sit, efectivo){
+    if(efectivo === "entregado") return { cls: "gris", txt: "Entregada al paciente" };
+    if(efectivo === "en_mesa") return { cls: "azul", txt: "OC lista en Mesa de Entradas" };
+    if(sit.restantes < 0) return { cls: "rojo", txt: "Vencido hace " + dh(-sit.restantes) };
+    if(sit.restantes === 0) return { cls: "rojo", txt: "Hoy se cumplen los " + sit.plazo + " días hábiles" };
+    if(sit.restantes <= 2) return { cls: "ambar", txt: "Faltan " + dh(sit.restantes) };
+    return { cls: "verde", txt: "Faltan " + dh(sit.restantes) };
+  }
+  /* Texto (una fecha por renglón: dd/mm/aaaa o aaaa-mm-dd, con comentario opcional) → lista ISO */
+  function parseLista(txt){
+    var out = [], malas = [];
+    String(txt || "").split(/\n+/).forEach(function(l){
+      l = l.trim(); if(!l) return;
+      var y, mo, da, m = l.match(/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{4})/);
+      if(m){ da = +m[1]; mo = +m[2]; y = +m[3]; }
+      else { m = l.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/); if(m){ y = +m[1]; mo = +m[2]; da = +m[3]; } }
+      if(!m){ malas.push(l); return; }
+      var d = new Date(y, mo - 1, da);
+      if(d.getMonth() !== mo - 1 || d.getDate() !== da){ malas.push(l); return; }
+      var k = iso(d); if(out.indexOf(k) < 0) out.push(k);
+    });
+    out.sort();
+    return { lista: out, malas: malas };
+  }
+  function listaATexto(lista){
+    return (lista && lista.length ? lista : DEF).slice().sort().map(function(k){
+      var p = k.split("-"); return p[2] + "/" + p[1] + "/" + p[0] + (NOMBRES[k] ? "  " + NOMBRES[k] : "");
+    }).join("\n");
+  }
+  return { PLAZO: PLAZO, DEF: DEF, NOMBRES: NOMBRES, iso: iso, fmt: fmt, fmtLargo: fmtLargo, hora: hora,
+           sumarHabiles: sumarHabiles, habilesEntre: habilesEntre, situacion: situacion, semaforo: semaforo,
+           dh: dh, parseLista: parseLista, listaATexto: listaATexto };
+})();
+if(typeof module !== "undefined" && module.exports) module.exports = MesaCal;
+
+</script>
+<script>
+/* ===== MESA DE ENTRADAS — anteojos y audífonos =====
+   Mismo Firebase que el generador (proyecto visitas-siprosa, login anónimo).
+   Colecciones: genres_mesa (ingresos), genres_mesa_usuarios (usuarios de mesa, contraseña solo como hash),
+   genres_mesa_config (feriados) y genres_registro_oc (registro de órdenes del generador: solo para ver
+   si la OC está emitida y registrar la entrega al paciente). */
+(function(){
+  "use strict";
+  var firebaseConfig = {
+    apiKey: "AIzaSyCDFcb5B7swNnetMOxXhVNQWaDxa1LVRF4",
+    authDomain: "visitas-siprosa.firebaseapp.com",
+    projectId: "visitas-siprosa",
+    storageBucket: "visitas-siprosa.firebasestorage.app",
+    messagingSenderId: "957519453967",
+    appId: "1:957519453967:web:e6c2bfac7a4da10fed287a",
+    measurementId: "G-GHDRCXE81C"
+  };
+  var COL = "genres_mesa", COL_U = "genres_mesa_usuarios", COL_CFG = "genres_mesa_config", COL_REG = "genres_registro_oc";
+  var SES_KEY = "mesa_pris_sesion";
+  var C = EntCore, K = MesaCal;
+  var db = null, usuario = null, mesa = [], reg = [], feriados = null;
+  var estado = { mesa: "conectando", reg: "conectando" }, escuchando = false;
+
+  var authReady = new Promise(function(resolve){
+    try{
+      if(!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+      db = firebase.firestore();
+      firebase.auth().signInAnonymously()
+        .then(function(){ resolve(true); })
+        .catch(function(err){ console.warn("Auth anónima falló (mesa):", err); resolve(false); });
+    }catch(err){ console.warn("Firebase no disponible (mesa):", err); resolve(false); }
+  });
+
+  function $(id){ return document.getElementById(id); }
+  function esc(t){ return String(t == null ? "" : t).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;"); }
+  function normUser(u){ return String(u || "").trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9._-]/g, ""); }
+  function ahora(){ var d = new Date(); return { ms: d.getTime(), fecha: K.fmt(d), hora: K.hora(d), txt: K.fmt(d) + " " + K.hora(d) }; }
+  function tipoTxt(t){ return t === "audio" ? "Audífonos" : t === "anteojos" ? "Anteojos" : "Prestación"; }
+  function tipoIco(t){ return t === "audio" ? "🎧" : "👓"; }
+  function ocsDe(r){ return r ? ((r.ocs && r.ocs.length) ? r.ocs : (r.oc ? [r.oc] : [])) : []; }
+  function claveDe(x){ return C.clave(x.num, x.cod); }
+
+  /* ---------- Contraseña: SHA-256 de "usuario|contraseña" (nunca se guarda en texto) ---------- */
+  function sha256Js(str){
+    function r(n,x){ return (x>>>n)|(x<<(32-n)); }
+    var Kk=[],H=[],p=2,c=0;
+    function frac(x){ return ((x-Math.floor(x))*4294967296)|0; }
+    while(c<64){ var esPrimo=true; for(var d=2;d*d<=p;d++){ if(p%d===0){ esPrimo=false; break; } }
+      if(esPrimo){ if(c<8) H[c]=frac(Math.pow(p,1/2)); Kk[c]=frac(Math.pow(p,1/3)); c++; } p++; }
+    var bytes=unescape(encodeURIComponent(str)), l=bytes.length, w=[];
+    for(var i=0;i<l;i++) w[i>>2]|=(bytes.charCodeAt(i)&255)<<(24-(i%4)*8);
+    w[l>>2]|=0x80<<(24-(l%4)*8);
+    var n=((l+8)>>6)*16+16; w[n-1]=l*8;
+    for(var j=0;j<n;j++) w[j]=w[j]|0;
+    for(var o=0;o<n;o+=16){
+      var W=w.slice(o,o+16), a=H.slice(0);
+      for(var t=0;t<64;t++){
+        if(t>=16){ var x=W[t-15], y=W[t-2];
+          W[t]=(W[t-16]+(r(7,x)^r(18,x)^(x>>>3))+W[t-7]+(r(17,y)^r(19,y)^(y>>>10)))|0; }
+        var t1=(a[7]+(r(6,a[4])^r(11,a[4])^r(25,a[4]))+((a[4]&a[5])^(~a[4]&a[6]))+Kk[t]+W[t])|0;
+        var t2=((r(2,a[0])^r(13,a[0])^r(22,a[0]))+((a[0]&a[1])^(a[0]&a[2])^(a[1]&a[2])))|0;
+        a=[(t1+t2)|0].concat(a); a[4]=(a[4]+t1)|0; a.length=8;
+      }
+      for(var q=0;q<8;q++) H[q]=(H[q]+a[q])|0;
+    }
+    var out=""; for(var z=0;z<8;z++) out+=("00000000"+(H[z]>>>0).toString(16)).slice(-8);
+    return out;
+  }
+  function hashClave(txt){
+    if(window.crypto && crypto.subtle && window.TextEncoder){
+      return crypto.subtle.digest("SHA-256", new TextEncoder().encode(txt)).then(function(buf){
+        return Array.prototype.map.call(new Uint8Array(buf), function(b){ return ("0" + b.toString(16)).slice(-2); }).join("");
+      });
+    }
+    return Promise.resolve(sha256Js(txt));
+  }
+
+  /* ---------- Ingreso / sesión ---------- */
+  window.verClave = function(){
+    var i = $("lg-pass"), b = $("lg-ojo"); if(!i) return;
+    var mostrar = i.type === "password";
+    i.type = mostrar ? "text" : "password";
+    b.textContent = mostrar ? "🙈" : "👁️"; b.title = mostrar ? "Ocultar contraseña" : "Mostrar contraseña"; b.setAttribute("aria-label", b.title);
+    i.focus();
+  };
+  async function validar(u, h){
+    var ok = await authReady; if(!ok || !db) throw new Error("No hay conexión con la base.");
+    var snap = await db.collection(COL_U).doc(u).get();
+    if(!snap.exists) return null;
+    var d = snap.data();
+    if(d.hash !== h || d.activo === false) return d.activo === false && d.hash === h ? { desactivado: true } : null;
+    return { u: u, n: d.nombre || u, h: h };
+  }
+  window.ingresar = async function(){
+    var u = normUser($("lg-user").value), c = $("lg-pass").value, err = $("lg-err"), btn = $("lg-btn");
+    err.textContent = "";
+    if(!u || !c){ err.textContent = "Escribí tu usuario y tu contraseña."; return; }
+    btn.disabled = true; btn.textContent = "Verificando…";
+    try{
+      var h = await hashClave(u + "|" + c);
+      var r = await validar(u, h);
+      if(!r){ err.textContent = "Usuario o contraseña incorrectos."; $("lg-pass").select(); return; }
+      if(r.desactivado){ err.textContent = "Tu usuario está desactivado. Consultá con Jorge."; return; }
+      usuario = r;
+      try{ if($("lg-rec").checked) localStorage.setItem(SES_KEY, JSON.stringify(r)); else localStorage.removeItem(SES_KEY); }catch(_){}
+      $("lg-pass").value = ""; $("lg-pass").type = "password"; $("lg-ojo").textContent = "👁️";
+      entrar();
+    }catch(e){
+      err.textContent = (e && e.code === "permission-denied") ? "Sin acceso a la base: falta la regla de Firestore de genres_mesa_usuarios." : ("No se pudo ingresar: " + (e && e.message || e));
+    }finally{ btn.disabled = false; btn.textContent = "Ingresar"; }
+  };
+  window.cerrarSesion = function(){
+    try{ localStorage.removeItem(SES_KEY); }catch(_){}
+    usuario = null;
+    $("app").style.display = "none"; $("login").style.display = "";
+    $("lg-user").value = ""; $("lg-err").textContent = "";
+    setTimeout(function(){ $("lg-user").focus(); }, 30);
+  };
+  function entrar(){
+    $("login").style.display = "none"; $("app").style.display = "";
+    $("hdr-nombre").textContent = usuario.n;
+    escuchar(); cambiarTab("nuevo"); render();
+    setTimeout(function(){ $("in-exp").focus(); }, 50);
+  }
+  async function sesionGuardada(){
+    var s = null;
+    try{ s = JSON.parse(localStorage.getItem(SES_KEY) || "null"); }catch(_){}
+    if(!s || !s.u || !s.h){ setTimeout(function(){ $("lg-user").focus(); }, 50); return; }
+    try{
+      var r = await validar(s.u, s.h);
+      if(r && !r.desactivado){ usuario = r; entrar(); return; }
+      try{ localStorage.removeItem(SES_KEY); }catch(_){}
+      $("lg-user").value = s.u;
+      $("lg-err").textContent = r && r.desactivado ? "Tu usuario está desactivado. Consultá con Jorge." : "Tu contraseña cambió: volvé a ingresar.";
+    }catch(e){ $("lg-user").value = s.u; $("lg-err").textContent = "No se pudo verificar la sesión. Ingresá de nuevo."; }
+  }
+
+  /* ---------- Datos en vivo ---------- */
+  function escuchar(){
+    if(escuchando) return; escuchando = true;
+    authReady.then(function(ok){
+      if(!ok || !db){ estado.mesa = estado.reg = "sin-acceso"; render(); return; }
+      db.collection(COL).onSnapshot(function(snap){
+        mesa = snap.docs.map(function(d){ var x = d.data(); x._id = d.id; return x; }).filter(function(m){ return !m.anulado; });
+        estado.mesa = "ok"; render();
+      }, function(err){ console.warn("Mesa onSnapshot:", err); estado.mesa = "sin-acceso"; render(); });
+      db.collection(COL_REG).onSnapshot(function(snap){
+        reg = snap.docs.map(function(d){ var x = d.data(); x._id = d.id; return x; }).filter(function(r){ return !r.descartado; });
+        estado.reg = "ok"; render();
+      }, function(err){ console.warn("Registro OC (mesa):", err); estado.reg = "sin-acceso"; render(); });
+      db.collection(COL_CFG).doc("feriados").onSnapshot(function(d){
+        var x = d.exists ? d.data() : null;
+        feriados = x && x.lista && x.lista.length ? x.lista : null; render();
+      }, function(err){ console.warn("Feriados (mesa):", err); });
+    });
+  }
+  /* Registro de órdenes del mismo expediente (prefiere el que ya tiene OC). */
+  function regDe(x){
+    var k = claveDe(x); if(!k) return null;
+    var c = reg.filter(function(r){ return claveDe(r) === k || (r.claves || []).indexOf(k) >= 0; });
+    if(x.anio) c = c.filter(function(r){ return !r.anio || !x.anio || String(r.anio) === String(x.anio) || (r.claves || []).indexOf(k) >= 0; });
+    c.sort(function(a, b){ return (ocsDe(b).length ? 1 : 0) - (ocsDe(a).length ? 1 : 0); });
+    return c[0] || null;
+  }
+  function efectivo(m, r){
+    if(m.estado === "entregado" || (r && r.entregado)) return "entregado";
+    if(m.estado === "en_mesa") return "en_mesa";
+    return m.estado || "ingresado";
+  }
+
+  /* ---------- Pestañas ---------- */
+  window.cambiarTab = function(t){
+    $("tab-nuevo").classList.toggle("on", t === "nuevo"); $("tab-lista").classList.toggle("on", t === "lista");
+    $("p-nuevo").style.display = t === "nuevo" ? "" : "none"; $("p-lista").style.display = t === "lista" ? "" : "none";
+    if(t === "lista"){ render(); setTimeout(function(){ $("ls-q").focus(); }, 30); }
+  };
+  window.marcarTipo = function(){
+    var v = tipoElegido();
+    $("tp-anteojos").classList.toggle("on", v === "anteojos"); $("tp-audio").classList.toggle("on", v === "audio");
+  };
+  function tipoElegido(){ var r = document.querySelector('input[name="in-tipo"]:checked'); return r ? r.value : ""; }
+  function msg(cls, html){ var m = $("in-msg"); m.className = "msg " + cls; m.innerHTML = html; }
+
+  /* ---------- Nuevo ingreso ---------- */
+  window.registrar = async function(){
+    var expTxt = $("in-exp").value.trim().toUpperCase().replace(/\s+/g, "");
+    var pac = $("in-pac").value.trim().replace(/\s+/g, " ").toUpperCase();
+    var tipo = tipoElegido(), tel = $("in-tel").value.trim();
+    var p = C.partirExpediente(expTxt);
+    if(!p || !p.num || !p.cod){ msg("er", "Revisá el <b>N° de expediente</b> (ej. 8871/410/U/2026)."); $("in-exp").focus(); return; }
+    if(!pac || pac.replace(/[^A-ZÑ]/gi, "").length < 3){ msg("er", "Escribí el <b>apellido y nombre</b> del paciente."); $("in-pac").focus(); return; }
+    if(!tipo){ msg("er", "Marcá si solicita <b>anteojos</b> o <b>audífonos</b>."); return; }
+    if(estado.mesa !== "ok"){ msg("er", "Todavía no hay conexión con la base. Esperá unos segundos y probá de nuevo."); return; }
+    var k = C.clave(p.num, p.cod);
+    var dup = mesa.filter(function(m){ return claveDe(m) === k && (!p.anio || !m.anio || String(m.anio) === p.anio); })[0];
+    if(dup){
+      msg("av", "⚠️ Este expediente <b>ya fue ingresado</b> el " + esc(dup.ingresoTxt) + " por " + esc(dup.usuarioNombre || dup.usuario) + " (" + esc(dup.paciente) + "). Lo dejé abierto en <b>Expedientes</b>.");
+      $("ls-q").value = dup.nroExp || k; $("ls-f").value = "todos"; cambiarTab("lista"); return;
+    }
+    var r = regDe(p);
+    if(r && ocsDe(r).length && !confirm("Este expediente ya tiene la ORDEN DE COMPRA N° " + ocsDe(r).join(" / ") + " (" + (r.paciente || "") + ").\n\nSi el paciente viene a RETIRARLA, buscalo en Expedientes.\n\n¿Registrarlo igual como un ingreso nuevo?")) return;
+    var btn = $("in-btn"); btn.disabled = true; btn.textContent = "Guardando…";
+    try{
+      var t = ahora(), anio = p.anio || String(new Date().getFullYear());
+      var vence = K.sumarHabiles(t.ms, K.PLAZO, feriados);
+      var doc = {
+        tipo: tipo, nroExp: expTxt, num: p.num, cod: p.cod, letra: p.letra || "", anio: p.anio || "",
+        paciente: pac, telefono: tel, estado: "ingresado", plazo: K.PLAZO,
+        ingresoMs: t.ms, ingresoTxt: t.txt, venceMs: vence.getTime(), venceTxt: K.fmt(vence),
+        usuario: usuario.u, usuarioNombre: usuario.n, vistoJorge: false, anulado: false,
+        historial: [t.txt + " · Ingreso cargado por " + usuario.n]
+      };
+      var id = ("m_" + p.num + "_" + p.cod + "_" + anio).replace(/[\/#\?\[\]\*\.]+/g, "_");
+      await db.collection(COL).doc(id).set(doc);
+      $("in-exp").value = ""; $("in-pac").value = ""; $("in-tel").value = "";
+      document.querySelectorAll('input[name="in-tipo"]').forEach(function(x){ x.checked = false; }); window.marcarTipo();
+      msg("ok", "✅ Ingreso registrado: <b>" + esc(expTxt) + "</b> — " + esc(pac) + " (" + tipoTxt(tipo) + ").<br>Vuelve a retirar la orden de compra a partir del <b>" + esc(K.fmtLargo(vence)) + "</b>. Imprimiendo la tirilla…");
+      imprimirTirilla(Object.assign({ _id: id }, doc));
+      setTimeout(function(){ $("in-exp").focus(); }, 50);
+    }catch(e){
+      msg("er", e && e.code === "permission-denied" ? "Sin acceso a la base: falta la regla de Firestore de <b>genres_mesa</b>." : "No se pudo guardar: " + esc(e && e.message || e));
+    }finally{ btn.disabled = false; btn.textContent = "💾 Registrar ingreso e imprimir tirilla"; }
+  };
+
+  /* ---------- Tirilla para el paciente ---------- */
+  function imprimirTirilla(m){
+    var vence = new Date(m.venceMs || K.sumarHabiles(m.ingresoMs, m.plazo || K.PLAZO, feriados).getTime());
+    var html = '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Tirilla</title><style>' +
+      '@page{size:auto;margin:10mm}*{box-sizing:border-box;margin:0;padding:0}body{font-family:Arial,sans-serif;color:#000}' +
+      '.t{width:95mm;border:1.5px dashed #000;border-radius:6px;padding:9mm 7mm 7mm;margin:0 auto}' +
+      '.lg{display:flex;align-items:center;justify-content:space-between;gap:6mm;margin-bottom:4mm}.lg img{height:12mm;width:auto;max-width:45mm}' +
+      '.k{font-size:9pt;font-weight:bold;letter-spacing:1px;text-transform:uppercase;text-align:center;border-top:1px solid #000;border-bottom:1px solid #000;padding:1.5mm 0;margin-bottom:4mm}' +
+      '.r{font-size:10.5pt;margin:1.6mm 0}.r b{font-size:11pt}.big{font-size:13pt;font-weight:bold}' +
+      '.v{border:2px solid #000;border-radius:5px;padding:3mm;text-align:center;margin:4mm 0 3mm}.v div{font-size:9.5pt}.v b{display:block;font-size:15pt;margin-top:1mm;text-transform:capitalize}' +
+      '.n{font-size:9pt;line-height:1.4}.f{font-size:8pt;color:#333;margin-top:3mm;text-align:right}</style></head><body><div class="t">' +
+      '<div class="lg">' + (window.LOGO1 ? '<img src="' + window.LOGO1 + '">' : "") + (window.LOGO2 ? '<img src="' + window.LOGO2 + '">' : "") + "</div>" +
+      '<div class="k">PRIS · Mesa de Entradas · Constancia de inicio de trámite</div>' +
+      '<div class="r">Prestación: <span class="big">' + tipoIco(m.tipo) + " " + esc(tipoTxt(m.tipo).toUpperCase()) + "</span></div>" +
+      '<div class="r">Paciente: <b>' + esc(m.paciente) + "</b></div>" +
+      '<div class="r">Expediente N°: <b>' + esc(m.nroExp) + "</b></div>" +
+      '<div class="r">Fecha de ingreso: <b>' + esc(m.ingresoTxt) + " hs</b></div>" +
+      '<div class="v"><div>Plazo: ' + (m.plazo || K.PLAZO) + " días hábiles. Puede volver a retirar su orden de compra a partir del</div><b>" + esc(K.fmtLargo(vence)) + "</b></div>" +
+      '<div class="n">Presentarse en <b>Mesa de Entradas del PRIS</b> con su <b>DNI</b> y esta tirilla. Con la orden de compra se dirige al proveedor.</div>' +
+      '<div class="f">Atendido por: ' + esc(m.usuarioNombre || "") + "</div>" +
+      "</div></body></html>";
+    var f = $("print-frame"), w = f.contentWindow, d = w.document;
+    d.open(); d.write(html); d.close();
+    var imgs = Array.prototype.slice.call(d.images || []);
+    var cargadas = Promise.all(imgs.map(function(im){ return im.complete ? 0 : new Promise(function(res){ im.onload = im.onerror = res; }); }));
+    Promise.race([cargadas, new Promise(function(res){ setTimeout(res, 1500); })])
+      .then(function(){ setTimeout(function(){ try{ w.focus(); w.print(); }catch(e){ alert("No se pudo abrir la impresión: " + (e && e.message || e)); } }, 150); });
+  }
+
+  /* ---------- WhatsApp ---------- */
+  function waNumero(tel){
+    var d = String(tel || "").replace(/\D/g, "");
+    if(!d) return "";
+    if(d.indexOf("54") === 0 && d.length >= 12) d = d.slice(2);
+    if(d.charAt(0) === "9" && d.length === 11) d = d.slice(1);
+    d = d.replace(/^0/, "");
+    if(d.length === 12 && d.substr(3, 2) === "15") d = d.slice(0, 3) + d.slice(5);       // 381 15 xxxxxxx
+    else if(d.length === 12 && d.substr(4, 2) === "15") d = d.slice(0, 4) + d.slice(6);  // 3863 15 xxxxxx
+    if(d.length === 7 || d.length === 8) d = "381" + d.slice(-7);                       // sin característica: Tucumán
+    return d.length === 10 ? "549" + d : "";
+  }
+  function waLink(m, ocTxt){
+    var n = waNumero(m.telefono); if(!n) return "";
+    var txt = "Hola " + m.paciente + ". Le informamos desde el PRIS (Programa Integrado de Salud) que su orden de compra de " +
+      tipoTxt(m.tipo).toLowerCase() + (ocTxt ? " N° " + ocTxt : "") + " (Expte. " + m.nroExp + ") ya está lista para retirar en Mesa de Entradas. Presentarse con DNI. Muchas gracias.";
+    return "https://wa.me/" + n + "?text=" + encodeURIComponent(txt);
+  }
+
+  /* ---------- Listado ---------- */
+  function items(){
+    var usados = {};
+    var lista = mesa.map(function(m){
+      var r = regDe(m); if(r) usados[r._id] = true;
+      var ocs = ocsDe(r).slice(); if(m.ocNro && ocs.indexOf(String(m.ocNro)) < 0) ocs.unshift(String(m.ocNro));
+      return { num: m.num, cod: m.cod, letra: m.letra, anio: m.anio, claves: r ? r.claves : null, ocs: ocs,
+               paciente: m.paciente, pacienteNorm: C.normNombre(m.paciente), tipo: m.tipo, creadoMs: m.ingresoMs,
+               _m: m, _r: r, _ef: efectivo(m, r), _sit: K.situacion(m, feriados) };
+    });
+    var solos = reg.filter(function(r){ return !usados[r._id]; }).map(function(r){
+      return Object.assign({}, r, { _r: r, _m: null, _ef: r.entregado ? "entregado" : (ocsDe(r).length ? "oc" : "tramite") });
+    });
+    return { mesa: lista, solos: solos };
+  }
+  function orden(a, b){
+    var pr = function(x){ return x._ef === "en_mesa" ? 0 : x._ef === "entregado" ? 3 : 1; };
+    return pr(a) - pr(b) || (a._ef === "entregado" ? (b._m.entregadoMs || 0) - (a._m.entregadoMs || 0) : a._sit.restantes - b._sit.restantes);
+  }
+  window.render = function(){
+    var box = $("ls-lista"), res = $("ls-res"); if(!box) return;
+    if(estado.mesa === "sin-acceso"){ box.innerHTML = '<div class="vacio" style="color:#b91c1c">Sin acceso a la base. Falta la regla de Firestore para <b>genres_mesa</b> (o el login anónimo).</div>'; return; }
+    if(estado.mesa !== "ok"){ box.innerHTML = '<div class="vacio">Conectando…</div>'; return; }
+    var it = items(), q = $("ls-q").value.trim(), f = $("ls-f").value;
+    var act = it.mesa.filter(function(x){ return x._ef !== "entregado"; });
+    $("cnt-act").textContent = act.length;
+    var n = { verde: 0, ambar: 0, rojo: 0, azul: 0 };
+    act.forEach(function(x){ var s = K.semaforo(x._sit, x._ef).cls; if(n[s] != null) n[s]++; });
+    res.innerHTML =
+      '<span class="chip azul" data-f="en_mesa">📦 ' + n.azul + " OC en mesa</span>" +
+      '<span class="chip verde" data-f="activos">🟢 ' + n.verde + " en plazo</span>" +
+      '<span class="chip ambar" data-f="activos">🟡 ' + n.ambar + " por vencer</span>" +
+      '<span class="chip rojo" data-f="vencidos">🔴 ' + n.rojo + " vencidos / hoy</span>";
+    var html = "", lista;
+    if(q){
+      lista = EntConsulta.buscar(it.mesa.concat(it.solos), q);
+      if(!lista.length) html = '<div class="vacio">No se encontró nada con “' + esc(q) + '”.<br><span style="font-size:12px">Probá con el apellido, el N° de expediente (8871/410) o el N° de OC (OC20552).</span></div>';
+      else html = lista.map(function(x){ return x._m ? tarjeta(x) : tarjetaReg(x); }).join("");
+    } else {
+      lista = it.mesa.filter(function(x){
+        if(f === "activos") return x._ef !== "entregado";
+        if(f === "en_mesa") return x._ef === "en_mesa";
+        if(f === "vencidos") return x._ef !== "entregado" && x._ef !== "en_mesa" && x._sit.restantes <= 0;
+        if(f === "entregados") return x._ef === "entregado";
+        return true;
+      }).sort(orden);
+      html = lista.length ? lista.map(tarjeta).join("") : '<div class="vacio">' + (f === "activos" ? "No hay expedientes en curso. 🎉<br>Los ingresos nuevos se cargan en <b>➕ Nuevo ingreso</b>." : "No hay expedientes en esta vista.") + "</div>";
+    }
+    box.innerHTML = html;
+  };
+  function tarjeta(x){
+    var m = x._m, r = x._r, sit = x._sit, ef = x._ef, sem = K.semaforo(sit, ef);
+    var ocs = x.ocs, ocTxt = ocs.join(" / ");
+    var plazoTxt = ef === "entregado" || ef === "en_mesa" ? "" :
+      " · Día hábil " + Math.min(Math.max(sit.transcurridos, 0), sit.plazo) + " de " + sit.plazo;
+    var est;
+    if(ef === "entregado"){
+      var cuando = m.entregadoTxt || (r && r.entregadoFecha ? r.entregadoFecha + (r.entregadoHora ? " " + r.entregadoHora : "") : "");
+      est = '<label class="it-ent ok"><input type="checkbox" checked data-acc="entregar" data-id="' + esc(m._id) + '"><span>✅ <b>Entregada al paciente</b>' + (cuando ? " el " + esc(cuando) + " hs" : "") + (m.entregadoPor ? " por " + esc(m.entregadoPor) : "") + "</span></label>";
+    } else if(ef === "en_mesa"){
+      est = '<div class="it-estado azul">📦 <b>La orden de compra está en Mesa de Entradas</b> desde el ' + esc(m.enMesaTxt || "") + ' hs.' +
+        (ocTxt ? '<div class="it-oc">OC N° ' + esc(ocTxt) + "</div>" : "") + "Buscá el papel y entregáselo al paciente.</div>" +
+        '<label class="it-ent"><input type="checkbox" data-acc="entregar" data-id="' + esc(m._id) + '"><span><b>¿Le estás entregando la orden de compra al paciente?</b> Tildá para registrar la entrega con fecha y hora.</span></label>';
+    } else if(ocs.length){
+      est = '<div class="it-estado">🧾 La OC N° <b>' + esc(ocTxt) + "</b> ya fue emitida, pero todavía <b>no figura entregada a Mesa de Entradas</b>. Si el papel está en mesa, podés entregarla igual.</div>" +
+        '<label class="it-ent"><input type="checkbox" data-acc="entregar" data-id="' + esc(m._id) + '"><span><b>¿Le estás entregando la orden de compra al paciente?</b> Tildá para registrar la entrega con fecha y hora.</span></label>';
+    } else if(ef === "trabajo"){
+      est = '<div class="it-estado">🛠️ <b>En trabajo</b> desde el ' + esc(m.trabajoTxt || "") + ". Todavía no hay orden de compra.</div>";
+    } else {
+      est = '<div class="it-estado">🕐 <b>Esperando</b> que se trabaje el expediente. Todavía no hay orden de compra.</div>';
+    }
+    var wa = (ef === "en_mesa" || (ocs.length && ef !== "entregado")) ? waLink(m, ocTxt) : "";
+    return '<div class="it ' + sem.cls + '">' +
+      '<div class="it-ico">' + tipoIco(m.tipo) + "</div>" +
+      '<div class="it-main">' +
+        '<div class="it-kick">' + esc(tipoTxt(m.tipo)) + "</div>" +
+        '<div class="it-tit"><span class="it-exp">' + esc(m.nroExp) + '</span><span class="it-pac">' + esc(m.paciente) + "</span></div>" +
+        '<div class="it-sem ' + sem.cls + '">' + esc(sem.txt) + esc(plazoTxt) + "</div>" +
+        '<div class="it-dato">Ingresó el ' + esc(m.ingresoTxt) + " hs · cargado por " + esc(m.usuarioNombre || m.usuario || "") +
+          (ef !== "entregado" ? " · vuelve a partir del <b>" + esc(K.fmtLargo(sit.vence)) + "</b>" : "") +
+          (m.telefono ? " · 📞 " + esc(m.telefono) : "") + "</div>" +
+        est +
+      "</div>" +
+      '<div class="it-acc">' +
+        (wa ? '<a class="mini wa" href="' + esc(wa) + '" target="_blank" rel="noopener" title="Avisar al paciente por WhatsApp">📲 WhatsApp</a>' : "") +
+        '<button type="button" class="mini" data-acc="tirilla" data-id="' + esc(m._id) + '" title="Volver a imprimir la tirilla">🖨️ Tirilla</button>' +
+      "</div></div>";
+  }
+  function tarjetaReg(x){
+    var r = x._r, ocs = ocsDe(r), ocTxt = ocs.join(" / "), est, cls;
+    if(r.entregado){
+      cls = "gris";
+      est = '<label class="it-ent ok"><input type="checkbox" checked data-acc="entregar-reg" data-id="' + esc(r._id) + '"><span>✅ <b>Entregada al paciente</b> el ' + esc(r.entregadoFecha || "") + (r.entregadoHora ? " a las " + esc(r.entregadoHora) + " hs" : "") + "</span></label>";
+    } else if(ocs.length){
+      cls = "azul";
+      est = '<div class="it-estado azul">🧾 <b>Orden de compra emitida</b>' + (r.fechaOC ? " el " + esc(r.fechaOC) : "") + '<div class="it-oc">OC N° ' + esc(ocTxt) + "</div>Si el papel está en mesa, entregáselo al paciente.</div>" +
+        '<label class="it-ent"><input type="checkbox" data-acc="entregar-reg" data-id="' + esc(r._id) + '"><span><b>¿Le estás entregando la orden de compra al paciente?</b> Tildá para registrar la entrega con fecha y hora.</span></label>';
+    } else {
+      cls = "ambar";
+      est = '<div class="it-estado">🟡 <b>Orden de compra en trámite.</b> Todavía no se puede entregar.</div>';
+    }
+    return '<div class="it ' + cls + '">' +
+      '<div class="it-ico">' + tipoIco(r.tipo) + "</div>" +
+      '<div class="it-main">' +
+        '<div class="it-kick">' + esc(tipoTxt(r.tipo)) + " · registro de órdenes (no ingresó por mesa)</div>" +
+        '<div class="it-tit"><span class="it-exp">' + esc(r.nroExp || C.expedienteTexto(r) || "Sin expediente") + '</span><span class="it-pac">' + esc(r.paciente || "(sin nombre)") + "</span></div>" +
+        est +
+      "</div></div>";
+  }
+
+  /* ---------- Acciones (delegadas) ---------- */
+  function porId(id){ return mesa.filter(function(m){ return m._id === id; })[0]; }
+  function regPorId(id){ return reg.filter(function(r){ return r._id === id; })[0]; }
+  function entregaReg(on, t){
+    return on ? { entregado: true, entregadoMs: t.ms, entregadoFecha: t.fecha, entregadoHora: t.hora }
+              : { entregado: false, entregadoMs: null, entregadoFecha: "", entregadoHora: "" };
+  }
+  async function entregar(id, chk){
+    var m = porId(id); if(!m) return;
+    var r = regDe(m), on = chk.checked, t = ahora();
+    if(!on && !confirm("¿Quitar la entrega registrada de " + m.paciente + "?")){ chk.checked = true; return; }
+    if(on && !confirm("¿Confirmás que le entregás la orden de compra a " + m.paciente + " (Expte. " + m.nroExp + ")?")){ chk.checked = false; return; }
+    chk.disabled = true;
+    try{
+      var v = on ? { estado: "entregado", entregadoMs: t.ms, entregadoTxt: t.txt, entregadoPor: usuario.n }
+                 : { estado: m.enMesaMs ? "en_mesa" : (m.trabajoMs ? "trabajo" : "ingresado"), entregadoMs: null, entregadoTxt: "", entregadoPor: "" };
+      v.historial = firebase.firestore.FieldValue.arrayUnion(t.txt + " · " + (on ? "OC entregada al paciente" : "Se quitó la entrega al paciente") + " (" + usuario.n + ")");
+      await db.collection(COL).doc(m._id).set(v, { merge: true });
+      if(r) await db.collection(COL_REG).doc(r._id).set(entregaReg(on, t), { merge: true });
+    }catch(e){ chk.checked = !on; alert("No se pudo guardar la entrega: " + (e && e.message || e)); }
+    chk.disabled = false;
+  }
+  async function entregarReg(id, chk){
+    var r = regPorId(id); if(!r) return;
+    var on = chk.checked;
+    if(!on && !confirm("¿Quitar la entrega registrada de " + r.paciente + "?")){ chk.checked = true; return; }
+    if(on && !confirm("¿Confirmás que le entregás la orden de compra a " + r.paciente + "?")){ chk.checked = false; return; }
+    chk.disabled = true;
+    try{ await db.collection(COL_REG).doc(r._id).set(entregaReg(on, ahora()), { merge: true }); }
+    catch(e){ chk.checked = !on; alert("No se pudo guardar la entrega: " + (e && e.message || e)); }
+    chk.disabled = false;
+  }
+  document.addEventListener("change", function(e){
+    var el = e.target; if(!el || !el.getAttribute) return;
+    var acc = el.getAttribute("data-acc");
+    if(acc === "entregar") entregar(el.getAttribute("data-id"), el);
+    else if(acc === "entregar-reg") entregarReg(el.getAttribute("data-id"), el);
+  });
+  document.addEventListener("click", function(e){
+    var el = e.target && e.target.closest ? e.target.closest("[data-acc],[data-f]") : null; if(!el) return;
+    if(el.hasAttribute("data-f")){ $("ls-q").value = ""; $("ls-f").value = el.getAttribute("data-f"); window.render(); return; }
+    if(el.getAttribute("data-acc") === "tirilla"){ var m = porId(el.getAttribute("data-id")); if(m) imprimirTirilla(m); }
+  });
+  // El contador de días hábiles cambia solo al pasar la medianoche.
+  setInterval(function(){ if(usuario) window.render(); }, 5 * 60 * 1000);
+
+  /* ---------- Arranque ---------- */
+  var l1 = $("lg-logo1"), l2 = $("lg-logo2");
+  if(l1 && window.LOGO1) l1.src = window.LOGO1; else if(l1) l1.style.display = "none";
+  if(l2 && window.LOGO2) l2.src = window.LOGO2; else if(l2) l2.style.display = "none";
+  sesionGuardada();
+})();
+
+</script>
+</body>
+</html>
