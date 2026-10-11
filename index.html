@@ -3940,6 +3940,13 @@ if(typeof module !== "undefined" && module.exports) module.exports = EntConsulta
 .mj-up input[type=file]{font-size:13px;width:100%}
 .mj-docs{margin-top:7px;font-size:12.5px;line-height:1.45;padding:6px 9px;border-radius:8px;background:#eff6ff;border:1px solid #bfdbfe;color:#1e3a8a}
 .mj-docs a{font-weight:700;cursor:pointer}
+.mj-exp{margin-top:7px;font-size:12.5px;line-height:1.45;padding:7px 9px;border-radius:8px;background:#fef9c3;border:1.5px solid #fde047;color:#713f12;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.mj-exp.ok{background:#f0fdf4;border-color:#bbf7d0;color:#166534}
+.mj-exp a.mj-abrir{padding:6px 10px;border-radius:8px;background:#0f766e;color:#fff;font-size:12.5px;font-weight:800;text-decoration:none}
+.mj-exp button{padding:6px 10px;border:none;border-radius:8px;background:#0f766e;color:#fff;font-size:12.5px;font-weight:800;cursor:pointer;font-family:inherit}
+.mj-exp button:disabled{opacity:.6}
+.mj-bajar{display:none;align-items:center;gap:8px;flex-wrap:wrap;padding:9px 14px;background:#fef9c3;border-bottom:1px solid #fde047;font-size:13px;color:#713f12}
+.mj-bajar b{flex:1;min-width:180px}
 #mj-leida{position:fixed;right:24px;bottom:84px;z-index:10002;width:360px;max-width:calc(100vw - 32px);background:#fff;border-radius:14px;box-shadow:0 18px 50px rgba(0,0,0,.30);border-left:6px solid #16a34a;padding:12px 14px;font-size:13px;line-height:1.5;animation:mesaEntra .35s ease-out}
 @media(max-width:640px){.mj-f{grid-template-columns:1fr}.mj-it{flex-wrap:wrap}.mj-acc{flex-direction:row;flex-wrap:wrap;width:100%}}
 @media print{#mesa-chip,#mesa-alerta,#mesa-modal,#mj-obs-ov,#mj-leida,#mj-oc-ov{display:none!important}}
@@ -3994,6 +4001,11 @@ if(typeof module !== "undefined" && module.exports) module.exports = EntConsulta
       <div class="mj-tab" id="mj-t-fer" onclick="MesaJ.tab('fer')">📅 Feriados</div>
     </div>
     <div id="mj-p-ing" style="display:flex;flex-direction:column;flex:1;min-height:0">
+      <div class="mj-bajar" id="mj-bajar">
+        <b id="mj-bajar-txt">📄 Expedientes para descargar</b>
+        <button type="button" class="mj-btn mj-verde" id="mj-bajar-btn" onclick="MesaJ.bajarTodos()">⬇️ Descargar todos</button>
+        <button type="button" class="mj-btn mj-gris" onclick="MesaJ.elegirCarpeta()" id="mj-carpeta-btn" title="Elegir la carpeta donde se guardan los expedientes">📁 Carpeta</button>
+      </div>
       <div class="rg-search">
         <span>🔍</span>
         <input id="mj-q" type="text" autocomplete="off" oninput="MesaJ.render()" placeholder="Apellido y nombre · 8871/410 · OC20552">
@@ -4196,30 +4208,81 @@ var MesaDocs = (function(){
   function aB64(u8){ var s = "", P = 0x8000; for(var i = 0; i < u8.length; i += P) s += String.fromCharCode.apply(null, u8.subarray(i, i + P)); return btoa(s); }
   function deB64(b){ var s = atob(b), u = new Uint8Array(s.length); for(var i = 0; i < s.length; i++) u[i] = s.charCodeAt(i); return u; }
   function idDe(mesaId){ return "d_" + mesaId; }
-  async function borrar(db, mesaId){
-    var id = idDe(mesaId), ref = db.collection(COL_D).doc(id), d = await ref.get();
+  /* Genérico: un archivo partido en pedazos (colección de datos + colección de partes) */
+  async function borrarEn(db, cD, cP, id){
+    var ref = db.collection(cD).doc(id), d = await ref.get();
     var partes = d.exists ? (d.data().partes || 0) : 0;
-    for(var i = 0; i < Math.max(partes, 1) + 2; i++){ try{ await db.collection(COL_DP).doc(id + "_" + i).delete(); }catch(_){ } }
+    for(var i = 0; i < Math.max(partes, 1) + 2; i++){ try{ await db.collection(cP).doc(id + "_" + i).delete(); }catch(_){ } }
     if(d.exists) await ref.delete();
   }
-  async function subir(db, mesaId, res, extra, avance){
-    if(res.bytes.length > MAX_BYTES) throw new Error("El PDF quedó muy pesado (" + (res.bytes.length / 1048576).toFixed(1) + " MB). Probá con fotos más livianas.");
-    await borrar(db, mesaId);
-    var b = aB64(res.bytes), n = Math.ceil(b.length / TAM_PARTE), id = idDe(mesaId);
+  async function subirEn(db, cD, cP, id, bytes, meta, avance){
+    await borrarEn(db, cD, cP, id);
+    var b = aB64(bytes), n = Math.ceil(b.length / TAM_PARTE);
     for(var i = 0; i < n; i++){
       avance && avance("Subiendo " + (i + 1) + " de " + n + "…");
-      await db.collection(COL_DP).doc(id + "_" + i).set({ d: b.slice(i * TAM_PARTE, (i + 1) * TAM_PARTE), i: i, doc: id });
+      await db.collection(cP).doc(id + "_" + i).set({ d: b.slice(i * TAM_PARTE, (i + 1) * TAM_PARTE), i: i, doc: id });
     }
-    await db.collection(COL_D).doc(id).set(Object.assign({ mesaId: mesaId, partes: n, bytes: res.bytes.length, paginas: res.paginas, contenido: res.contenido }, extra || {}));
+    await db.collection(cD).doc(id).set(Object.assign({}, meta, { partes: n, bytes: bytes.length }));
     return { partes: n };
   }
-  async function bajar(db, mesaId){
-    var id = idDe(mesaId), d = await db.collection(COL_D).doc(id).get();
-    if(!d.exists) throw new Error("La documentación ya no está disponible.");
-    var n = d.data().partes, idx = []; for(var i = 0; i < n; i++) idx.push(i);
-    var partes = await Promise.all(idx.map(function(i){ return db.collection(COL_DP).doc(id + "_" + i).get(); }));
-    var b = partes.map(function(p){ if(!p.exists) throw new Error("Falta una parte del archivo."); return p.data().d; }).join("");
-    return new Blob([deB64(b)], { type: "application/pdf" });
+  async function bajarEn(db, cD, cP, id, tipo, avance){
+    var d = await db.collection(cD).doc(id).get();
+    if(!d.exists) throw new Error("El archivo ya no está disponible.");
+    var n = d.data().partes, out = [];
+    for(var i = 0; i < n; i++){
+      avance && avance("Bajando " + (i + 1) + " de " + n + "…");
+      var p = await db.collection(cP).doc(id + "_" + i).get();
+      if(!p.exists) throw new Error("Falta una parte del archivo.");
+      out.push(p.data().d);
+    }
+    return new Blob([deB64(out.join(""))], { type: tipo || "application/pdf" });
+  }
+  /* Documentación (Jorge → mesa) */
+  function borrar(db, mesaId){ return borrarEn(db, COL_D, COL_DP, idDe(mesaId)); }
+  async function subir(db, mesaId, res, extra, avance){
+    if(res.bytes.length > MAX_BYTES) throw new Error("El PDF quedó muy pesado (" + (res.bytes.length / 1048576).toFixed(1) + " MB). Probá con fotos más livianas.");
+    return subirEn(db, COL_D, COL_DP, idDe(mesaId), res.bytes, Object.assign({ mesaId: mesaId, paginas: res.paginas, contenido: res.contenido }, extra || {}), avance);
+  }
+  function bajar(db, mesaId){ return bajarEn(db, COL_D, COL_DP, idDe(mesaId)); }
+  /* Expediente escaneado (mesa → Jorge): se sube el PDF original, sin tocar */
+  var COL_E = "genres_mesa_exp", COL_EP = "genres_mesa_exp_partes", MAX_EXP = 25 * 1024 * 1024;
+  function idExp(mesaId){ return "e_" + mesaId; }
+  async function subirExp(db, mesaId, file, extra, avance){
+    if(!esPdf(file)) throw new Error("El expediente tiene que ser un PDF.");
+    if(file.size > MAX_EXP) throw new Error("El PDF pesa " + (file.size / 1048576).toFixed(1) + " MB y el máximo es 25 MB.");
+    var bytes = await leer(file);
+    return subirEn(db, COL_E, COL_EP, idExp(mesaId), bytes, Object.assign({ mesaId: mesaId, nombreOriginal: file.name || "" }, extra || {}), avance);
+  }
+  function bajarExp(db, mesaId, avance){ return bajarEn(db, COL_E, COL_EP, idExp(mesaId), "application/pdf", avance); }
+  function borrarExp(db, mesaId){ return borrarEn(db, COL_E, COL_EP, idExp(mesaId)); }
+  /* Texto de las primeras páginas (para controlar el N° de expediente). Escaneos sin texto → "" */
+  async function textoPdf(file, maxPag){
+    try{
+      var lib = await pdfjs(), doc = await lib.getDocument({ data: await leer(file) }).promise, t = "";
+      for(var n = 1; n <= Math.min(doc.numPages, maxPag || 3); n++){
+        var items = (await (await doc.getPage(n)).getTextContent()).items;
+        t += items.map(function(i){ return i.str; }).join(" ") + "\n";
+      }
+      return t;
+    }catch(_){ return ""; }
+  }
+  /* ¿El PDF menciona este expediente? null = no se puede saber (escaneo sin texto) */
+  function mencionaExp(texto, num, cod){
+    var limpio = String(texto || "").replace(/\s+/g, " ");
+    if(limpio.replace(/[^0-9a-z]/gi, "").length < 60) return null;
+    var re = new RegExp("(^|\\D)0*" + String(parseInt(num, 10)) + "\\s*[\\/\\-]\\s*0*" + String(parseInt(cod, 10)) + "(\\D|$)");
+    return re.test(limpio);
+  }
+  /* Link del PDF del expediente en SIGEDIG (ej. 192.168.10.11:3000/sigedig/ADJUNTOSEXP/1547588.pdf).
+     Solo se aceptan direcciones http/https; si falta, se agrega "http://". */
+  function linkSigedig(txt){
+    var m = String(txt || "").trim().match(/(?:https?:\/\/)?[^\s"'<>]+/i); if(!m) return null;
+    var u = m[0]; if(!/^https?:\/\//i.test(u)) u = "http://" + u;
+    try{
+      var x = new URL(u);
+      if(x.protocol !== "http:" && x.protocol !== "https:" || !x.hostname || x.hostname.indexOf(".") < 0) return null;
+      return { url: x.href, adjunto: /\/ADJUNTOSEXP\//i.test(x.pathname), pdf: /\.pdf$/i.test(x.pathname) };
+    }catch(_){ return null; }
   }
   /* Abre el PDF en una pestaña nueva (desde ahí se imprime). La pestaña se abre antes de bajar
      el archivo para que el navegador no la bloquee. */
@@ -4234,7 +4297,8 @@ var MesaDocs = (function(){
     }, function(e){ if(w) try{ w.close(); }catch(_){ } throw e; });
   }
   return { procesarOC: procesarOC, armar: armar, subir: subir, bajar: bajar, borrar: borrar, abrir: abrir,
-           COL_D: COL_D, COL_DP: COL_DP, aB64: aB64, deB64: deB64 };
+           linkSigedig: linkSigedig, subirExp: subirExp, bajarExp: bajarExp, borrarExp: borrarExp, textoPdf: textoPdf, mencionaExp: mencionaExp,
+           COL_D: COL_D, COL_DP: COL_DP, COL_E: COL_E, COL_EP: COL_EP, MAX_EXP: MAX_EXP, aB64: aB64, deB64: deB64 };
 })();
 
 </script>
@@ -4345,6 +4409,7 @@ var MesaJ = (function(){
   var COL = "genres_mesa", COL_U = "genres_mesa_usuarios", COL_CFG = "genres_mesa_config", COL_REG = "genres_registro_oc", COL_OBS = "genres_mesa_obs";
   var obs = [], obsLeidas = null, obsPara = null;
   var mesaTodos = {}, docsMeta = {}, docsListo = false, ocPara = null, ocCache = null;
+  var expMeta = {}, expListo = false, expConocidos = null, bajando = {};
   var C = EntCore, K = MesaCal;
   var db = null, mesa = [], usuarios = [], reg = [], feriados = null, estado = "conectando", primeraCarga = true;
   var conocidos = {}, ocultaHasta = 0, tituloBase = document.title;
@@ -4403,6 +4468,13 @@ var MesaJ = (function(){
       reg = snap.docs.map(function(d){ var x = d.data(); x._id = d.id; return x; }).filter(function(r){ return !r.descartado; });
       render();
     }, function(err){ console.warn("Mesa J registro:", err); });
+    db.collection(MesaDocs.COL_E).onSnapshot(function(snap){
+      expMeta = {}; snap.docs.forEach(function(d){ var x = d.data(); x._id = d.id; if(x.mesaId) expMeta[x.mesaId] = x; });
+      var nuevos = Object.keys(expMeta).filter(function(k){ return expConocidos && !expConocidos[k]; });
+      if(nuevos.length && desbloqueado()){ sonar(); ocultaHasta = 0; }
+      expConocidos = expConocidos || {}; Object.keys(expMeta).forEach(function(k){ expConocidos[k] = true; });
+      expListo = true; render(); alerta(); programarLimpieza();
+    }, function(err){ console.warn("Mesa J expedientes:", err); });
     db.collection(MesaDocs.COL_D).onSnapshot(function(snap){
       docsMeta = {}; snap.docs.forEach(function(d){ var x = d.data(); x._id = d.id; if(x.mesaId) docsMeta[x.mesaId] = x; });
       docsListo = true; render(); programarLimpieza();
@@ -4459,6 +4531,9 @@ var MesaJ = (function(){
     }catch(_){}
   }
   function sinVer(){ return mesa.filter(function(m){ return !m.vistoJorge && efectivo(m, regDe(m)) === "ingresado"; }).sort(function(a, b){ return (b.ingresoMs || 0) - (a.ingresoMs || 0); }); }
+  function expPend(){ return Object.keys(expMeta).map(function(k){ return expMeta[k]; }).filter(function(e){ var m = mesaTodos[e.mesaId]; return m && !m.anulado; }); }
+  function expSinVer(){ return expPend().filter(function(e){ return !e.vistoJorge; }); }
+  function mb(b){ return b ? (b / 1048576 < 0.1 ? Math.max(1, Math.round(b / 1024)) + " KB" : (b / 1048576).toFixed(1) + " MB") : ""; }
   function sinTomar(){ return mesa.filter(function(m){ return efectivo(m, regDe(m)) === "ingresado"; }); }
 
   /* ---------- Botón flotante + mini ventana de alerta ---------- */
@@ -4466,7 +4541,7 @@ var MesaJ = (function(){
     var b = $("mesa-chip"), n = $("mesa-chip-n"); if(!b) return;
     var ver = desbloqueado() && estado === "ok";
     b.style.display = ver ? "flex" : "none";
-    var nv = sinVer().length, st = sinTomar().length;
+    var nv = sinVer().length + expSinVer().length, st = sinTomar().length;
     n.textContent = nv || st; n.classList.toggle("nuevo", nv > 0);
     b.title = nv ? nv + " ingreso(s) nuevo(s) de Mesa de Entradas" : st + " ingreso(s) sin tomar";
     document.title = (nv ? "(" + nv + ") 📥 " : "") + tituloBase;
@@ -4474,19 +4549,29 @@ var MesaJ = (function(){
   function alerta(){
     chip();
     var box = $("mesa-alerta"); if(!box) return;
-    var lista = sinVer();
+    var lista = sinVer(), exps = expSinVer();
     var modalAbierto = $("mesa-modal") && $("mesa-modal").style.display !== "none";
-    if(!desbloqueado() || !lista.length || modalAbierto || Date.now() < ocultaHasta){ box.style.display = "none"; return; }
+    if(!desbloqueado() || (!lista.length && !exps.length) || modalAbierto || Date.now() < ocultaHasta){ box.style.display = "none"; return; }
     var muestra = lista.slice(0, 3);
-    box.innerHTML = '<div class="ma-head"><span style="font-size:20px">📥</span><b>' + (lista.length === 1 ? "Nuevo ingreso de Mesa de Entradas" : lista.length + " ingresos nuevos de Mesa de Entradas") + '</b><button type="button" data-mj="ocultar" title="Más tarde">✕</button></div>' +
+    var titulo = lista.length ? (lista.length === 1 ? "Nuevo ingreso de Mesa de Entradas" : lista.length + " ingresos nuevos de Mesa de Entradas")
+      : (exps.length === 1 ? "Mesa te mandó un expediente" : "Mesa te mandó " + exps.length + " expedientes");
+    var soloExp = exps.filter(function(e){ return !lista.some(function(m){ return m._id === e.mesaId; }); });
+    box.innerHTML = '<div class="ma-head"><span style="font-size:20px">📥</span><b>' + titulo + '</b><button type="button" data-mj="ocultar" title="Más tarde">✕</button></div>' +
+      soloExp.slice(0, 3).map(function(e){
+        var m = mesaTodos[e.mesaId] || {};
+        return '<div class="ma-it"><div class="ma-it-t">📄 ' + esc(m.nroExp || e.nroExp || "") + '</div><div class="ma-it-p">' + esc(m.paciente || e.paciente || "") + "</div>" +
+          '<div class="ma-it-d">Expediente enviado por ' + esc(e.subidoPor || "") + " el " + esc(e.subidoTxt || "") + " hs · " + mb(e.bytes) + "</div></div>";
+      }).join("") +
       muestra.map(function(m){
         var sit = K.situacion(m, feriados);
-        return '<div class="ma-it"><div class="ma-it-t">' + tipoIco(m.tipo) + " " + esc(m.nroExp) + '</div><div class="ma-it-p">' + esc(m.paciente) + "</div>" +
+        return '<div class="ma-it"><div class="ma-it-t">' + tipoIco(m.tipo) + " " + esc(m.nroExp) + (expMeta[m._id] || m.sigedigUrl ? " · 📄 con expediente" : "") + '</div><div class="ma-it-p">' + esc(m.paciente) + "</div>" +
           '<div class="ma-it-d">' + esc(tipoTxt(m.tipo)) + " · cargado por " + esc(m.usuarioNombre || m.usuario || "") + " el " + esc(m.ingresoTxt) + " hs · vence el " + esc(K.fmt(sit.vence)) + "</div>" +
           '<div class="ma-it-b"><button type="button" class="mj-btn mj-verde" data-mj="tomar" data-id="' + esc(m._id) + '">▶ Tomar</button><button type="button" class="mj-btn mj-gris" data-mj="visto" data-id="' + esc(m._id) + '">Visto</button></div></div>';
       }).join("") +
       (lista.length > 3 ? '<div class="ma-it" style="font-size:13px;color:#475569">… y ' + (lista.length - 3) + " más.</div>" : "") +
-      '<div class="ma-foot"><button type="button" class="mj-btn mj-gris" data-mj="ocultar">Más tarde</button><button type="button" class="mj-btn mj-azul" data-mj="abrir">Ver todos</button></div>';
+      '<div class="ma-foot"><button type="button" class="mj-btn mj-gris" data-mj="ocultar">Más tarde</button>' +
+      (exps.length ? '<button type="button" class="mj-btn mj-verde" data-mj="bajartodos">⬇️ Descargar ' + (exps.length === 1 ? "expediente" : exps.length + " expedientes") + "</button>" : "") +
+      '<button type="button" class="mj-btn mj-azul" data-mj="abrir">Ver todos</button></div>';
     box.style.display = "";
   }
   setInterval(function(){ chip(); if(desbloqueado()) alerta(); }, 1500);
@@ -4502,6 +4587,8 @@ var MesaJ = (function(){
     // Al abrir el panel, los ingresos nuevos quedan vistos (siguen en "Nuevos sin tomar" hasta que los tomes).
     var nv = sinVer();
     if(nv.length && db){ var b = db.batch(); nv.forEach(function(x){ b.set(db.collection(COL).doc(x._id), { vistoJorge: true }, { merge: true }); }); b.commit().catch(function(e){ console.warn("Mesa J visto:", e); }); }
+    var ev = expSinVer();
+    if(ev.length && db){ var b2 = db.batch(); ev.forEach(function(x){ b2.set(db.collection(MesaDocs.COL_E).doc(x._id), { vistoJorge: true }, { merge: true }); }); b2.commit().catch(function(e){ console.warn("Mesa J exp visto:", e); }); }
     setTimeout(function(){ var q = $("mj-q"); if(q) q.focus(); }, 30);
   }
   function cerrar(){
@@ -4522,7 +4609,7 @@ var MesaJ = (function(){
   }
 
   function render(){
-    chip(); autoTrabajo();
+    chip(); autoTrabajo(); barraBajar();
     var box = $("mj-lista"), sub = $("mj-sub"); if(!box) return;
     if(estado === "sin-acceso"){ if(sub) sub.textContent = "Sin acceso a la base"; box.innerHTML = '<div class="rg-vacio">Sin acceso: falta la regla de Firestore para <b>genres_mesa</b> (y que el login anónimo esté habilitado).</div>'; return; }
     if(estado !== "ok"){ box.innerHTML = '<div class="rg-vacio">Conectando…</div>'; return; }
@@ -4575,7 +4662,7 @@ var MesaJ = (function(){
         '<div class="mj-tit"><span class="mj-exp">' + esc(m.nroExp) + '</span><span class="mj-pac">' + esc(m.paciente) + "</span></div>" +
         '<div class="mj-sem ' + sem.cls + '">' + esc(sem.txt) + (ef === "ingresado" || ef === "trabajo" ? " · vence el " + esc(K.fmtLargo(sit.vence)) : "") + "</div>" +
         '<div class="mj-dato">' + estadoTxt + "<br>Ingresó el " + esc(m.ingresoTxt) + " hs · cargado por " + esc(m.usuarioNombre || m.usuario || "") + (m.telefono ? " · 📞 " + esc(m.telefono) : "") + "</div>" +
-        docsHtml(m) + obsHtml(m._id) +
+        expHtml(m) + docsHtml(m) + obsHtml(m._id) +
       "</div>" +
       '<div class="mj-acc">' + acc + "</div></div>";
   }
@@ -4586,6 +4673,7 @@ var MesaJ = (function(){
   function accion(acc, id){
     var m = porId(id), t = ahora();
     if(acc === "abrir"){ abrir(); return; }
+    if(acc === "bajartodos"){ $("mesa-alerta").style.display = "none"; bajarTodos(); return; }
     if(acc === "ocultar"){ ocultaHasta = Date.now() + 10 * 60 * 1000; $("mesa-alerta").style.display = "none"; return; }
     if(!m) return;
     if(acc === "visto") return guardar(id, { vistoJorge: true });
@@ -4593,6 +4681,11 @@ var MesaJ = (function(){
     if(acc === "nuevo") return guardar(id, { estado: "ingresado", trabajoMs: null, trabajoTxt: "", historial: historial(t, "Vuelve a sin tomar") });
     if(acc === "mesa") return ocAbrir(m, false);
     if(acc === "docs") return ocAbrir(m, true);
+    if(acc === "abrirsig"){
+      if(!m.sigedigAbiertoTxt) guardar(id, { sigedigAbiertoTxt: t.txt, vistoJorge: true, historial: historial(t, "Expediente abierto desde SIGEDIG") });
+      return;
+    }
+    if(acc === "bajarexp") return bajarUno(m._id, document.querySelector('[data-mj="bajarexp"][data-id="' + id + '"]'));
     if(acc === "verdocs") return MesaDocs.abrir(MesaDocs.bajar(db, m._id)).catch(function(e){ alert(e && e.message || e); });
     if(acc === "deshacer"){
       if(!confirm("¿Quitar la entrega de la OC a Mesa de Entradas de " + m.paciente + "?")) return;
@@ -4692,6 +4785,95 @@ var MesaJ = (function(){
       btn.disabled = false; $("mj-oc-ver").disabled = false;
     }
   }
+  /* ---------- Expediente escaneado que manda mesa: se descarga y se borra del sistema ----------
+     Si elegiste una carpeta (Chrome), se guarda directo ahí; si no, va a Descargas. */
+  function nombreArchivo(m){
+    var n = (String(m.nroExp || "").replace(/[\/\\]+/g, "-") + " " + String(m.paciente || "")).replace(/[,:;*?"<>|]+/g, "").replace(/\s+/g, " ").trim();
+    return (n || "expediente") + ".pdf";
+  }
+  function expHtml(m){
+    var e = expMeta[m._id];
+    if(m.sigedigUrl) return '<div class="mj-exp' + (m.sigedigAbiertoTxt ? " ok" : "") + '">🔗 <span style="flex:1;min-width:160px"><b>Expediente en SIGEDIG</b> · vinculado por ' + esc(m.sigedigPor || "") + " el " + esc(m.sigedigTxt || "") + " hs" +
+      (m.sigedigAbiertoTxt ? " · abierto el " + esc(m.sigedigAbiertoTxt) + " hs" : "") + '</span><a class="mj-abrir" href="' + esc(m.sigedigUrl) + '" target="_blank" rel="noopener" data-mj="abrirsig" data-id="' + esc(m._id) + '">📄 Abrir expediente</a></div>';
+    if(e) return '<div class="mj-exp">📄 <span style="flex:1;min-width:160px"><b>Expediente adjunto</b> · ' + mb(e.bytes) + " · enviado por " + esc(e.subidoPor || "") + " el " + esc(e.subidoTxt || "") + " hs</span>" +
+      '<button type="button" data-mj="bajarexp" data-id="' + esc(m._id) + '"' + (bajando[m._id] ? " disabled" : "") + ">" + (bajando[m._id] ? "Descargando…" : "⬇️ Descargar") + "</button></div>";
+    if(m.expDescargadoTxt) return '<div class="mj-exp ok">✅ Expediente descargado el ' + esc(m.expDescargadoTxt) + " hs (ya no ocupa lugar en el sistema)</div>";
+    return "";
+  }
+  /* Carpeta elegida: se recuerda en el navegador (IndexedDB) */
+  var carpeta = null;
+  function idb(){ return new Promise(function(res, rej){ var r = indexedDB.open("mesa_pris", 1); r.onupgradeneeded = function(){ r.result.createObjectStore("kv"); }; r.onsuccess = function(){ res(r.result); }; r.onerror = function(){ rej(r.error); }; }); }
+  function idbGet(k){ return idb().then(function(d){ return new Promise(function(res){ var q = d.transaction("kv").objectStore("kv").get(k); q.onsuccess = function(){ res(q.result || null); }; q.onerror = function(){ res(null); }; }); }).catch(function(){ return null; }); }
+  function idbSet(k, v){ return idb().then(function(d){ return new Promise(function(res){ var t = d.transaction("kv", "readwrite"); t.objectStore("kv").put(v, k); t.oncomplete = function(){ res(true); }; t.onerror = function(){ res(false); }; }); }).catch(function(){ return false; }); }
+  var puedeCarpeta = typeof window.showDirectoryPicker === "function";
+  if(puedeCarpeta) idbGet("carpeta").then(function(h){ if(h){ carpeta = h; barraBajar(); } });
+  async function elegirCarpeta(){
+    if(!puedeCarpeta){ alert("Este navegador no permite elegir carpeta: los expedientes se guardan en Descargas. Usá Google Chrome para elegir carpeta."); return null; }
+    try{
+      var h = await window.showDirectoryPicker({ id: "expedientes_pris", mode: "readwrite" });
+      carpeta = h; await idbSet("carpeta", h); barraBajar(); return h;
+    }catch(e){ return null; }
+  }
+  async function permisoCarpeta(){
+    if(!carpeta) return false;
+    try{
+      var o = { mode: "readwrite" };
+      if((await carpeta.queryPermission(o)) === "granted") return true;
+      return (await carpeta.requestPermission(o)) === "granted";
+    }catch(_){ return false; }
+  }
+  async function guardarArchivo(blob, nombre){
+    if(carpeta && await permisoCarpeta()){
+      var base = nombre.replace(/\.pdf$/i, ""), final = nombre, i = 2;
+      while(true){ try{ await carpeta.getFileHandle(final); final = base + " (" + i++ + ").pdf"; }catch(_){ break; } }
+      var fh = await carpeta.getFileHandle(final, { create: true }), w = await fh.createWritable();
+      await w.write(blob); await w.close();
+      return { donde: "carpeta " + carpeta.name, nombre: final };
+    }
+    var url = URL.createObjectURL(blob), a = document.createElement("a");
+    a.href = url; a.download = nombre; document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(function(){ URL.revokeObjectURL(url); }, 60000);
+    return { donde: "Descargas", nombre: nombre };
+  }
+  async function bajarUno(mesaId, btn, silencioso){
+    var m = mesaTodos[mesaId]; if(!m || !expMeta[mesaId] || bajando[mesaId]) return false;
+    bajando[mesaId] = true; if(btn){ btn.disabled = true; btn.textContent = "Descargando…"; }
+    try{
+      var blob = await MesaDocs.bajarExp(db, mesaId, function(t){ if(btn) btn.textContent = t; });
+      var r = await guardarArchivo(blob, nombreArchivo(m));
+      await MesaDocs.borrarExp(db, mesaId);
+      var t = ahora();
+      await db.collection(COL).doc(mesaId).set({ expDescargadoMs: t.ms, expDescargadoTxt: t.txt,
+        historial: historial(t, "Expediente descargado (" + r.nombre + ", en " + r.donde + ") y borrado del sistema") }, { merge: true });
+      return true;
+    }catch(e){
+      if(!silencioso) alert("No se pudo descargar el expediente: " + (e && e.message || e) + "\nNo se borró del sistema: podés volver a intentar.");
+      return false;
+    }finally{ bajando[mesaId] = false; render(); }
+  }
+  async function bajarTodos(){
+    var lista = expPend(); if(!lista.length){ alert("No hay expedientes para descargar."); return; }
+    if(puedeCarpeta && !carpeta){
+      if(confirm("¿Querés elegir la carpeta donde guardar los expedientes?\n(Se recuerda para la próxima. Si cancelás, van a Descargas.)")) await elegirCarpeta();
+    }
+    var b = $("mj-bajar-btn"); if(b){ b.disabled = true; }
+    var ok = 0, mal = 0;
+    for(var i = 0; i < lista.length; i++){
+      if(b) b.textContent = "Descargando " + (i + 1) + " de " + lista.length + "…";
+      if(await bajarUno(lista[i].mesaId, null, true)) ok++; else mal++;
+    }
+    if(b){ b.disabled = false; b.textContent = "⬇️ Descargar todos"; }
+    alert("✅ " + ok + (ok === 1 ? " expediente descargado" : " expedientes descargados") + (carpeta ? " en la carpeta “" + carpeta.name + "”" : " en Descargas") + "." +
+      (mal ? "\n⚠️ " + mal + " no se pudieron descargar: quedan en el sistema para reintentar." : ""));
+  }
+  function barraBajar(){
+    var bar = $("mj-bajar"); if(!bar) return;
+    var n = expPend().length;
+    bar.style.display = n ? "flex" : "none";
+    $("mj-bajar-txt").textContent = "📄 " + (n === 1 ? "1 expediente" : n + " expedientes") + " de mesa para descargar" + (carpeta ? " · se guardan en “" + carpeta.name + "”" : "");
+    var cb = $("mj-carpeta-btn"); if(cb) cb.style.display = puedeCarpeta ? "" : "none";
+  }
+
   /* Borrado automático: 7 días después de entregada al paciente (o si el ingreso se anuló) */
   var _limpT = null, limpiando = false;
   function programarLimpieza(){ clearTimeout(_limpT); _limpT = setTimeout(limpiarDocs, 4000); }
@@ -4711,6 +4893,14 @@ var MesaJ = (function(){
         if(!borrar) continue;
         await MesaDocs.borrar(db, d.mesaId);
         if(m) await db.collection(COL).doc(m._id).set({ historial: historial(ahora(), "Documentación borrada automáticamente (" + motivo + ")") }, { merge: true });
+      }
+      var eids = Object.keys(expMeta);
+      for(var k = 0; k < eids.length; k++){
+        var me = mesaTodos[expMeta[eids[k]].mesaId];
+        if(expListo && (!me || me.anulado)){
+          await MesaDocs.borrarExp(db, expMeta[eids[k]].mesaId);
+          if(me) await db.collection(COL).doc(me._id).set({ historial: historial(ahora(), "Expediente borrado del sistema (ingreso anulado)") }, { merge: true });
+        }
       }
     }catch(e){ console.warn("Mesa J limpieza docs:", e); }
     limpiando = false;
@@ -4829,7 +5019,7 @@ var MesaJ = (function(){
     catch(_){ prompt("Copiá el link:", url); }
   }
   function exportar(){
-    var cols = ["Tipo","Expediente","Paciente","Teléfono","Ingreso","Cargado por","Vence","Estado","N° OC","Tomado","OC a mesa","Entregada al paciente","Entregada por","Observaciones","Documentación"];
+    var cols = ["Tipo","Expediente","Paciente","Teléfono","Ingreso","Cargado por","Vence","Estado","N° OC","Tomado","OC a mesa","Entregada al paciente","Entregada por","Observaciones","Documentación","Expediente descargado"];
     var filas = mesa.slice().sort(function(a, b){ return (a.ingresoMs || 0) - (b.ingresoMs || 0); }).map(function(m){
       var r = regDe(m), ef = efectivo(m, r), sit = K.situacion(m, feriados);
       var est = ef === "entregado" ? "Entregada" : ef === "en_mesa" ? "OC en mesa" : ef === "trabajo" ? "En trabajo" : "Sin tomar";
@@ -4837,7 +5027,8 @@ var MesaJ = (function(){
       return [tipoTxt(m.tipo), m.nroExp, m.paciente, m.telefono || "", m.ingresoTxt, m.usuarioNombre || m.usuario || "", K.fmt(sit.vence), est,
               m.ocNro || ocsDe(r).join(" / "), m.trabajoTxt || "", m.enMesaTxt || "", m.entregadoTxt || (r && r.entregadoFecha ? r.entregadoFecha + " " + (r.entregadoHora || "") : ""), m.entregadoPor || "",
               obs.filter(function(o){ return o.mesaId === m._id; }).map(function(o){ return o.creadoTxt + ": " + o.texto + " — " + (o.leido ? "leída por " + o.leidoPor + " el " + o.leidoTxt + (o.respuesta ? " (resp.: " + o.respuesta + ")" : "") : "SIN LEER"); }).join(" | "),
-              docsMeta[m._id] ? contenidoTxt(docsMeta[m._id].contenido) + " (" + (docsMeta[m._id].creadoTxt || "") + ")" + (m.docsImpresoTxt ? " — impresa por " + m.docsImpresoPor + " el " + m.docsImpresoTxt : " — sin imprimir") : ""];
+              docsMeta[m._id] ? contenidoTxt(docsMeta[m._id].contenido) + " (" + (docsMeta[m._id].creadoTxt || "") + ")" + (m.docsImpresoTxt ? " — impresa por " + m.docsImpresoPor + " el " + m.docsImpresoTxt : " — sin imprimir") : "",
+              m.expDescargadoTxt || (expMeta[m._id] ? "pendiente de descarga" : "")];
     });
     var csv = [cols].concat(filas).map(function(f){ return f.map(function(v){ v = String(v == null ? "" : v); return /[;"\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; }).join(";"); }).join("\r\n");
     var blob = new Blob(["\ufeff" + csv], { type: "text/csv;charset=utf-8" });
@@ -4846,7 +5037,7 @@ var MesaJ = (function(){
   }
 
   return { abrir: abrir, cerrar: cerrar, tab: tab, render: render, crearUsuario: crearUsuario, ojo: ojo,
-           obsCerrar: obsCerrar, obsEnviar: obsEnviar, ocCerrar: ocCerrar, ocCambio: ocCambio, ocVista: ocVista, ocEnviar: ocEnviar, guardarFeriados: guardarFeriados, feriadosSugeridos: feriadosSugeridos, copiarLink: copiarLink, exportar: exportar };
+           bajarTodos: bajarTodos, elegirCarpeta: elegirCarpeta, obsCerrar: obsCerrar, obsEnviar: obsEnviar, ocCerrar: ocCerrar, ocCambio: ocCambio, ocVista: ocVista, ocEnviar: ocEnviar, guardarFeriados: guardarFeriados, feriadosSugeridos: feriadosSugeridos, copiarLink: copiarLink, exportar: exportar };
 })();
 </script>
 
