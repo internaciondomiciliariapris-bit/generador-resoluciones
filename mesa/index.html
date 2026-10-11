@@ -96,6 +96,33 @@ button,input,select{font-family:inherit}
 .it-docs button{padding:10px 14px;border:none;border-radius:9px;background:#1a56a0;color:#fff;font-size:14px;font-weight:800;cursor:pointer;font-family:inherit}
 .it-docs button:disabled{opacity:.6}
 .it-docs span{font-size:13px;color:#1e3a8a;line-height:1.4}
+.ops{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.op{border:1.5px solid #e2e8f0;border-radius:12px;padding:12px;background:#fff}
+.op-t{font-size:13px;font-weight:800;color:#1a56a0;margin-bottom:8px}
+.op input[type=text]{width:100%;padding:10px 12px;border:1.5px solid #d1d5db;border-radius:9px;font-size:14px;outline:none;font-family:inherit}
+.lote{border:1.5px dashed #93c5fd;border-radius:12px;padding:12px 14px;margin-bottom:12px;background:#f8fbff}
+.lote-h{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.lote-h b{flex:1;min-width:200px;font-size:14px;color:#1e3a8a}
+.lote-h label{position:relative;overflow:hidden;padding:9px 13px;border-radius:9px;background:#1a56a0;color:#fff;font-weight:800;font-size:13px;cursor:pointer}
+.lote-h label.sec{background:#fff;color:#1a56a0;border:1.5px solid #93c5fd}
+.lote-h label input{position:absolute;inset:0;opacity:0;cursor:pointer}
+.lote-f{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.3fr) auto;gap:8px;align-items:center;padding:8px 0;border-top:1px solid #e2e8f0;font-size:13px}
+.lote-f select{width:100%;padding:8px;border:1.5px solid #cbd5e1;border-radius:8px;font-size:13px;font-family:inherit}
+.lote-f .ok{color:#166534;font-weight:700}.lote-f .no{color:#b45309;font-weight:700}
+.lote-f .nom{word-break:break-all}
+.lote-pie{display:flex;gap:8px;justify-content:flex-end;margin-top:10px;flex-wrap:wrap}
+.alt{margin-top:8px;font-size:13px;color:#475569}.alt summary{cursor:pointer;font-weight:700;color:#1a56a0}
+.it-exp a.abrir{padding:8px 12px;border-radius:9px;background:#0f766e;color:#fff;font-weight:800;text-decoration:none}
+.it-exp input[type=text]{flex:1;min-width:200px;padding:8px 10px;border:1.5px solid #cbd5e1;border-radius:8px;font-size:13px;font-family:inherit}
+.it-exp button{padding:8px 12px;border:none;border-radius:9px;background:#0f766e;color:#fff;font-weight:800;cursor:pointer;font-family:inherit}
+.drop{position:relative;border:2px dashed #93c5fd;border-radius:12px;padding:16px;text-align:center;background:#f8fbff;color:#1e3a8a;font-size:14px;font-weight:600;cursor:pointer}
+.drop.on{background:#dbeafe;border-color:#1a56a0}
+.drop.lleno{border-style:solid;border-color:#16a34a;background:#f0fdf4;color:#166534}
+.drop input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%}
+.it-exp{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:10px;padding:9px 12px;border-radius:10px;font-size:13px;line-height:1.4;background:#fef9c3;border:1.5px solid #fde047;color:#713f12}
+.it-exp.ok{background:#f0fdf4;border-color:#bbf7d0;color:#166534}
+.it-exp label{position:relative;overflow:hidden;padding:8px 12px;border-radius:9px;background:#1a56a0;color:#fff;font-weight:800;cursor:pointer}
+.it-exp label input{position:absolute;inset:0;opacity:0;cursor:pointer}
 .mini.wa{border-color:#86efac;background:#f0fdf4;color:#166534}
 .sec{font-size:12px;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:#334155;margin:18px 0 10px}
 /* ---- Observaciones de Jorge ---- */
@@ -118,7 +145,7 @@ button,input,select{font-family:inherit}
 .it-obs-r.leida{background:#f8fafc;border-color:#e2e8f0}
 .it-obs-r i{display:block;font-style:normal;font-size:12px;color:#64748b;margin-top:3px}
 .hdr-obs{display:none;background:#dc2626;color:#fff;border-radius:999px;padding:5px 11px;font-size:12px;font-weight:800;cursor:pointer;border:none}
-@media(max-width:600px){.it{flex-wrap:wrap}.it-acc{flex-direction:row;width:100%}.tipos{grid-template-columns:1fr}}
+@media(max-width:600px){.ops{grid-template-columns:1fr}.lote-f{grid-template-columns:1fr}.it{flex-wrap:wrap}.it-acc{flex-direction:row;width:100%}.tipos{grid-template-columns:1fr}}
 @media print{body>*{display:none!important}}
 </style>
 </head>
@@ -190,12 +217,39 @@ button,input,select{font-family:inherit}
       <input type="tel" id="in-tel" autocomplete="off" placeholder="Ej. 381 5123456">
       <div class="hint">Sirve para avisarle por WhatsApp cuando la orden de compra esté lista.</div>
     </div>
+    <div class="f">
+      <label>📄 Expediente para Jorge — elegí una de las dos opciones (opcional)</label>
+      <div class="ops">
+        <div class="op">
+          <div class="op-t">Opción 1 · 🔗 Pegar el link de SIGEDIG</div>
+          <input type="text" id="in-link" autocomplete="off" spellcheck="false" placeholder="192.168.10.11:3000/sigedig/ADJUNTOSEXP/…">
+          <div class="hint">En SIGEDIG: <b>Ver Archivos</b> → clic en la barra de direcciones del PDF → <b>Ctrl+C</b> → acá <b>Ctrl+V</b>.</div>
+        </div>
+        <div class="op">
+          <div class="op-t">Opción 2 · 📎 Subir el PDF descargado</div>
+          <div class="drop" id="in-drop">
+            <input type="file" id="in-pdf" accept="application/pdf,.pdf" onchange="pdfElegido()">
+            <div id="in-pdf-txt">Arrastrá el PDF acá o tocá para elegirlo.</div>
+          </div>
+          <div class="hint">Máximo 25 MB. Se borra del sistema apenas Jorge lo descarga.</div>
+        </div>
+      </div>
+      <div class="hint">¿Descargaron varios en una carpeta? Envíenlos todos juntos desde <b>📋 Expedientes → 📁 Enviar varios PDF</b>.</div>
+    </div>
     <button type="button" class="btn btn-verde" id="in-btn" onclick="registrar()">💾 Registrar ingreso e imprimir tirilla</button>
     <div class="msg" id="in-msg"></div>
   </div>
 
   <!-- Expedientes -->
   <div class="card" id="p-lista" style="display:none">
+    <div class="lote">
+      <div class="lote-h">
+        <b>📁 Enviar varios PDF a Jorge<br><span style="font-weight:500;font-size:12px;color:#475569">Descargá los expedientes de SIGEDIG en una carpeta y elegilos todos juntos: el sistema reconoce de qué expediente es cada uno.</span></b>
+        <label>📄 Elegir PDFs<input type="file" id="lote-files" accept="application/pdf,.pdf" multiple onchange="loteElegidos(this)"></label>
+        <label class="sec">📁 Elegir carpeta<input type="file" id="lote-dir" webkitdirectory multiple onchange="loteElegidos(this)"></label>
+      </div>
+      <div id="lote-lista"></div>
+    </div>
     <div class="bar">
       <input type="text" id="ls-q" autocomplete="off" oninput="render()" placeholder="🔍 Apellido y nombre · 8871/410 · OC20552">
       <select id="ls-f" onchange="render()">
@@ -704,30 +758,81 @@ var MesaDocs = (function(){
   function aB64(u8){ var s = "", P = 0x8000; for(var i = 0; i < u8.length; i += P) s += String.fromCharCode.apply(null, u8.subarray(i, i + P)); return btoa(s); }
   function deB64(b){ var s = atob(b), u = new Uint8Array(s.length); for(var i = 0; i < s.length; i++) u[i] = s.charCodeAt(i); return u; }
   function idDe(mesaId){ return "d_" + mesaId; }
-  async function borrar(db, mesaId){
-    var id = idDe(mesaId), ref = db.collection(COL_D).doc(id), d = await ref.get();
+  /* Genérico: un archivo partido en pedazos (colección de datos + colección de partes) */
+  async function borrarEn(db, cD, cP, id){
+    var ref = db.collection(cD).doc(id), d = await ref.get();
     var partes = d.exists ? (d.data().partes || 0) : 0;
-    for(var i = 0; i < Math.max(partes, 1) + 2; i++){ try{ await db.collection(COL_DP).doc(id + "_" + i).delete(); }catch(_){ } }
+    for(var i = 0; i < Math.max(partes, 1) + 2; i++){ try{ await db.collection(cP).doc(id + "_" + i).delete(); }catch(_){ } }
     if(d.exists) await ref.delete();
   }
-  async function subir(db, mesaId, res, extra, avance){
-    if(res.bytes.length > MAX_BYTES) throw new Error("El PDF quedó muy pesado (" + (res.bytes.length / 1048576).toFixed(1) + " MB). Probá con fotos más livianas.");
-    await borrar(db, mesaId);
-    var b = aB64(res.bytes), n = Math.ceil(b.length / TAM_PARTE), id = idDe(mesaId);
+  async function subirEn(db, cD, cP, id, bytes, meta, avance){
+    await borrarEn(db, cD, cP, id);
+    var b = aB64(bytes), n = Math.ceil(b.length / TAM_PARTE);
     for(var i = 0; i < n; i++){
       avance && avance("Subiendo " + (i + 1) + " de " + n + "…");
-      await db.collection(COL_DP).doc(id + "_" + i).set({ d: b.slice(i * TAM_PARTE, (i + 1) * TAM_PARTE), i: i, doc: id });
+      await db.collection(cP).doc(id + "_" + i).set({ d: b.slice(i * TAM_PARTE, (i + 1) * TAM_PARTE), i: i, doc: id });
     }
-    await db.collection(COL_D).doc(id).set(Object.assign({ mesaId: mesaId, partes: n, bytes: res.bytes.length, paginas: res.paginas, contenido: res.contenido }, extra || {}));
+    await db.collection(cD).doc(id).set(Object.assign({}, meta, { partes: n, bytes: bytes.length }));
     return { partes: n };
   }
-  async function bajar(db, mesaId){
-    var id = idDe(mesaId), d = await db.collection(COL_D).doc(id).get();
-    if(!d.exists) throw new Error("La documentación ya no está disponible.");
-    var n = d.data().partes, idx = []; for(var i = 0; i < n; i++) idx.push(i);
-    var partes = await Promise.all(idx.map(function(i){ return db.collection(COL_DP).doc(id + "_" + i).get(); }));
-    var b = partes.map(function(p){ if(!p.exists) throw new Error("Falta una parte del archivo."); return p.data().d; }).join("");
-    return new Blob([deB64(b)], { type: "application/pdf" });
+  async function bajarEn(db, cD, cP, id, tipo, avance){
+    var d = await db.collection(cD).doc(id).get();
+    if(!d.exists) throw new Error("El archivo ya no está disponible.");
+    var n = d.data().partes, out = [];
+    for(var i = 0; i < n; i++){
+      avance && avance("Bajando " + (i + 1) + " de " + n + "…");
+      var p = await db.collection(cP).doc(id + "_" + i).get();
+      if(!p.exists) throw new Error("Falta una parte del archivo.");
+      out.push(p.data().d);
+    }
+    return new Blob([deB64(out.join(""))], { type: tipo || "application/pdf" });
+  }
+  /* Documentación (Jorge → mesa) */
+  function borrar(db, mesaId){ return borrarEn(db, COL_D, COL_DP, idDe(mesaId)); }
+  async function subir(db, mesaId, res, extra, avance){
+    if(res.bytes.length > MAX_BYTES) throw new Error("El PDF quedó muy pesado (" + (res.bytes.length / 1048576).toFixed(1) + " MB). Probá con fotos más livianas.");
+    return subirEn(db, COL_D, COL_DP, idDe(mesaId), res.bytes, Object.assign({ mesaId: mesaId, paginas: res.paginas, contenido: res.contenido }, extra || {}), avance);
+  }
+  function bajar(db, mesaId){ return bajarEn(db, COL_D, COL_DP, idDe(mesaId)); }
+  /* Expediente escaneado (mesa → Jorge): se sube el PDF original, sin tocar */
+  var COL_E = "genres_mesa_exp", COL_EP = "genres_mesa_exp_partes", MAX_EXP = 25 * 1024 * 1024;
+  function idExp(mesaId){ return "e_" + mesaId; }
+  async function subirExp(db, mesaId, file, extra, avance){
+    if(!esPdf(file)) throw new Error("El expediente tiene que ser un PDF.");
+    if(file.size > MAX_EXP) throw new Error("El PDF pesa " + (file.size / 1048576).toFixed(1) + " MB y el máximo es 25 MB.");
+    var bytes = await leer(file);
+    return subirEn(db, COL_E, COL_EP, idExp(mesaId), bytes, Object.assign({ mesaId: mesaId, nombreOriginal: file.name || "" }, extra || {}), avance);
+  }
+  function bajarExp(db, mesaId, avance){ return bajarEn(db, COL_E, COL_EP, idExp(mesaId), "application/pdf", avance); }
+  function borrarExp(db, mesaId){ return borrarEn(db, COL_E, COL_EP, idExp(mesaId)); }
+  /* Texto de las primeras páginas (para controlar el N° de expediente). Escaneos sin texto → "" */
+  async function textoPdf(file, maxPag){
+    try{
+      var lib = await pdfjs(), doc = await lib.getDocument({ data: await leer(file) }).promise, t = "";
+      for(var n = 1; n <= Math.min(doc.numPages, maxPag || 3); n++){
+        var items = (await (await doc.getPage(n)).getTextContent()).items;
+        t += items.map(function(i){ return i.str; }).join(" ") + "\n";
+      }
+      return t;
+    }catch(_){ return ""; }
+  }
+  /* ¿El PDF menciona este expediente? null = no se puede saber (escaneo sin texto) */
+  function mencionaExp(texto, num, cod){
+    var limpio = String(texto || "").replace(/\s+/g, " ");
+    if(limpio.replace(/[^0-9a-z]/gi, "").length < 60) return null;
+    var re = new RegExp("(^|\\D)0*" + String(parseInt(num, 10)) + "\\s*[\\/\\-]\\s*0*" + String(parseInt(cod, 10)) + "(\\D|$)");
+    return re.test(limpio);
+  }
+  /* Link del PDF del expediente en SIGEDIG (ej. 192.168.10.11:3000/sigedig/ADJUNTOSEXP/1547588.pdf).
+     Solo se aceptan direcciones http/https; si falta, se agrega "http://". */
+  function linkSigedig(txt){
+    var m = String(txt || "").trim().match(/(?:https?:\/\/)?[^\s"'<>]+/i); if(!m) return null;
+    var u = m[0]; if(!/^https?:\/\//i.test(u)) u = "http://" + u;
+    try{
+      var x = new URL(u);
+      if(x.protocol !== "http:" && x.protocol !== "https:" || !x.hostname || x.hostname.indexOf(".") < 0) return null;
+      return { url: x.href, adjunto: /\/ADJUNTOSEXP\//i.test(x.pathname), pdf: /\.pdf$/i.test(x.pathname) };
+    }catch(_){ return null; }
   }
   /* Abre el PDF en una pestaña nueva (desde ahí se imprime). La pestaña se abre antes de bajar
      el archivo para que el navegador no la bloquee. */
@@ -742,7 +847,8 @@ var MesaDocs = (function(){
     }, function(e){ if(w) try{ w.close(); }catch(_){ } throw e; });
   }
   return { procesarOC: procesarOC, armar: armar, subir: subir, bajar: bajar, borrar: borrar, abrir: abrir,
-           COL_D: COL_D, COL_DP: COL_DP, aB64: aB64, deB64: deB64 };
+           linkSigedig: linkSigedig, subirExp: subirExp, bajarExp: bajarExp, borrarExp: borrarExp, textoPdf: textoPdf, mencionaExp: mencionaExp,
+           COL_D: COL_D, COL_DP: COL_DP, COL_E: COL_E, COL_EP: COL_EP, MAX_EXP: MAX_EXP, aB64: aB64, deB64: deB64 };
 })();
 
 </script>
@@ -851,7 +957,7 @@ if(typeof module !== "undefined" && module.exports) module.exports = MesaCal;
     measurementId: "G-GHDRCXE81C"
   };
   var COL = "genres_mesa", COL_U = "genres_mesa_usuarios", COL_CFG = "genres_mesa_config", COL_REG = "genres_registro_oc", COL_OBS = "genres_mesa_obs";
-  var obs = [], obsConocidas = null, docsMeta = {};
+  var obs = [], obsConocidas = null, docsMeta = {}, expMeta = {};
   var SES_KEY = "mesa_pris_sesion";
   var C = EntCore, K = MesaCal;
   var db = null, usuario = null, mesa = [], reg = [], feriados = null;
@@ -985,6 +1091,10 @@ if(typeof module !== "undefined" && module.exports) module.exports = MesaCal;
         reg = snap.docs.map(function(d){ var x = d.data(); x._id = d.id; return x; }).filter(function(r){ return !r.descartado; });
         estado.reg = "ok"; render();
       }, function(err){ console.warn("Registro OC (mesa):", err); estado.reg = "sin-acceso"; render(); });
+      db.collection(MesaDocs.COL_E).onSnapshot(function(snap){
+        expMeta = {}; snap.docs.forEach(function(d){ var x = d.data(); if(x.mesaId) expMeta[x.mesaId] = x; });
+        render();
+      }, function(err){ console.warn("Expedientes (mesa):", err); });
       db.collection(MesaDocs.COL_D).onSnapshot(function(snap){
         docsMeta = {}; snap.docs.forEach(function(d){ var x = d.data(); if(x.mesaId) docsMeta[x.mesaId] = x; });
         render();
@@ -1077,6 +1187,132 @@ if(typeof module !== "undefined" && module.exports) module.exports = MesaCal;
     }).join("") + "</div>";
   }
 
+  /* ---------- Expediente escaneado para Jorge ---------- */
+  function mb(b){ return b ? (b / 1048576 < 0.1 ? Math.max(1, Math.round(b / 1024)) + " KB" : (b / 1048576).toFixed(1) + " MB") : ""; }
+  window.pdfElegido = function(){
+    var f = $("in-pdf").files[0], d = $("in-drop"), t = $("in-pdf-txt");
+    if(!f){ d.classList.remove("lleno"); t.textContent = "Arrastrá el PDF acá o tocá para elegirlo. Le llega a Jorge para trabajarlo."; return; }
+    var malo = !/\.pdf$/i.test(f.name) && f.type !== "application/pdf";
+    if(malo || f.size > MesaDocs.MAX_EXP){
+      alert(malo ? "El expediente tiene que ser un PDF." : "El PDF pesa " + mb(f.size) + " y el máximo es 25 MB.");
+      $("in-pdf").value = ""; return window.pdfElegido();
+    }
+    d.classList.add("lleno"); t.textContent = "📄 " + f.name + " (" + mb(f.size) + ") — tocá para cambiarlo";
+  };
+  (function(){
+    var d = $("in-drop"); if(!d) return;
+    ["dragenter", "dragover"].forEach(function(ev){ d.addEventListener(ev, function(){ d.classList.add("on"); }); });
+    ["dragleave", "drop"].forEach(function(ev){ d.addEventListener(ev, function(){ d.classList.remove("on"); }); });
+    d.addEventListener("drop", function(){ setTimeout(window.pdfElegido, 0); });
+  })();
+  /* Sube el PDF del expediente; controla que sea del mismo expediente cuando el PDF tiene texto */
+  async function subirExpediente(m, file, avance, sinControl){
+    var txt = sinControl ? "" : await MesaDocs.textoPdf(file, 3), coincide = sinControl ? null : MesaDocs.mencionaExp(txt, m.num, m.cod);
+    if(coincide === false && !confirm("⚠️ En el PDF no encuentro el expediente " + m.nroExp + ".\n¿Seguro que es el expediente de " + m.paciente + "?\n\nAceptar = subirlo igual · Cancelar = no subirlo")) return false;
+    var t = ahora();
+    await MesaDocs.subirExp(db, m._id, file, { nroExp: m.nroExp, paciente: m.paciente, subidoMs: t.ms, subidoTxt: t.txt, subidoPor: usuario.n, vistoJorge: false }, avance);
+    await db.collection(COL).doc(m._id).set({ expEnviadoTxt: t.txt, expEnviadoPor: usuario.n, expDescargadoTxt: "",
+      historial: firebase.firestore.FieldValue.arrayUnion(t.txt + " · Expediente escaneado enviado a Jorge (" + mb(file.size) + ") por " + usuario.n) }, { merge: true });
+    return true;
+  }
+  function expTarjeta(m){
+    var e = expMeta[m._id];
+    if(m.sigedigUrl) return '<div class="it-exp ok">🔗 <span style="flex:1;min-width:180px"><b>Expediente vinculado de SIGEDIG</b> por ' + esc(m.sigedigPor || "") + " el " + esc(m.sigedigTxt || "") + " hs · " +
+      (m.sigedigAbiertoTxt ? "✅ Jorge lo abrió el " + esc(m.sigedigAbiertoTxt) + " hs" : "⏳ Jorge todavía no lo abrió") + '</span><a class="abrir" href="' + esc(m.sigedigUrl) + '" target="_blank" rel="noopener">📄 Ver</a></div>';
+    if(e) return '<div class="it-exp">📄 <span style="flex:1;min-width:180px"><b>Expediente enviado a Jorge</b> (' + mb(e.bytes) + ") por " + esc(e.subidoPor || "") + " el " + esc(e.subidoTxt || "") + " hs · ⏳ esperando que lo descargue</span></div>";
+    if(m.expDescargadoTxt) return '<div class="it-exp ok">✅ Jorge descargó el expediente el ' + esc(m.expDescargadoTxt) + " hs</div>";
+    if(m.estado === "entregado") return "";
+    return '<div class="it-exp">📄 <span style="width:100%">Todavía no se envió el expediente a Jorge.</span>' +
+      '<input type="text" placeholder="Pegá el link del PDF de SIGEDIG" data-link="' + esc(m._id) + '"><button type="button" data-acc="guardarlink" data-id="' + esc(m._id) + '">🔗 Enviar link</button>' +
+      '<label>📎 o subir PDF<input type="file" accept="application/pdf,.pdf" data-acc="adjexp" data-id="' + esc(m._id) + '"></label></div>';
+  }
+  /* ---------- Varios PDF juntos (carpeta): cada PDF se asigna a su ingreso leyendo el N° de expediente ---------- */
+  var lote = [];
+  function candidatos(){
+    return mesa.filter(function(m){ return m.estado !== "entregado" && !expMeta[m._id]; })
+      .sort(function(a, b){ return (b.ingresoMs || 0) - (a.ingresoMs || 0); });
+  }
+  window.loteElegidos = async function(input){
+    var files = Array.prototype.slice.call(input.files || []).filter(function(f){ return /\.pdf$/i.test(f.name) || f.type === "application/pdf"; });
+    input.value = "";
+    var box = $("lote-lista");
+    if(!files.length){ box.innerHTML = '<div class="hint" style="margin-top:8px">No hay PDF para enviar.</div>'; return; }
+    box.innerHTML = '<div class="hint" style="margin-top:8px">⏳ Leyendo ' + files.length + " PDF…</div>";
+    var cands = candidatos(), usados = {};
+    lote = [];
+    for(var i = 0; i < files.length; i++){
+      var f = files[i], txt = f.size <= MesaDocs.MAX_EXP ? await MesaDocs.textoPdf(f, 2) : "", match = null;
+      for(var j = 0; j < cands.length && !match; j++){
+        if(!usados[cands[j]._id] && MesaDocs.mencionaExp(txt, cands[j].num, cands[j].cod) === true) match = cands[j];
+      }
+      if(match) usados[match._id] = true;
+      lote.push({ file: f, id: match ? match._id : "", auto: !!match, grande: f.size > MesaDocs.MAX_EXP });
+    }
+    loteRender();
+  };
+  function loteRender(){
+    var box = $("lote-lista"); if(!box) return;
+    if(!lote.length){ box.innerHTML = ""; return; }
+    var cands = candidatos();
+    var ok = lote.filter(function(x){ return x.id && !x.grande; }).length;
+    box.innerHTML = lote.map(function(x, i){
+      var opts = '<option value="">— Elegí el ingreso / no enviar —</option>' + cands.map(function(m){
+        return '<option value="' + esc(m._id) + '"' + (m._id === x.id ? " selected" : "") + ">" + esc(m.nroExp + " — " + m.paciente) + "</option>";
+      }).join("");
+      var est = x.grande ? '<span class="no">⛔ Pesa ' + mb(x.file.size) + " (máx. 25 MB)</span>"
+        : x.auto && x.id ? '<span class="ok">✅ Reconocido</span>' : x.id ? '<span class="ok">✔ Asignado</span>' : '<span class="no">⚠️ Elegí a qué ingreso va</span>';
+      return '<div class="lote-f"><div class="nom">📄 ' + esc(x.file.name) + " (" + mb(x.file.size) + ')</div><select data-lote="' + i + '"' + (x.grande ? " disabled" : "") + ">" + opts + "</select><div>" + est + "</div></div>";
+    }).join("") +
+      '<div class="lote-pie"><button type="button" class="mini" onclick="loteCancelar()">Cancelar</button><button type="button" class="btn btn-verde" style="width:auto" id="lote-btn" onclick="loteEnviar()"' + (ok ? "" : " disabled") + ">📤 Enviar " + ok + " a Jorge</button></div>";
+  }
+  window.loteCancelar = function(){ lote = []; loteRender(); };
+  window.loteEnviar = async function(){
+    var va = lote.filter(function(x){ return x.id && !x.grande; });
+    var ids = va.map(function(x){ return x.id; });
+    if(ids.some(function(id, i){ return ids.indexOf(id) !== i; })){ alert("Hay dos PDF asignados al mismo ingreso. Revisalo antes de enviar."); return; }
+    var b = $("lote-btn"); b.disabled = true;
+    var bien = 0, mal = [];
+    for(var i = 0; i < va.length; i++){
+      var m = porId(va[i].id);
+      try{
+        b.textContent = "Enviando " + (i + 1) + " de " + va.length + "…";
+        if(!m) throw new Error("ingreso no encontrado");
+        await subirExpediente(m, va[i].file, null, true); bien++;
+      }catch(e){ mal.push(va[i].file.name + ": " + (e && e.message || e)); }
+    }
+    lote = []; loteRender(); render();
+    alert("✅ " + bien + (bien === 1 ? " expediente enviado" : " expedientes enviados") + " a Jorge." + (mal.length ? "\n\n⚠️ No se pudieron enviar:\n" + mal.join("\n") : ""));
+  };
+  document.addEventListener("change", function(e){
+    var el = e.target; if(!el || !el.hasAttribute || !el.hasAttribute("data-lote")) return;
+    var x = lote[+el.getAttribute("data-lote")]; if(!x) return;
+    x.id = el.value; x.auto = false; loteRender();
+  });
+
+  async function guardarLinkDesdeLista(id, btn){
+    var m = porId(id), inp = document.querySelector('[data-link="' + id + '"]'); if(!m || !inp) return;
+    var link = MesaDocs.linkSigedig(inp.value);
+    if(!link){ alert("Pegá el link del PDF del expediente (lo copiás de la barra de direcciones en SIGEDIG)."); inp.focus(); return; }
+    if(!link.adjunto && !confirm("El link no parece el PDF de un expediente de SIGEDIG (debería tener “ADJUNTOSEXP”).\n\n" + link.url + "\n\n¿Guardarlo igual?")) return;
+    btn.disabled = true;
+    try{
+      var t = ahora();
+      await db.collection(COL).doc(id).set({ sigedigUrl: link.url, sigedigTxt: t.txt, sigedigPor: usuario.n, sigedigAbiertoTxt: "", vistoJorge: false,
+        historial: firebase.firestore.FieldValue.arrayUnion(t.txt + " · Link de SIGEDIG cargado por " + usuario.n) }, { merge: true });
+    }catch(e){ alert("No se pudo guardar el link: " + (e && e.message || e)); btn.disabled = false; }
+  }
+  async function adjuntarDesdeLista(id, input){
+    var m = porId(id), f = input.files[0]; if(!m || !f) return;
+    var lab = input.parentNode, txt = lab.firstChild;
+    try{
+      if(!/\.pdf$/i.test(f.name) && f.type !== "application/pdf") throw new Error("El expediente tiene que ser un PDF.");
+      if(f.size > MesaDocs.MAX_EXP) throw new Error("El PDF pesa " + mb(f.size) + " y el máximo es 25 MB.");
+      input.disabled = true;
+      await subirExpediente(m, f, function(t){ txt.textContent = "⏳ " + t + " "; });
+    }catch(e){ alert("No se pudo enviar el expediente: " + (e && e.message || e)); }
+    input.disabled = false; input.value = ""; render();
+  }
+
   /* ---------- Documentación enviada por Jorge (un solo PDF para imprimir) ---------- */
   function contenidoTxt(c){ if(!c) return ""; var p = []; if(c.oc) p.push("orden de compra ×2"); if(c.dni) p.push("copia del DNI"); if(c.receta) p.push("receta"); return p.join(", "); }
   function docsTarjeta(m){
@@ -1133,6 +1369,9 @@ if(typeof module !== "undefined" && module.exports) module.exports = MesaCal;
     if(!pac || pac.replace(/[^A-ZÑ]/gi, "").length < 3){ msg("er", "Escribí el <b>apellido y nombre</b> del paciente."); $("in-pac").focus(); return; }
     if(!tipo){ msg("er", "Marcá si solicita <b>anteojos</b> o <b>audífonos</b>."); return; }
     if(estado.mesa !== "ok"){ msg("er", "Todavía no hay conexión con la base. Esperá unos segundos y probá de nuevo."); return; }
+    var linkTxt = $("in-link").value.trim(), link = linkTxt ? MesaDocs.linkSigedig(linkTxt) : null;
+    if(linkTxt && !link){ msg("er", "El <b>link del expediente</b> no es una dirección válida. Copialo de la barra de direcciones del PDF en SIGEDIG."); $("in-link").focus(); return; }
+    if(link && !link.adjunto && !confirm("El link no parece el PDF de un expediente de SIGEDIG (debería tener “ADJUNTOSEXP”).\n\n" + link.url + "\n\n¿Guardarlo igual?")) return;
     var k = C.clave(p.num, p.cod);
     var dup = mesa.filter(function(m){ return claveDe(m) === k && (!p.anio || !m.anio || String(m.anio) === p.anio); })[0];
     if(dup){
@@ -1158,13 +1397,23 @@ if(typeof module !== "undefined" && module.exports) module.exports = MesaCal;
         paciente: pac, telefono: tel, estado: "ingresado", plazo: K.PLAZO,
         ingresoMs: t.ms, ingresoTxt: t.txt, venceMs: vence.getTime(), venceTxt: K.fmt(vence),
         usuario: usuario.u, usuarioNombre: usuario.n, vistoJorge: false, anulado: false,
-        historial: [t.txt + " · Ingreso cargado por " + usuario.n]
+        historial: [t.txt + " · Ingreso cargado por " + usuario.n].concat(link ? [t.txt + " · Link de SIGEDIG cargado por " + usuario.n] : [])
       };
+      if(link){ doc.sigedigUrl = link.url; doc.sigedigTxt = t.txt; doc.sigedigPor = usuario.n; }
       var id = ("m_" + p.num + "_" + p.cod + "_" + anio).replace(/[\/#\?\[\]\*\.]+/g, "_");
       await db.collection(COL).doc(id).set(doc);
+      var pdf = $("in-pdf").files[0], expMsg = "";
+      if(pdf){
+        try{
+          var subio = await subirExpediente(Object.assign({ _id: id }, doc), pdf, function(x){ btn.textContent = "📄 " + x; });
+          expMsg = subio ? "<br>📄 Expediente escaneado enviado a Jorge." : "<br>⚠️ El expediente escaneado no se envió: adjuntalo desde <b>Expedientes</b>.";
+        }catch(e){ expMsg = "<br>⚠️ El ingreso quedó registrado, pero el expediente no se pudo enviar (" + esc(e && e.message || e) + "). Adjuntalo desde <b>Expedientes</b>."; }
+      }
+      $("in-pdf").value = ""; window.pdfElegido(); $("in-link").value = "";
+      if(link && !pdf) expMsg = "<br>🔗 Link del expediente enviado a Jorge.";
       $("in-exp").value = ""; $("in-pac").value = ""; $("in-tel").value = "";
       document.querySelectorAll('input[name="in-tipo"]').forEach(function(x){ x.checked = false; }); window.marcarTipo();
-      msg("ok", "✅ Ingreso registrado: <b>" + esc(expTxt) + "</b> — " + esc(pac) + " (" + tipoTxt(tipo) + ").<br>Vuelve a retirar la orden de compra a partir del <b>" + esc(K.fmtLargo(vence)) + "</b>. Imprimiendo la tirilla…");
+      msg("ok", "✅ Ingreso registrado: <b>" + esc(expTxt) + "</b> — " + esc(pac) + " (" + tipoTxt(tipo) + ").<br>Vuelve a retirar la orden de compra a partir del <b>" + esc(K.fmtLargo(vence)) + "</b>. Imprimiendo la tirilla…" + expMsg);
       imprimirTirilla(Object.assign({ _id: id }, doc));
       setTimeout(function(){ $("in-exp").focus(); }, 50);
     }catch(e){
@@ -1301,7 +1550,7 @@ if(typeof module !== "undefined" && module.exports) module.exports = MesaCal;
         '<div class="it-dato">Ingresó el ' + esc(m.ingresoTxt) + " hs · cargado por " + esc(m.usuarioNombre || m.usuario || "") +
           (ef !== "entregado" ? " · vuelve a partir del <b>" + esc(K.fmtLargo(sit.vence)) + "</b>" : "") +
           (m.telefono ? " · 📞 " + esc(m.telefono) : "") + "</div>" +
-        est + docsTarjeta(m) + obsTarjeta(m._id) +
+        est + expTarjeta(m) + docsTarjeta(m) + obsTarjeta(m._id) +
       "</div>" +
       '<div class="it-acc">' +
         (wa ? '<a class="mini wa" href="' + esc(wa) + '" target="_blank" rel="noopener" title="Avisar al paciente por WhatsApp">📲 WhatsApp</a>' : "") +
@@ -1366,12 +1615,14 @@ if(typeof module !== "undefined" && module.exports) module.exports = MesaCal;
     var el = e.target; if(!el || !el.getAttribute) return;
     var acc = el.getAttribute("data-acc");
     if(acc === "entregar") entregar(el.getAttribute("data-id"), el);
+    else if(acc === "adjexp") adjuntarDesdeLista(el.getAttribute("data-id"), el);
     else if(acc === "obs-chk"){ var c = el.closest("[data-obs]"), b = c && c.querySelector(".obs-ok"); if(b) b.disabled = !el.checked; }
     else if(acc === "entregar-reg") entregarReg(el.getAttribute("data-id"), el);
   });
   document.addEventListener("click", function(e){
     var el = e.target && e.target.closest ? e.target.closest("[data-acc],[data-f]") : null; if(!el) return;
     if(el.hasAttribute("data-f")){ $("ls-q").value = ""; $("ls-f").value = el.getAttribute("data-f"); window.render(); return; }
+    if(el.getAttribute("data-acc") === "guardarlink"){ guardarLinkDesdeLista(el.getAttribute("data-id"), el); return; }
     if(el.getAttribute("data-acc") === "imprimir"){ imprimirDocs(el.getAttribute("data-id"), el); return; }
     if(el.getAttribute("data-acc") === "obs-ok"){ confirmarObs(el.getAttribute("data-id"), el); return; }
     if(el.getAttribute("data-acc") === "tirilla"){ var m = porId(el.getAttribute("data-id")); if(m) imprimirTirilla(m); }
