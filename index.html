@@ -269,6 +269,12 @@ hr{border:none;border-top:1.5px solid #e2e8f0;margin:16px 0 14px}
 .rg-card.tr{background:#fffbeb;border-color:#fde68a}.rg-card.tr .rg-kick{color:#b45309}
 .rg-tramite{margin-top:10px;padding:9px 11px;border-radius:10px;background:#fff;border:1.5px dashed #fcd34d;font-size:13px;color:#78350f}
 .rg-tramite b{color:#92400e}
+.rg-docs{margin-top:10px;padding:9px 11px;border-radius:10px;font-size:13px;line-height:1.5;background:#f0f9ff;border:1.5px solid #bae6fd;color:#0c4a6e}
+.rg-docs.bloq{background:#fef2f2;border-color:#fca5a5;color:#7f1d1d}
+.rg-docs.desb{background:#f0fdf4;border-color:#bbf7d0;color:#14532d}
+.rg-docs button{margin-top:6px;padding:7px 12px;border:none;border-radius:8px;background:#b91c1c;color:#fff;font-size:13px;font-weight:800;cursor:pointer;font-family:inherit}
+.rg-docs button:disabled{opacity:.6;cursor:default}
+.rg-docs details{margin-top:4px}.rg-docs summary{cursor:pointer;font-weight:700}
 .rg-oc.vacia{border-style:dashed;border-color:#cbd5e1;box-shadow:none}.rg-oc.vacia span{color:#64748b}.rg-oc.vacia b{font-family:inherit;font-size:16px;color:#64748b}
 @media (max-width:600px){.rg-oc b{font-size:28px}}
 .rg-tit{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 12px}
@@ -3149,6 +3155,7 @@ if(typeof module !== "undefined" && module.exports) module.exports = EntConsulta
   // Expedientes en trámite (cuadro hecho / resolución en proceso) que todavía no tienen OC
   var ETAPA_RANK = { mesa: 0, cuadro: 1, proceso: 2, resolucion: 3 };
   var tramite = { pend: null, borr: null, mesa: null }, _syncT = null;
+  var mesaVivos = [];   // ingresos de Mesa de Entradas con su id (para el bloqueo de la documentación)
   // PDFs leídos que esperan ser guardados: se van SUMANDO en cada "Agregar PDFs" (carga por etapas).
   var enEspera = [], destildados = {};
   var authReady = new Promise(function(resolve){
@@ -3331,7 +3338,9 @@ if(typeof module !== "undefined" && module.exports) module.exports = EntConsulta
         }, function(err){ console.warn("Registro OC (en proceso):", err); });
         // Ingresos de Mesa de Entradas (genres_mesa): entran como "OC en trámite" desde el primer día.
         db.collection("genres_mesa").onSnapshot(function(snap){
-          tramite.mesa = snap.docs.map(function(d){ return d.data(); }).filter(function(x){ return !x.anulado; }); Store.programarSync();
+          tramite.mesa = snap.docs.map(function(d){ return d.data(); }).filter(function(x){ return !x.anulado; });
+          mesaVivos = snap.docs.map(function(d){ var x = d.data(); return { id: d.id, d: x }; }).filter(function(o){ return !o.d.anulado; });
+          Store.programarSync(); try{ UI.render(); }catch(_){ }
         }, function(err){ console.warn("Registro OC (mesa de entradas):", err); });
       });
     },
@@ -3721,11 +3730,39 @@ if(typeof module !== "undefined" && module.exports) module.exports = EntConsulta
           // Primero el N° de expediente y, a la par, el nombre y apellido del paciente.
           '<div class="rg-tit"><span class="rg-exp">' + esc(r.nroExp || C.expedienteTexto(r) || "Sin expediente") + '</span><span class="rg-pacn">' + esc(r.paciente || "(sin nombre)") + "</span></div>" +
           ocGrande +
-          (datos ? '<div class="rg-datos">' + datos + "</div>" : "") + alertas + entrega +
+          (datos ? '<div class="rg-datos">' + datos + "</div>" : "") + alertas + entrega + UI.docsMesa(r) +
         "</div>" +
         '<div class="rg-acc"><button type="button" class="ent-mini" title="Copiar paciente, expediente y OC" onclick="EntUI.copiar(\'' + r._id + '\', this)">📋</button>' +
         '<button type="button" class="ent-mini rojo" title="Eliminar del registro" onclick="EntUI.eliminar(\'' + r._id + '\')">🗑️</button></div>' +
       "</div>";
+    },
+    // Ingreso de Mesa de Entradas del mismo expediente (por N° y código; año si está).
+    mesaDe: function(r){
+      var p = (r.num && r.cod) ? r : C.partirExpediente(r.nroExp || "");
+      var k = p ? C.clave(p.num, p.cod) : ""; if(!k) return null;
+      var anio = String((p && p.anio) || r.anio || "");
+      var c = mesaVivos.filter(function(o){
+        var mk = C.clave(o.d.num, o.d.cod);
+        return (mk === k || (r.claves || []).indexOf(mk) >= 0) && (!anio || !o.d.anio || String(o.d.anio) === anio);
+      });
+      return c[0] || null;
+    },
+    // Documentación (OC y recetas) que imprime mesa: se imprime UNA vez y queda bloqueada hasta desbloquearla acá.
+    docsMesa: function(r){
+      var o = UI.mesaDe(r); if(!o) return "";
+      var m = o.d;
+      var vecesTxt = Number(m.docsImpresiones) > 1 ? " · impresa " + Number(m.docsImpresiones) + " veces" : "";
+      var hist = (m.historial || []).filter(function(h){ return /Documentaci[oó]n (impresa|abierta)|desbloque/i.test(h); });
+      var detalle = hist.length > 1 ? "<details><summary>Ver historial de impresiones (" + hist.length + ")</summary>" + hist.slice().reverse().map(function(h){ return "• " + esc(h); }).join("<br>") + "</details>" : "";
+      if(!m.docsImpresoTxt) return "";
+      if(m.docsDesbloqueado === true){
+        return '<div class="rg-docs desb">🔓 <b>Documentación desbloqueada</b>' + (m.docsDesbloqueoTxt ? " el " + esc(m.docsDesbloqueoTxt) : "") +
+          (m.docsDesbloqueoMotivo ? " — " + esc(m.docsDesbloqueoMotivo) : "") + ". Mesa la puede volver a imprimir una vez." +
+          "<br>Última impresión: <b>" + esc(m.docsImpresoPor || "") + "</b> el " + esc(m.docsImpresoTxt) + " hs" + vecesTxt + detalle + "</div>";
+      }
+      return '<div class="rg-docs bloq">🔒 <b>Mesa ya imprimió la documentación</b> (OC y recetas): <b>' + esc(m.docsImpresoPor || "") + "</b> el " + esc(m.docsImpresoTxt) + " hs" + vecesTxt + "." +
+        "<br>Está bloqueada para reimprimir." + detalle +
+        '<br><button type="button" onclick="desbloquearDocsMesa(\'' + esc(o.id) + '\', this)">🔓 Desbloquear para reimprimir</button></div>';
     },
     entrega: function(id, chk){
       var r = UI.rec(id); if(!r) return;
@@ -3932,6 +3969,30 @@ if(typeof module !== "undefined" && module.exports) module.exports = EntConsulta
     }
   };
   window.EntUI = UI;
+
+  /* Desbloquea la reimpresión de la documentación en Mesa de Entradas (una vez más). */
+  window.desbloquearDocsMesa = async function(mesaId, btn){
+    var o = mesaVivos.filter(function(x){ return x.id === mesaId; })[0];
+    if(!o){ alert("No encontré el ingreso de Mesa de Entradas."); return; }
+    var m = o.d;
+    if(!m.docsImpresoTxt || m.docsDesbloqueado === true){ alert("Esa documentación no está bloqueada."); return; }
+    var motivo = prompt("Desbloquear la documentación de " + m.paciente + " (Expte. " + m.nroExp + ").\n\nLa imprimió " + (m.docsImpresoPor || "mesa") + " el " + m.docsImpresoTxt + ".\nMesa la va a poder imprimir UNA vez más.\n\nMotivo (opcional, queda registrado):", "");
+    if(motivo === null) return;
+    motivo = String(motivo).trim();
+    if(btn){ btn.disabled = true; btn.textContent = "Desbloqueando…"; }
+    try{
+      var ok = await authReady; if(!ok || !db) throw new Error("Sin acceso a la base");
+      var d = new Date(), dd = function(n){ return String(n).padStart(2, "0"); };
+      var txt = dd(d.getDate()) + "/" + dd(d.getMonth() + 1) + "/" + d.getFullYear() + " " + dd(d.getHours()) + ":" + dd(d.getMinutes());
+      await db.collection("genres_mesa").doc(mesaId).set({
+        docsDesbloqueado: true, docsDesbloqueoTxt: txt, docsDesbloqueoMs: d.getTime(), docsDesbloqueoPor: "la Gerencia (Jorge)", docsDesbloqueoMotivo: motivo,
+        historial: firebase.firestore.FieldValue.arrayUnion(txt + " · Documentación desbloqueada para reimprimir por la Gerencia (Jorge)" + (motivo ? " — motivo: " + motivo : ""))
+      }, { merge: true });
+    }catch(e){
+      alert("No se pudo desbloquear: " + (e && e.message || e));
+      if(btn){ btn.disabled = false; btn.textContent = "🔓 Desbloquear para reimprimir"; }
+    }
+  };
 
   /* ---------- Navegación ----------
      • Buscador: mini pantalla (ventana emergente) sobre lo que esté abierto.
@@ -4821,7 +4882,12 @@ var MesaJ = (function(){
     var d = docsMeta[m._id]; if(!d) return "";
     return '<div class="mj-docs">📎 <b>Documentación enviada</b>: ' + esc(contenidoTxt(d.contenido)) + " · " + (d.paginas || "?") + " pág. · " + esc(d.creadoTxt || "") +
       ' · <a data-mj="verdocs" data-id="' + esc(m._id) + '">👁️ Ver</a>' +
-      (m.docsImpresoTxt ? "<br>🖨️ Impresa por <b>" + esc(m.docsImpresoPor || "") + "</b> el " + esc(m.docsImpresoTxt) + " hs" : "<br>⏳ Mesa todavía no la imprimió") + "</div>";
+      (m.docsImpresoTxt
+        ? (m.docsDesbloqueado === true
+            ? "<br>🔓 Desbloqueada" + (m.docsDesbloqueoTxt ? " el " + esc(m.docsDesbloqueoTxt) : "") + " · antes impresa por <b>" + esc(m.docsImpresoPor || "") + "</b> el " + esc(m.docsImpresoTxt) + " hs"
+            : "<br>🔒 Impresa por <b>" + esc(m.docsImpresoPor || "") + "</b> el " + esc(m.docsImpresoTxt) + " hs — bloqueada" +
+              ' <button type="button" class="mj-btn" style="background:#b91c1c;color:#fff;padding:4px 9px;font-size:12px" onclick="desbloquearDocsMesa(\'' + esc(m._id) + '\', this)">🔓 Desbloquear</button>')
+        : "<br>⏳ Mesa todavía no la imprimió") + "</div>";
   }
   function ocAbrir(m, soloDocs){
     ocPara = { m: m, soloDocs: soloDocs }; ocCache = null;
