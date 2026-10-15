@@ -539,6 +539,7 @@ hr{border:none;border-top:1.5px solid #e2e8f0;margin:16px 0 14px}
       <button id="btn-cargar-oc" style="width:auto;flex:0 0 auto;background:#dcfce7;color:#166534;border:1px solid #4ade80;border-radius:8px;padding:10px 14px;font-size:13px;font-weight:600;cursor:pointer" onclick="document.getElementById('oc-file').click()">📎 Cargar Nº de Orden (PDFs de OC)</button>
       <input id="oc-file" type="file" accept="application/pdf,.pdf" multiple style="display:none" onchange="cargarOrdenesDesdePDF(this.files); this.value='';">
       <button id="btn-fecha-orden" style="width:auto;flex:0 0 auto;background:#dbeafe;color:#1e40af;border:1px solid #60a5fa;border-radius:8px;padding:10px 14px;font-size:13px;font-weight:600;cursor:pointer" onclick="ponerFechaOrdenATodos()">📅 Fecha de orden a todos</button>
+      <button id="btn-duplicados" style="width:auto;flex:0 0 auto;background:#fff7ed;color:#9a3412;border:1px solid #fb923c;border-radius:8px;padding:10px 14px;font-size:13px;font-weight:600;cursor:pointer" onclick="revisarDuplicados()">🧹 Revisar duplicados</button>
       <button id="btn-vaciar-anteojos" style="width:auto;flex:0 0 auto;background:#fee2e2;color:#b91c1c;border:1px solid #fca5a5;border-radius:8px;padding:10px 14px;font-size:13px;font-weight:600;cursor:pointer" onclick="vaciarLista('anteojos')">🗑️ Vaciar Anteojos</button>
       <button id="btn-vaciar-audio" style="width:auto;flex:0 0 auto;background:#fee2e2;color:#b91c1c;border:1px solid #fca5a5;border-radius:8px;padding:10px 14px;font-size:13px;font-weight:600;cursor:pointer" onclick="vaciarLista('audio')">🗑️ Vaciar Audífonos</button>
     </div>
@@ -1218,7 +1219,19 @@ function registrarExpediente(p){
     creado: _hoy()
   };
   if(!reg.nroExp) return;
-  const arr = listadoLeer();
+  let arr = listadoLeer();
+  // ¿El mismo paciente (mismo tipo) ya figura con OTRO Nº de expediente? Suele ser un expediente mal tipeado.
+  const otros = arr.filter(x => (x.nroExp||"").trim() !== reg.nroExp && x.tipo === reg.tipo && _normNom(x.paciente) === _normNom(reg.paciente));
+  if(otros.length){
+    const lista = otros.map(x => "• " + x.nroExp + (x.orden ? " (OC " + x.orden + ")" : "")).join("\n");
+    const reemplazar = window._lstSilencio ? false : confirm("⚠️ " + reg.paciente + " ya está en el Listado con otro Nº de expediente:\n" + lista +
+      "\n\nAhora generaste el " + reg.nroExp + ".\n\nACEPTAR = es el mismo expediente mal escrito: se reemplaza la fila vieja por esta (se conserva su Nº de orden).\nCANCELAR = son dos expedientes distintos: quedan las dos filas.");
+    if(reemplazar){
+      const viejo = otros[0];
+      reg.orden = viejo.orden || ""; reg.ordenFecha = viejo.ordenFecha || ""; reg.creado = viejo.creado || reg.creado;
+      arr = arr.filter(x => otros.indexOf(x) < 0);
+    }
+  }
   // upsert por Nº Expediente: si descargás Word y PDF del mismo, no se duplica
   const i = arr.findIndex(x => (x.nroExp||"").trim() === reg.nroExp);
   if(i >= 0){ reg.orden = arr[i].orden || ""; reg.ordenFecha = arr[i].ordenFecha || ""; reg.creado = arr[i].creado || reg.creado; arr[i] = reg; } else { arr.push(reg); }
@@ -1272,6 +1285,12 @@ function setOrden(nroExp, valor){
   const i = arr.findIndex(x => (x.nroExp||"").trim() === String(nroExp).trim());
   if(i >= 0){
     const val = String(valor||"").trim();
+    const otro = val ? arr.find((x, k) => k !== i && String(x.orden||"").trim() === val) : null;
+    if(otro){
+      alert("⚠️ La OC " + val + " ya está cargada en el expediente " + otro.nroExp + " (" + otro.paciente + ").\n\nCada OC es única: no se puede repetir. Si ese expediente está mal, usá 🧹 Revisar duplicados o borralo con ✕.");
+      renderListado();
+      return;
+    }
     arr[i].orden = val;
     if(val){ if(!arr[i].ordenFecha) arr[i].ordenFecha = _hoy(); }
     else { arr[i].ordenFecha = ""; }
@@ -1332,6 +1351,8 @@ function cargarOrdenesDesdePDF(files){
     const actual = String(mejor.r.orden||"").trim();
     if(actual === d.oc){ yaEstaban.push(mejor.r.nroExp); return; }
     if(actual && actual !== d.oc){ conflictos.push(mejor.r.nroExp+": ya tenía "+actual+", el PDF dice "+d.oc); return; }
+    const yaEnOtro = arr.find(function(x, k){ return k !== mejor.i && String(x.orden||"").trim() === d.oc; });
+    if(yaEnOtro){ conflictos.push(mejor.r.nroExp+": la OC "+d.oc+" ya está en el expediente "+yaEnOtro.nroExp+" ("+yaEnOtro.paciente+")"); return; }
     arr[mejor.i].orden = d.oc;
     if(!arr[mejor.i].ordenFecha) arr[mejor.i].ordenFecha = _fechaArchivo(f);
     cargados.push(mejor.r.nroExp+" → OC "+d.oc);
@@ -1377,11 +1398,13 @@ function _renderGrupo(grupo, tbodyId){
   const tbody = document.getElementById(tbodyId);
   if(!tbody) return 0;
   const td = "padding:7px 8px;border:1px solid #e2e8f0;";
+  const dups = _filasDuplicadas(listadoLeer());
   tbody.innerHTML = grupo.map(function(r){
     const key = String(r.nroExp).replace(/\\/g,"\\\\").replace(/'/g,"\\'");
     const ordVal = _escL(r.orden).replace(/"/g,"&quot;");
-    return '<tr>' +
-      '<td style="'+td+'">'+_escL(r.nroExp)+'</td>' +
+    const esDup = dups[String(r.nroExp).trim()];
+    return '<tr'+(esDup?' style="background:#fff7ed" title="Repetido: mismo paciente u OC en otro expediente. Usá 🧹 Revisar duplicados."':'')+'>' +
+      '<td style="'+td+'">'+(esDup?'⚠️ ':'')+_escL(r.nroExp)+'</td>' +
       '<td style="'+td+'text-align:center;white-space:nowrap">'+_escL(r.creado||"—")+'</td>' +
       '<td style="'+td+'">'+_escL(r.paciente)+'</td>' +
       '<td style="'+td+'text-align:center"><input type="text" value="'+_escL(r.cantidad)+'" onchange="setCantidad(\''+key+'\', this.value)" style="width:52px;border:1px solid #cbd5e1;border-radius:6px;padding:5px 6px;font-size:13px;text-align:center;outline:none"></td>' +
@@ -1392,6 +1415,90 @@ function _renderGrupo(grupo, tbodyId){
     '</tr>';
   }).join("");
   return grupo.reduce((s,r)=>s+(Number(r.monto)||0),0);
+}
+
+// ===== Duplicados en el Listado: mismo paciente (mismo tipo) o misma OC con distinto Nº de expediente =====
+function _gruposDuplicados(arr){
+  const padre = arr.map((_, i) => i);
+  const raiz = i => { while(padre[i] !== i){ padre[i] = padre[padre[i]]; i = padre[i]; } return i; };
+  const unir = (a, b) => { padre[raiz(a)] = raiz(b); };
+  const porClave = {};
+  arr.forEach(function(r, i){
+    const claves = [];
+    const oc = String(r.orden||"").trim();
+    if(oc) claves.push("oc:" + oc);
+    const pac = _normNom(r.paciente);
+    if(pac) claves.push("pac:" + r.tipo + ":" + pac);
+    claves.forEach(function(k){ if(porClave[k] != null) unir(i, porClave[k]); else porClave[k] = i; });
+  });
+  const g = {};
+  arr.forEach(function(r, i){ const k = raiz(i); (g[k] = g[k] || []).push(r); });
+  return Object.keys(g).map(k => g[k]).filter(x => x.length > 1);
+}
+function _filasDuplicadas(arr){
+  const out = {};
+  _gruposDuplicados(arr).forEach(function(g){ g.forEach(function(r){ out[String(r.nroExp).trim()] = true; }); });
+  return out;
+}
+// Lo que dice el registro del buscador (cargado desde el PDF de la OC) para esa OC
+function _expDelRegistro(oc){
+  try{
+    if(!oc || !window.RegistroOCStore || !window.RegistroOCStore.lista) return null;
+    const r = window.RegistroOCStore.lista().filter(function(x){
+      const ocs = (x.ocs && x.ocs.length) ? x.ocs : (x.oc ? [x.oc] : []);
+      return ocs.map(String).indexOf(String(oc)) >= 0;
+    })[0];
+    return r ? { rec: r, nroExp: r.nroExp || EntCore.expedienteTexto(r) } : null;
+  }catch(_){ return null; }
+}
+async function revisarDuplicados(){
+  const msgEl = document.getElementById("lst-msg");
+  let arr = listadoLeer();
+  const grupos = _gruposDuplicados(arr);
+  if(!grupos.length){ if(msgEl){ msgEl.className="msg ok"; msgEl.textContent="✔ No hay duplicados en el Listado."; } return; }
+  const hechos = [], salteados = [], regCorr = [];
+  for(let gi = 0; gi < grupos.length; gi++){
+    const g = grupos[gi];
+    const oc = g.map(r => String(r.orden||"").trim()).filter(Boolean)[0] || "";
+    const enReg = _expDelRegistro(oc);
+    let sugerido = 0;
+    if(enReg){
+      const pr = EntCore.partirExpediente(enReg.nroExp);
+      const k = g.findIndex(function(r){ const p = EntCore.partirExpediente(r.nroExp); return p && pr && p.num === pr.num && p.cod === pr.cod; });
+      if(k >= 0) sugerido = k;
+    }
+    const opciones = g.map((r, k) => (k+1) + ") " + r.nroExp + "  —  " + r.paciente + (r.orden ? "  —  OC " + r.orden : "") + (r.ordenFecha ? "  (" + r.ordenFecha + ")" : "")).join("\n");
+    const resp = prompt("Duplicado " + (gi+1) + " de " + grupos.length + ":\n\n" + opciones +
+      (enReg ? "\n\nEl buscador (PDF de la OC " + oc + ") dice: " + enReg.nroExp : "") +
+      "\n\nEscribí el número de la fila CORRECTA (las otras se borran).\nDejá vacío o Cancelar para no tocar este caso.", String(sugerido+1));
+    const n = parseInt(String(resp||"").trim(), 10);
+    if(!n || n < 1 || n > g.length){ salteados.push(g[0].paciente); continue; }
+    const queda = g[n-1], borrar = g.filter(r => r !== queda);
+    // Conserva el Nº de orden y su fecha si la fila que queda no los tenía
+    borrar.forEach(function(r){
+      if(!queda.orden && r.orden){ queda.orden = r.orden; queda.ordenFecha = r.ordenFecha || queda.ordenFecha; }
+      if(!queda.ordenFecha && r.ordenFecha) queda.ordenFecha = r.ordenFecha;
+    });
+    arr = arr.filter(r => borrar.indexOf(r) < 0);
+    hechos.push(queda.paciente + " → queda " + queda.nroExp + " (se borró " + borrar.map(r => r.nroExp).join(", ") + ")");
+    // Si el buscador tiene esa OC con el expediente equivocado, lo corrige también
+    if(enReg && window.RegistroOCStore && window.RegistroOCStore.corregirExpediente){
+      const pq = EntCore.partirExpediente(queda.nroExp), pr2 = EntCore.partirExpediente(enReg.nroExp);
+      if(pq && pr2 && (pq.num !== pr2.num || pq.cod !== pr2.cod)){
+        try{ await window.RegistroOCStore.corregirExpediente(enReg.rec, queda.nroExp); regCorr.push("OC " + oc + " → " + queda.nroExp); }
+        catch(e){ regCorr.push("OC " + oc + ": no se pudo corregir en el buscador (" + (e && e.message || e) + ")"); }
+      }
+    }
+  }
+  listadoGuardar(arr);
+  renderListado();
+  if(msgEl){
+    msgEl.className = "msg " + (hechos.length ? "ok" : "er");
+    msgEl.style.whiteSpace = "pre-line";
+    msgEl.textContent = (hechos.length ? "✅ Corregidos " + hechos.length + ":\n   " + hechos.join("\n   ") : "No se corrigió ninguno.") +
+      (regCorr.length ? "\n🔎 También corregido en el buscador:\n   " + regCorr.join("\n   ") : "") +
+      (salteados.length ? "\n• Sin tocar: " + salteados.join(", ") : "");
+  }
 }
 
 function renderListado(){
@@ -2678,7 +2785,9 @@ async function reprocesarLote(fileList){
       document.body.appendChild(a); a.click(); a.remove();
       setTimeout(function(){ URL.revokeObjectURL(url); }, 4000);
 
+      window._lstSilencio = true;
       oks.forEach(function(pl){ try{ registrarExpediente(pl); }catch(_){ } });
+      window._lstSilencio = false;
 
       var res = "✅ ZIP descargado con "+oks.length+" PDF ("+zipNom+"). Quedaron registradas en el Listado.";
       if(sinNumero) res += " "+sinNumero+" sin Nº (no incluidas).";
@@ -3536,6 +3645,7 @@ if(typeof module !== "undefined" && module.exports) module.exports = EntConsulta
                enTramite: cache.filter(function(r){ return r.etapa && !(r.ocs && r.ocs.length) && !r.oc; }).length };
     }
   };
+  Store.lista = function(){ return cache.slice(); };
   window.RegistroOCStore = Store;
 
   /* ---------- UI ---------- */
