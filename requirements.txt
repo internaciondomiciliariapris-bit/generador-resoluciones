@@ -1,4 +1,0 @@
-fpdf2
-openpyxl
-reportlab
-pypdf
