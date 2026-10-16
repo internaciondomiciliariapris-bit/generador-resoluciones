@@ -160,6 +160,26 @@ button,input,select{font-family:inherit}
 .it-docs button.lock{background:#94a3b8;cursor:not-allowed}
 .aviso-otros{margin:-4px 0 12px;font-size:13px;color:#1e3a8a;background:#eff6ff;border:1px solid #bfdbfe;border-radius:9px;padding:8px 12px;cursor:pointer}
 @media(max-width:600px){.tab{font-size:13px;padding:10px 6px}}
+/* ---- Ventana de control del ingreso (datos obligatorios / nombre como en el DNI) ---- */
+#val-ov{position:fixed;inset:0;z-index:10050;background:rgba(15,23,42,.62);display:flex;align-items:flex-start;justify-content:center;padding:8vh 14px 14px;overflow:auto}
+.val-box{background:#fff;width:100%;max-width:560px;border-radius:18px;box-shadow:0 24px 70px rgba(0,0,0,.45);overflow:hidden;animation:obsEntra .25s ease-out}
+.val-head{display:flex;align-items:center;gap:12px;padding:16px 20px;color:#fff}
+.val-head.rojo{background:linear-gradient(120deg,#b91c1c,#dc2626)}
+.val-head.azul{background:linear-gradient(120deg,#0f766e,#1a56a0)}
+.val-head b{font-size:19px;display:block}.val-head span{font-size:13px;opacity:.92}
+.val-body{padding:16px 20px;font-size:15px;line-height:1.55;color:#1a2b4a}
+.val-body ul{margin:8px 0 0 20px}.val-body li{margin:6px 0}
+.val-nom{margin:10px 0;padding:14px;border:2px solid #1a56a0;border-radius:12px;background:#eff6ff;text-align:center;font-size:22px;font-weight:900;letter-spacing:.5px;color:#1a2b4a;word-break:break-word}
+.val-dato{font-size:14px;color:#475569;text-align:center}
+.val-chk{display:flex;align-items:flex-start;gap:10px;margin-top:12px;padding:12px;border-radius:10px;background:#fffbeb;border:1.5px solid #fde68a;font-size:15px;font-weight:700;cursor:pointer}
+.val-chk input{width:22px;height:22px;flex-shrink:0;accent-color:#16a34a;margin-top:1px}
+.val-pie{display:flex;gap:10px;padding:0 20px 18px;flex-wrap:wrap}
+.val-pie button{flex:1;min-width:150px;padding:13px;border:none;border-radius:10px;font-size:15px;font-weight:800;cursor:pointer;font-family:inherit}
+.val-ok{background:#16a34a;color:#fff}.val-ok:disabled{background:#cbd5e1;cursor:default}
+.val-no{background:#f1f5f9;color:#334155;border:1.5px solid #cbd5e1!important}
+.f input.falta{border-color:#dc2626!important;background:#fef2f2}
+.tipos.falta .tipo{border-color:#dc2626;background:#fef2f2}
+.dni-av{margin-top:6px;padding:8px 11px;border-radius:9px;background:#fffbeb;border:1.5px solid #fde68a;color:#92400e;font-size:13px;font-weight:700;line-height:1.45}
 @media(max-width:600px){.ops{grid-template-columns:1fr}.lote-f{grid-template-columns:1fr}.it{flex-wrap:wrap}.it-acc{flex-direction:row;width:100%}.tipos{grid-template-columns:1fr}}
 @media print{body>*{display:none!important}}
 </style>
@@ -215,15 +235,16 @@ button,input,select{font-family:inherit}
     <div class="f">
       <label for="in-exp">N° de expediente <span>*</span></label>
       <input type="text" id="in-exp" autocomplete="off" maxlength="20" placeholder="Ej. 8871/410/U/2026" onkeydown="expKeydown(this,event)" style="text-transform:uppercase">
-      <div class="hint">Escribí cada parte y apretá <b>Tab</b>: pone la barra sola (8871 Tab 410 Tab U Tab 2026). Si no tiene año, se toma el año actual.</div>
+      <div class="hint">Completo, con las <b>4 partes</b>: número / código / <b>letra</b> / año. Escribí cada parte y apretá <b>Tab</b>: pone la barra sola (8871 Tab 410 Tab U Tab 2026).</div>
     </div>
     <div class="f">
       <label for="in-pac">Apellido y nombre del paciente <span>*</span></label>
       <input type="text" id="in-pac" autocomplete="off" placeholder="Ej. PÉREZ, JUAN CARLOS" style="text-transform:uppercase">
+      <div class="dni-av">🪪 Apellido y nombre <b>COMPLETOS y EXACTAMENTE como figuran en el DNI</b> del paciente (todos los nombres y apellidos, sin abreviar ni sobrenombres). Tené el DNI en la mano al cargarlo.</div>
     </div>
     <div class="f">
       <label>¿Qué solicita? <span>*</span></label>
-      <div class="tipos">
+      <div class="tipos" id="in-tipos">
         <label class="tipo" id="tp-anteojos"><input type="radio" name="in-tipo" value="anteojos" onchange="marcarTipo()"> 👓 Anteojos</label>
         <label class="tipo" id="tp-audio"><input type="radio" name="in-tipo" value="audio" onchange="marcarTipo()"> 🎧 Audífonos</label>
       </div>
@@ -264,6 +285,14 @@ button,input,select{font-family:inherit}
   </div>
 </div>
 
+<!-- Control del ingreso: faltan datos / confirmar nombre como en el DNI -->
+<div id="val-ov" style="display:none" role="alertdialog" aria-modal="true">
+  <div class="val-box">
+    <div class="val-head" id="val-head"><div style="font-size:30px" id="val-ico">⚠️</div><div><b id="val-tit"></b><span id="val-sub"></span></div></div>
+    <div class="val-body" id="val-body"></div>
+    <div class="val-pie" id="val-pie"></div>
+  </div>
+</div>
 <iframe id="print-frame" title="Impresión" style="position:fixed;width:0;height:0;border:0;right:0;bottom:0;visibility:hidden"></iframe>
 
 <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
@@ -1325,15 +1354,80 @@ if(typeof module !== "undefined" && module.exports) module.exports = MesaCal;
     }
   };
 
+  /* ---------- Control del ingreso ---------- */
+  var RE_EXP_COMPLETO = /^(\d{1,6})\/(\d{2,4})\/([A-ZÑ])\/(20\d{2})$/;
+  function faltantesIngreso(expTxt, pac, tipo){
+    var f = [];
+    if(!expTxt) f.push({ campo: "in-exp", txt: "<b>N° de expediente</b>: está vacío." });
+    else if(!RE_EXP_COMPLETO.test(expTxt)){
+      var p = C.partirExpediente(expTxt), que = [];
+      if(!p || !p.num) que.push("el número"); if(!p || !p.cod) que.push("el código");
+      if(!p || !p.letra) que.push("la <b>letra</b>"); if(!p || !p.anio) que.push("el <b>año</b>");
+      f.push({ campo: "in-exp", txt: "<b>N° de expediente incompleto</b> (" + esc(expTxt) + ")" + (que.length ? ": falta " + que.join(", ") : "") + ". Tiene que tener las 4 partes, por ejemplo <b>8871/410/U/2026</b>." });
+    }
+    var palabras = String(pac || "").replace(/[,.]/g, " ").split(/\s+/).filter(function(w){ return w.replace(/[^A-ZÑÁÉÍÓÚÜ']/gi, "").length >= 2; });
+    if(!pac) f.push({ campo: "in-pac", txt: "<b>Apellido y nombre</b>: está vacío." });
+    else if(/\d/.test(pac)) f.push({ campo: "in-pac", txt: "<b>Apellido y nombre</b>: no puede tener números." });
+    else if(palabras.length < 2) f.push({ campo: "in-pac", txt: "<b>Apellido y nombre incompletos</b> (" + esc(pac) + "): tiene que estar el <b>apellido y el nombre</b> completos, como figuran en el DNI." });
+    if(!tipo) f.push({ campo: "in-tipos", txt: "<b>¿Qué solicita?</b>: tildá <b>Anteojos</b> o <b>Audífonos</b>." });
+    return f;
+  }
+  function marcarFaltantes(f){
+    ["in-exp", "in-pac", "in-tipos"].forEach(function(id){ var el = $(id); if(el) el.classList.toggle("falta", f.some(function(x){ return x.campo === id; })); });
+  }
+  function abrirVentana(cls, ico, tit, sub, body, pie){
+    $("val-head").className = "val-head " + cls; $("val-ico").textContent = ico;
+    $("val-tit").textContent = tit; $("val-sub").textContent = sub;
+    $("val-body").innerHTML = body; $("val-pie").innerHTML = pie;
+    $("val-ov").style.display = "flex";
+  }
+  function cerrarVentana(){ $("val-ov").style.display = "none"; }
+  function ventanaFaltan(f){
+    abrirVentana("rojo", "⚠️", "Faltan completar datos", "No se puede registrar el ingreso hasta completarlos.",
+      "Completá estos datos <b>obligatorios</b>:<ul>" + f.map(function(x){ return "<li>" + x.txt + "</li>"; }).join("") + "</ul>" +
+      '<div style="margin-top:10px;font-size:13px;color:#64748b">El teléfono es opcional.</div>',
+      '<button type="button" class="val-ok" id="val-entendido">Entendido, completar</button>');
+    var b = $("val-entendido");
+    b.onclick = function(){ cerrarVentana(); var el = $(f[0].campo); if(el && el.focus && el.tagName === "INPUT") el.focus(); };
+    setTimeout(function(){ b.focus(); }, 30);
+  }
+  function ventanaDni(pac, expTxt, tipo){
+    return new Promise(function(resolve){
+      abrirVentana("azul", "🪪", "Verificá con el DNI del paciente", "El apellido y nombre tiene que ser EXACTAMENTE el del DNI.",
+        '<div class="val-dato">Así va a quedar registrado:</div>' +
+        '<div class="val-nom">' + esc(pac) + "</div>" +
+        '<div class="val-dato">Expte. <b>' + esc(expTxt) + "</b> · " + tipoIco(tipo) + " " + esc(tipoTxt(tipo)) + "</div>" +
+        '<div style="margin-top:12px;font-size:14px">Compará letra por letra con el DNI: <b>todos los apellidos y todos los nombres</b>, sin abreviar, sin sobrenombres y sin errores de tipeo.</div>' +
+        '<label class="val-chk"><input type="checkbox" id="val-dni-chk"> Lo comparé con el DNI del paciente y está escrito exactamente igual.</label>',
+        '<button type="button" class="val-no" id="val-corregir">✏️ Corregir</button><button type="button" class="val-ok" id="val-confirmar" disabled>✅ Confirmar y registrar</button>');
+      var chk = $("val-dni-chk"), ok = $("val-confirmar"), no = $("val-corregir");
+      chk.onchange = function(){ ok.disabled = !chk.checked; };
+      ok.onclick = function(){ if(!chk.checked) return; cerrarVentana(); resolve(true); };
+      no.onclick = function(){ cerrarVentana(); resolve(false); };
+      setTimeout(function(){ chk.focus(); }, 30);
+    });
+  }
+  // Al corregir un campo marcado en rojo, se quita la marca.
+  ["in-exp", "in-pac"].forEach(function(id){ var el = $(id); if(el) el.addEventListener("input", function(){ el.classList.remove("falta"); }); });
+  document.addEventListener("change", function(e){ if(e.target && e.target.name === "in-tipo"){ var t = $("in-tipos"); if(t) t.classList.remove("falta"); } });
+
   /* ---------- Nuevo ingreso ---------- */
   window.registrar = async function(){
     var expTxt = $("in-exp").value.trim().toUpperCase().replace(/\s+/g, "");
     var pac = $("in-pac").value.trim().replace(/\s+/g, " ").toUpperCase();
     var tipo = tipoElegido(), tel = $("in-tel").value.trim();
     var p = C.partirExpediente(expTxt);
-    if(!p || !p.num || !p.cod){ msg("er", "Revisá el <b>N° de expediente</b> (ej. 8871/410/U/2026)."); $("in-exp").focus(); return; }
-    if(!pac || pac.replace(/[^A-ZÑ]/gi, "").length < 3){ msg("er", "Escribí el <b>apellido y nombre</b> del paciente."); $("in-pac").focus(); return; }
-    if(!tipo){ msg("er", "Marcá si solicita <b>anteojos</b> o <b>audífonos</b>."); return; }
+    // ---- Datos OBLIGATORIOS: expediente completo (con letra y año), apellido y nombre completos, anteojos/audífonos ----
+    var faltan = faltantesIngreso(expTxt, pac, tipo);
+    marcarFaltantes(faltan);
+    if(faltan.length){
+      msg("er", "⛔ Faltan datos obligatorios. Completalos para poder registrar el ingreso.");
+      ventanaFaltan(faltan);
+      return;
+    }
+    // ---- Apellido y nombre como en el DNI: se confirma en una ventana antes de guardar ----
+    var okDni = await ventanaDni(pac, expTxt, tipo);
+    if(!okDni){ msg("av", "Revisá el apellido y nombre con el DNI del paciente y volvé a tocar <b>Registrar</b>."); $("in-pac").focus(); return; }
     if(estado.mesa !== "ok"){ msg("er", "Todavía no hay conexión con la base. Esperá unos segundos y probá de nuevo."); return; }
     var k = C.clave(p.num, p.cod);
     var dup = mesa.filter(function(m){ return claveDe(m) === k && (!p.anio || !m.anio || String(m.anio) === p.anio); })[0];
