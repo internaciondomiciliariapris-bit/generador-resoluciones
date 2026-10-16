@@ -1108,7 +1108,7 @@ if(typeof module !== "undefined" && module.exports) module.exports = MesaCal;
       if(!ok || !db){ estado.mesa = estado.reg = "sin-acceso"; render(); return; }
       db.collection(COL).onSnapshot(function(snap){
         mesa = snap.docs.map(function(d){ var x = d.data(); x._id = d.id; return x; }).filter(function(m){ return !m.anulado; });
-        estado.mesa = "ok"; render();
+        estado.mesa = "ok"; render(); window.mostrarObs();
       }, function(err){ console.warn("Mesa onSnapshot:", err); estado.mesa = "sin-acceso"; render(); });
       db.collection(COL_REG).onSnapshot(function(snap){
         reg = snap.docs.map(function(d){ var x = d.data(); x._id = d.id; return x; }).filter(function(r){ return !r.descartado; });
@@ -1126,7 +1126,7 @@ if(typeof module !== "undefined" && module.exports) module.exports = MesaCal;
         obs = snap.docs.map(function(d){ var x = d.data(); x._id = d.id; return x; }).filter(function(o){ return !o.anulada; });
         obs.sort(function(a, b){ return (a.creadoMs || 0) - (b.creadoMs || 0); });
         var nuevas = obs.filter(function(o){ return !o.leido && obsConocidas && !obsConocidas[o._id]; });
-        if(nuevas.length) sonar();
+        if(nuevas.some(obsEsParaMi)) sonar();
         obsConocidas = obsConocidas || {}; obs.forEach(function(o){ obsConocidas[o._id] = true; });
         mostrarObs(false); render();
       }, function(err){ console.warn("Observaciones (mesa):", err); });
@@ -1168,7 +1168,18 @@ if(typeof module !== "undefined" && module.exports) module.exports = MesaCal;
       setTimeout(function(){ try{ ac.close(); }catch(_){ } }, 1100);
     }catch(_){}
   }
-  function obsSinLeer(){ return obs.filter(function(o){ return !o.leido; }); }
+  /* Cada observación es para el usuario del expediente: el que lo cargó o el que lo tomó.
+     Solo a ese usuario le salta la ventana; los demás la ven en la tarjeta del expediente.
+     Si la observación no es de un expediente (o el ingreso ya no está), le aparece a todos. */
+  function obsEsParaMi(o){
+    if(!usuario) return false;
+    if(o.paraU) return o.paraU === usuario.u;
+    if(!o.mesaId) return true;
+    var m = porId(o.mesaId);
+    if(!m) return estado.mesa === "ok";
+    return m.usuario === usuario.u || m.tomadoU === usuario.u;
+  }
+  function obsSinLeer(){ return estado.mesa === "ok" ? obs.filter(function(o){ return !o.leido && obsEsParaMi(o); }) : []; }
   function obsDe(mesaId){ return obs.filter(function(o){ return o.mesaId === mesaId; }); }
   window.mostrarObs = function(){
     var ov = $("obs-ov"), l = $("obs-lista"), b = $("hdr-obs"); if(!ov) return;
