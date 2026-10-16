@@ -283,6 +283,23 @@ hr{border:none;border-top:1.5px solid #e2e8f0;margin:16px 0 14px}
 .rg-fix{margin:6px 0;padding:7px 9px;background:#fff;border:1px solid #fde68a;border-radius:8px;font-size:12.5px;color:#334155;line-height:1.9}
 .rg-fix-it{display:inline-block;margin-right:12px}
 .rg-fix .sub{color:#64748b;font-size:11.5px}
+/* ===== Contraseña del buscador de expedientes/OC ===== */
+.bk-ov{position:fixed;inset:0;z-index:99999;background:rgba(15,23,42,.55);display:none;align-items:center;justify-content:center;padding:16px}
+.bk-ov.on{display:flex}
+.bk-box{background:#fff;border-radius:16px;width:100%;max-width:380px;padding:22px 22px 18px;box-shadow:0 24px 60px rgba(0,0,0,.35);font-family:inherit;text-align:left}
+.bk-t{font-size:17px;font-weight:800;color:#1a56a0;margin-bottom:4px}
+.bk-s{font-size:12.5px;color:#64748b;margin-bottom:14px;line-height:1.4}
+.bk-wrap{display:flex;gap:6px}
+.bk-wrap input{flex:1;height:40px;border:1.5px solid #cbd5e1;border-radius:9px;padding:0 12px;font-size:15px;font-family:inherit}
+.bk-wrap input:focus{outline:none;border-color:#1a56a0}
+.bk-wrap button{width:42px;border:1.5px solid #cbd5e1;border-radius:9px;background:#f8fafc;cursor:pointer;font-size:16px}
+.bk-rec{display:flex;align-items:center;gap:6px;font-size:12.5px;color:#334155;margin-top:10px}
+.bk-err{min-height:16px;margin-top:8px;font-size:12px;color:#b91c1c;font-weight:600}
+.bk-acc{display:flex;gap:8px;justify-content:flex-end;margin-top:8px}
+.bk-acc button{border:none;border-radius:9px;padding:10px 16px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit}
+.bk-cancel{background:#e2e8f0;color:#334155}
+.bk-ok{background:#1a56a0;color:#fff}
+.bk-ok:hover{background:#154482}
 </style>
 </head>
 <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
@@ -310,7 +327,7 @@ hr{border:none;border-top:1.5px solid #e2e8f0;margin:16px 0 14px}
     </div>
     <button class="splash-btn" id="btn-ingresar" onclick="ingresar()">Ingresar</button>
     <button type="button" class="pw-olvidar" id="pw-olvidar" onclick="olvidarClave()">🔓 Olvidar la contraseña en esta computadora</button>
-    <button class="splash-btn splash-btn-ent" onclick="abrirBuscadorRegistro()">🔎 Buscar expediente / orden de compra</button>
+    <button class="splash-btn splash-btn-ent" onclick="abrirBuscadorConClave()">🔎 Buscar expediente / orden de compra</button>
     <div class="splash-foot">Internación Domiciliaria · PRIS · SI.PRO.SA.</div>
   </div>
 </div>
@@ -318,7 +335,7 @@ hr{border:none;border-top:1.5px solid #e2e8f0;margin:16px 0 14px}
 <div class="app" id="app-main" style="display:none">
 <div class="card" id="form-card">
   <div class="header" style="position:relative">
-    <button type="button" class="btn-ent-hdr" onclick="abrirBuscadorRegistro()" title="Buscar expediente / orden de compra">🔎 Buscar OC</button>
+    <button type="button" class="btn-ent-hdr" onclick="abrirBuscadorConClave()" title="Buscar expediente / orden de compra">🔎 Buscar OC</button>
     <h1>👓🎧 Prestaciones Ópticas y Auditivas</h1>
     <p>Programa Integrado de Salud — Ministerio de Salud Pública de Tucumán</p>
   </div>
@@ -615,7 +632,7 @@ hr{border:none;border-top:1.5px solid #e2e8f0;margin:16px 0 14px}
   <div class="body">
     <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:6px">
       <div id="ent-resumen" class="ent-estado" style="margin:0">Conectando…</div>
-      <button type="button" class="ent-btn ent-btn-azul" onclick="abrirBuscadorRegistro()">🔎 Buscar en el registro</button>
+      <button type="button" class="ent-btn ent-btn-azul" onclick="abrirBuscadorConClave()">🔎 Buscar en el registro</button>
     </div>
 
     <div class="stitle" style="margin-top:14px">1 · Cargar PDFs (por etapas)</div>
@@ -5220,5 +5237,69 @@ var MesaJ = (function(){
 <!-- Botón flotante "Volver al inicio": vuelve a la pantalla de ingreso -->
 <button type="button" id="btn-volver" onclick="volverInicio()" title="Volver a la pantalla de inicio" aria-label="Volver a la pantalla de inicio">&#8592; Volver al inicio</button>
 <script src="/actualizador-html.js"></script>
+<div class="bk-ov" id="bk-ov" role="dialog" aria-modal="true" aria-labelledby="bk-t">
+  <div class="bk-box">
+    <div class="bk-t" id="bk-t">🔒 Buscador de expedientes y órdenes de compra</div>
+    <div class="bk-s">Ingresá la contraseña de Gerencia para abrir el buscador.</div>
+    <div class="bk-wrap">
+      <input type="password" id="bk-input" autocomplete="off" placeholder="Contraseña" onkeydown="if(event.key==='Enter'){event.preventDefault();confirmarClaveBuscador();} else if(event.key==='Escape'){cerrarClaveBuscador();}">
+      <button type="button" id="bk-ojo" onclick="verClaveBuscador()" title="Mostrar contraseña" aria-label="Mostrar contraseña">👁️</button>
+    </div>
+    <label class="bk-rec"><input type="checkbox" id="bk-recordar" checked> Recordar en esta computadora</label>
+    <div class="bk-err" id="bk-err"></div>
+    <div class="bk-acc">
+      <button type="button" class="bk-cancel" onclick="cerrarClaveBuscador()">Cancelar</button>
+      <button type="button" class="bk-ok" onclick="confirmarClaveBuscador()">Abrir buscador</button>
+    </div>
+  </div>
+</div>
+<script>
+/* ===== Contraseña del buscador de expedientes / OC =====
+   Se guarda SOLO el hash SHA-256 de la contraseña. Para cambiarla, reemplazar
+   BUSCADOR_HASH por el SHA-256 de la nueva. Reusa hashClave() del ingreso. */
+var BUSCADOR_HASH = "2f8f191656429c28ea6f334a5d8568aa0f62f64674b87dd26546368e09f7f756";
+var BUSCADOR_KEY = "genres_buscador_ok";
+var _buscadorOk = false;
+function buscadorRecordado(){ try{ return localStorage.getItem(BUSCADOR_KEY) === BUSCADOR_HASH; }catch(_){ return false; } }
+function abrirBuscadorConClave(){
+  if(_buscadorOk || buscadorRecordado()){ window.abrirBuscadorRegistro(); return; }
+  var ov=document.getElementById('bk-ov'), i=document.getElementById('bk-input'), e=document.getElementById('bk-err');
+  if(e) e.textContent=''; if(i){ i.value=''; i.type='password'; }
+  var o=document.getElementById('bk-ojo'); if(o) o.textContent='👁️';
+  if(ov) ov.classList.add('on');
+  if(i) setTimeout(function(){ i.focus(); }, 30);
+}
+function cerrarClaveBuscador(){ var ov=document.getElementById('bk-ov'); if(ov) ov.classList.remove('on'); }
+function verClaveBuscador(){
+  var i=document.getElementById('bk-input'), b=document.getElementById('bk-ojo'); if(!i) return;
+  var ver=i.type==='password'; i.type=ver?'text':'password';
+  if(b){ b.textContent=ver?'🙈':'👁️'; b.title=ver?'Ocultar contraseña':'Mostrar contraseña'; b.setAttribute('aria-label', b.title); }
+  i.focus();
+}
+function confirmarClaveBuscador(){
+  var i=document.getElementById('bk-input'), e=document.getElementById('bk-err');
+  if(!i || !i.value){ if(e) e.textContent='Escribí la contraseña.'; if(i) i.focus(); return; }
+  hashClave(i.value).then(function(h){
+    if(h !== BUSCADOR_HASH){ if(e) e.textContent='Contraseña incorrecta.'; i.select(); return; }
+    _buscadorOk = true;
+    var rec=document.getElementById('bk-recordar');
+    try{ if(rec && rec.checked) localStorage.setItem(BUSCADOR_KEY, BUSCADOR_HASH); }catch(_){}
+    i.value=''; cerrarClaveBuscador();
+    var o=document.getElementById('pw-olvidar'); if(o) o.style.display='inline-block';
+    window.abrirBuscadorRegistro();
+  }).catch(function(err){ if(e) e.textContent='No se pudo verificar: ' + (err && err.message || err); });
+}
+document.getElementById('bk-ov').addEventListener('click', function(ev){ if(ev.target === this) cerrarClaveBuscador(); });
+// "Olvidar la contraseña" también olvida la del buscador
+(function(){
+  var orig = window.olvidarClave;
+  window.olvidarClave = function(){
+    try{ localStorage.removeItem(BUSCADOR_KEY); }catch(_){}
+    _buscadorOk = false;
+    if(typeof orig === 'function') orig();
+  };
+  setTimeout(function(){ var o=document.getElementById('pw-olvidar'); if(o && buscadorRecordado()) o.style.display='inline-block'; }, 0);
+})();
+</script>
 </body>
 </html>
