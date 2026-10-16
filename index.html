@@ -275,6 +275,14 @@ hr{border:none;border-top:1.5px solid #e2e8f0;margin:16px 0 14px}
 .rg-docs button{margin-top:6px;padding:7px 12px;border:none;border-radius:8px;background:#b91c1c;color:#fff;font-size:13px;font-weight:800;cursor:pointer;font-family:inherit}
 .rg-docs button:disabled{opacity:.6;cursor:default}
 .rg-docs details{margin-top:4px}.rg-docs summary{cursor:pointer;font-weight:700}
+.rg-previo{margin-top:10px;padding:9px 11px;border-radius:10px;font-size:13px;line-height:1.5;background:#f1f5f9;border:1.5px solid #94a3b8;color:#1e293b}
+.rg-previo.mal{background:#fef2f2;border-color:#f87171;color:#7f1d1d}
+.ent-carga{display:flex;flex-direction:column;gap:8px;margin:0 0 12px;padding:12px 14px;border:2px solid #fbbf24;border-radius:12px;background:#fffbeb}
+.ent-carga b{font-size:14px;color:#78350f}
+.ent-carga label{display:flex;gap:9px;align-items:flex-start;font-size:14px;cursor:pointer;line-height:1.4;padding:8px 10px;border-radius:9px;background:#fff;border:1.5px solid #e2e8f0}
+.ent-carga label.on{border-color:#1a56a0;background:#eff6ff}
+.ent-carga input{width:18px;height:18px;margin-top:1px;flex-shrink:0}
+.mj-viejo{display:inline-block;margin-top:4px;background:#7f1d1d;color:#fff;font-size:11px;font-weight:800;border-radius:6px;padding:2px 7px}
 .rg-oc.vacia{border-style:dashed;border-color:#cbd5e1;box-shadow:none}.rg-oc.vacia span{color:#64748b}.rg-oc.vacia b{font-family:inherit;font-size:16px;color:#64748b}
 @media (max-width:600px){.rg-oc b{font-size:28px}}
 .rg-tit{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 12px}
@@ -621,7 +629,12 @@ hr{border:none;border-top:1.5px solid #e2e8f0;margin:16px 0 14px}
     <div class="stitle" style="margin-top:14px">1 · Cargar PDFs (por etapas)</div>
     <div class="hint" style="margin-bottom:10px">Podés ir agregando de a partes: elegí unos PDF, después <b>➕ Agregar más</b> (de la misma u otra carpeta), y guardá cuando quieras. También podés guardar y seguir otro día: lo guardado <b>nunca se pierde</b> y lo nuevo se suma y se cruza con lo anterior. Los PDF <b>no</b> se guardan: solo los datos.</div>
     <input id="ent-files" type="file" accept="application/pdf,.pdf" multiple style="display:none" onchange="EntUI.analizar(this.files); this.value='';">
-    <button type="button" class="ent-btn ent-btn-azul" onclick="document.getElementById('ent-files').click()">📂 Elegir PDFs…</button>
+    <div class="ent-carga" id="ent-carga">
+      <b>¿Qué vas a cargar? (obligatorio, antes de elegir los PDF)</b>
+      <label><input type="radio" name="ent-tipo-carga" value="previo" onchange="EntUI.tipoCarga()"><span>📁 <b>Expedientes VIEJOS, ya trabajados ANTES del sistema de Mesa de Entradas.</b><br><span style="font-size:12.5px;color:#475569">Quedan marcados como anteriores al sistema: Mesa de Entradas <b>no los puede ingresar como nuevos</b>.</span></span></label>
+      <label><input type="radio" name="ent-tipo-carga" value="nuevo" onchange="EntUI.tipoCarga()"><span>🧾 <b>Órdenes de compra / expedientes del trámite actual</b> (los que entraron por Mesa de Entradas o se están trabajando ahora).</span></label>
+    </div>
+    <button type="button" class="ent-btn ent-btn-azul" onclick="EntUI.elegir()">📂 Elegir PDFs…</button>
     <div id="ent-prop"></div>
     <div id="ent-admin-msg" class="msg"></div>
 
@@ -3321,6 +3334,8 @@ if(typeof module !== "undefined" && module.exports) module.exports = EntConsulta
       if(d.extra && !(rec && rec.extra)) datos.extra = d.extra;
       if(d.cantidad && !(rec && rec.cantidad)) datos.cantidad = d.cantidad;
       if(!rec){ datos.creadoMs = Date.now(); datos.creadoTxt = hoyTxt(); datos.origen = "pdf"; }
+      // Expediente VIEJO (anterior al sistema de Mesa de Entradas): queda marcado para que mesa no lo ingrese como nuevo.
+      if(UI.cargaPrevia() && !(rec && rec.previoMesa)){ datos.previoMesa = true; datos.previoTxt = hoyTxt(); datos.previoMs = Date.now(); }
       await db.collection(COL).doc(rec ? rec._id : idRegistro({ oc: d.oc, num: datos.num, cod: datos.cod, anio: datos.anio, paciente: datos.paciente })).set(datos, { merge: true });
     },
     /* ---------- Expedientes en trámite (todavía sin OC) ----------
@@ -3719,6 +3734,7 @@ if(typeof module !== "undefined" && module.exports) module.exports = EntConsulta
         var et = r.etapa === "resolucion" ? "Resolución generada" + (r.nroRes ? " (Res. N° " + esc(r.nroRes) + ")" : "") + (r.fechaRes ? " el " + esc(r.fechaRes) : (r.etapaFecha ? " el " + esc(r.etapaFecha) : ""))
                : r.etapa === "proceso" ? "Resolución en proceso" + (r.etapaFecha ? " (desde el " + esc(r.etapaFecha) + ")" : "")
                : r.etapa === "cuadro" ? "Cuadro comparativo hecho" + (r.etapaFecha ? " el " + esc(r.etapaFecha) : "") + (r.ganadora ? " · adjudica a " + esc(r.ganadora) : "")
+               : r.previoMesa ? "Expediente anterior al sistema de Mesa de Entradas"
                : r.etapa === "mesa" ? "Ingresado por Mesa de Entradas" + (r.etapaFecha ? " el " + esc(r.etapaFecha) : "")
                : "Expediente cargado";
         entrega = '<div class="rg-tramite">🟡 <b>Orden de compra en trámite</b> — ' + et + ".<br>Todavía no se puede entregar: cuando se cargue el PDF de la OC pasa a “Por entregar”.</div>";
@@ -3730,11 +3746,21 @@ if(typeof module !== "undefined" && module.exports) module.exports = EntConsulta
           // Primero el N° de expediente y, a la par, el nombre y apellido del paciente.
           '<div class="rg-tit"><span class="rg-exp">' + esc(r.nroExp || C.expedienteTexto(r) || "Sin expediente") + '</span><span class="rg-pacn">' + esc(r.paciente || "(sin nombre)") + "</span></div>" +
           ocGrande +
-          (datos ? '<div class="rg-datos">' + datos + "</div>" : "") + alertas + entrega + UI.docsMesa(r) +
+          (datos ? '<div class="rg-datos">' + datos + "</div>" : "") + alertas + UI.previoHtml(r) + entrega + UI.docsMesa(r) +
         "</div>" +
         '<div class="rg-acc"><button type="button" class="ent-mini" title="Copiar paciente, expediente y OC" onclick="EntUI.copiar(\'' + r._id + '\', this)">📋</button>' +
         '<button type="button" class="ent-mini rojo" title="Eliminar del registro" onclick="EntUI.eliminar(\'' + r._id + '\')">🗑️</button></div>' +
       "</div>";
+    },
+    // Expediente viejo (anterior al sistema de mesa). Si además mesa lo ingresó como nuevo, se avisa en rojo.
+    previoHtml: function(r){
+      if(!r.previoMesa) return "";
+      var o = UI.mesaDe(r);
+      if(o && !o.d.anulado){
+        var m = o.d;
+        return '<div class="rg-previo mal">📁 <b>Expediente VIEJO</b>, trabajado antes del sistema de Mesa de Entradas (cargado desde PDF el ' + esc(r.previoTxt || "") + ").<br>⚠️ <b>Mesa lo ingresó como NUEVO</b> el " + esc(m.ingresoTxt || "") + (m.usuarioNombre ? " (" + esc(m.usuarioNombre) + ")" : "") + ": ese ingreso no corresponde. Anulalo desde 📥 Mesa de entradas (🗑️).</div>";
+      }
+      return '<div class="rg-previo">📁 <b>Expediente VIEJO</b>, trabajado antes del sistema de Mesa de Entradas (cargado desde PDF el ' + esc(r.previoTxt || "") + "). Mesa no lo puede ingresar como nuevo.</div>";
     },
     // Ingreso de Mesa de Entradas del mismo expediente (por N° y código; año si está).
     mesaDe: function(r){
@@ -3787,6 +3813,17 @@ if(typeof module !== "undefined" && module.exports) module.exports = EntConsulta
       if(!confirm("¿Eliminar del registro a " + r.paciente + "?")) return;
       Store.eliminar(r).catch(function(e){ alert("No se pudo eliminar: " + (e && e.message || e)); });
     },
+    // Tipo de carga elegido: "previo" (expedientes viejos, anteriores al sistema de mesa) o "nuevo".
+    cargaTipo: function(){ var r = document.querySelector('input[name="ent-tipo-carga"]:checked'); return r ? r.value : ""; },
+    cargaPrevia: function(){ return UI.cargaTipo() === "previo"; },
+    tipoCarga: function(){
+      Array.prototype.forEach.call(document.querySelectorAll('input[name="ent-tipo-carga"]'), function(i){ i.parentNode.classList.toggle("on", i.checked); });
+      if(enEspera.length) UI.reagrupar();
+    },
+    elegir: function(){
+      if(!UI.cargaTipo()){ alert("Antes de elegir los PDF, marcá qué vas a cargar:\n\n📁 Expedientes VIEJOS (anteriores al sistema de Mesa de Entradas)\n   o\n🧾 Órdenes de compra / expedientes del trámite actual."); var c = $("ent-carga"); if(c) c.scrollIntoView({ behavior: "smooth", block: "center" }); return; }
+      $("ent-files").click();
+    },
     analizar: async function(fileList){
       var files = Array.prototype.slice.call(fileList || []).filter(function(f){ return /\.pdf$/i.test(f.name) || f.type === "application/pdf"; });
       var box = $("ent-prop"); if(!box || !files.length) return;
@@ -3828,7 +3865,7 @@ if(typeof module !== "undefined" && module.exports) module.exports = EntConsulta
         var dst = g.destino, ocsD = dst ? ((dst.ocs && dst.ocs.length) ? dst.ocs : (dst.oc ? [dst.oc] : [])) : [];
         var aportaOc = g.datos.oc && ocsD.indexOf(g.datos.oc) < 0;
         var aportaExp = g.items.some(function(it){ return it.rol === "expediente"; }) && !(dst && dst.tieneExp);
-        var aportaDatos = !!dst && ((g.datos.fechaOC && !dst.fechaOC) || (g.datos.proveedor && !dst.proveedor) || (dst.restaurar && !!g.datos.num));
+        var aportaDatos = !!dst && ((g.datos.fechaOC && !dst.fechaOC) || (g.datos.proveedor && !dst.proveedor) || (dst.restaurar && !!g.datos.num) || (UI.cargaPrevia() && !dst.previoMesa));
         g.estado = !dst ? "nuevo" : (aportaOc || aportaExp || aportaDatos ? "completa" : "igual");
         var anuladasReg = Store.anuladas();
         if(g.datos.oc && anuladasReg[C.soloNum(g.datos.oc)]){ g.estado = "anulada"; g.alertas = ["OC " + g.datos.oc + " ANULADA: no se guarda en el registro."]; }
@@ -3867,7 +3904,7 @@ if(typeof module !== "undefined" && module.exports) module.exports = EntConsulta
         '<details class="ent-det"><summary>Ver el detalle de los ' + propuesta.length + " (y destildar los que no quieras guardar)</summary>" +
           '<div class="ent-scroll"><table class="ent-tabla">' + cab(true) + "<tbody>" + propuesta.map(function(g, i){ return fila(g, i, true); }).join("") + "</tbody></table></div></details>" +
         '<div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">' +
-        '<button type="button" class="ent-btn ent-btn-azul" onclick="document.getElementById(\'ent-files\').click()">➕ Agregar más PDFs</button>' +
+        '<button type="button" class="ent-btn ent-btn-azul" onclick="EntUI.elegir()">➕ Agregar más PDFs</button>' +
         '<button type="button" class="ent-btn ent-btn-verde" id="ent-subir" onclick="EntUI.subir()">💾 Guardar en el registro</button>' +
         '<button type="button" class="ent-btn ent-btn-gris" onclick="EntUI.cancelarProp()">Descartar lo no guardado</button></div>';
     },
@@ -3880,6 +3917,8 @@ if(typeof module !== "undefined" && module.exports) module.exports = EntConsulta
     subir: async function(){
       var sel = propuesta.filter(function(g){ return g.incluir && g.estado !== "igual" && g.estado !== "anulada"; });
       if(!sel.length){ enEspera = []; destildados = {}; propuesta = []; UI.renderPropuesta(); var m0 = $("ent-admin-msg"); if(m0){ m0.className = "msg ok"; m0.textContent = "✔ No había nada nuevo para guardar: todo ya estaba en el registro."; } return; }
+      if(!UI.cargaTipo()){ alert("Marcá arriba qué estás cargando: expedientes VIEJOS (anteriores al sistema) o del trámite actual."); return; }
+      if(UI.cargaPrevia() && !confirm("Se van a guardar " + sel.length + " paciente(s) como EXPEDIENTES VIEJOS, anteriores al sistema de Mesa de Entradas.\nMesa no los va a poder ingresar como nuevos.\n\n¿Confirmás?")) return;
       var btn = $("ent-subir"), msg = $("ent-admin-msg"), ok = 0, err = [];
       if(btn) btn.disabled = true;
       for(var i = 0; i < sel.length; i++){
@@ -4871,6 +4910,7 @@ var MesaJ = (function(){
       : ef === "trabajo" ? "🛠️ <b>En trabajo</b><span class=\"sub\">desde " + esc(m.trabajoTxt || "") + "</span>"
       : "🆕 <b>Sin tomar</b>" + (nuevo ? ' <span class="mj-nuevo">NUEVO</span>' : "");
     if(m.tomadoN) estado += '<span class="sub">✋ tomado en mesa por ' + esc(m.tomadoN) + "</span>";
+    if(x._r && x._r.previoMesa && ef !== "entregado") estado += '<br><span class="mj-viejo" title="Este expediente se cargó como anterior al sistema: el ingreso de mesa no corresponde">📁 EXPEDIENTE VIEJO — anular</span>';
     var b = function(acc, cls, txt, tit){ return '<button type="button" class="mj-btn ' + cls + '" data-mj="' + acc + '" data-id="' + esc(m._id) + '"' + (tit ? ' title="' + esc(tit) + '"' : "") + ">" + txt + "</button>"; };
     var acc = "";
     if(ef === "ingresado") acc = b("tomar", "mj-verde", "▶ Tomar", "Empezar a trabajarlo") + b("mesa", "mj-azul", "📦 OC a mesa", "Ya llevé la orden de compra a Mesa de Entradas");
