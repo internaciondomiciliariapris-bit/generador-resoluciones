@@ -1436,9 +1436,6 @@ if(typeof module !== "undefined" && module.exports) module.exports = MesaCal;
       ventanaFaltan(faltan);
       return;
     }
-    // ---- Apellido y nombre como en el DNI: se confirma en una ventana antes de guardar ----
-    var okDni = await ventanaDni(pac, expTxt, tipo);
-    if(!okDni){ msg("av", "Revisá el apellido y nombre con el DNI del paciente y volvé a tocar <b>Registrar</b>."); $("in-pac").focus(); return; }
     if(estado.mesa !== "ok"){ msg("er", "Todavía no hay conexión con la base. Esperá unos segundos y probá de nuevo."); return; }
     var k = C.clave(p.num, p.cod);
     var dup = mesa.filter(function(m){ return claveDe(m) === k && (!p.anio || !m.anio || String(m.anio) === p.anio); })[0];
@@ -1448,6 +1445,12 @@ if(typeof module !== "undefined" && module.exports) module.exports = MesaCal;
     }
     // ¿Ya existe en el sistema? (registro de órdenes: cuadro, resolución, OC o entregada)
     var r = regDe(Object.assign({}, p, { anio: p.anio || String(new Date().getFullYear()) }));
+    if(r && r.previoMesa){
+      msg("er", "⛔ <b>Este expediente es VIEJO</b>: " + esc(r.nroExp || expTxt) + " — " + esc(r.paciente || "") + " ya fue trabajado <b>antes del sistema de Mesa de Entradas</b>" + (ocsDe(r).length ? " (OC N° " + esc(ocsDe(r).join(" / ")) + ")" : "") + ".<br>No se puede ingresar como nuevo. Si el paciente viene a retirar algo, consultá con Jorge.");
+      ventanaFaltan([{ campo: "in-exp", txt: "<b>Expediente VIEJO</b>: el " + esc(r.nroExp || expTxt) + " (" + esc(r.paciente || "") + ") ya fue trabajado antes del sistema de Mesa de Entradas. <b>No se puede ingresar como nuevo.</b> Consultá con Jorge." }]);
+      $("val-tit").textContent = "No se puede ingresar"; $("val-sub").textContent = "Este expediente ya existía antes del sistema.";
+      return;
+    }
     if(r && !(r.etapa === "mesa" && r.origen === "mesa" && !ocsDe(r).length && !r.entregado)){
       var oc = ocsDe(r).join(" / ");
       var est = r.entregado ? "la orden de compra" + (oc ? " N° " + oc : "") + " <b>ya fue ENTREGADA</b> al paciente" + (r.entregadoFecha ? " el " + esc(r.entregadoFecha) : "")
@@ -1456,6 +1459,9 @@ if(typeof module !== "undefined" && module.exports) module.exports = MesaCal;
       msg("er", "⛔ <b>Este N° de expediente ya existe en el sistema</b>: " + esc(r.nroExp || expTxt) + " — " + esc(r.paciente || "") + ", " + est + ".<br>No se puede ingresar de nuevo. Lo dejé abierto en <b>Expedientes</b>. Si creés que es un error, avisale a Jorge.");
       $("ls-q").value = r.nroExp || expTxt; $("ls-f").value = "todos"; cambiarTab("lista"); return;
     }
+    // ---- Apellido y nombre como en el DNI: se confirma en una ventana antes de guardar (recién cuando se sabe que el expediente se puede ingresar) ----
+    var okDni = await ventanaDni(pac, expTxt, tipo);
+    if(!okDni){ msg("av", "Revisá el apellido y nombre con el DNI del paciente y volvé a tocar <b>Registrar</b>."); $("in-pac").focus(); return; }
     var btn = $("in-btn"); btn.disabled = true; btn.textContent = "Guardando…";
     try{
       var t = ahora(), anio = p.anio || String(new Date().getFullYear());
@@ -1624,6 +1630,7 @@ if(typeof module !== "undefined" && module.exports) module.exports = MesaCal;
           (ef !== "entregado" ? " · vuelve a partir del <b>" + esc(K.fmtLargo(sit.vence)) + "</b>" : "") +
           (m.telefono ? " · 📞 " + esc(m.telefono) : "") + "</div>" +
         quienTarjeta(m) +
+        (r && r.previoMesa && ef !== "entregado" ? '<div class="it-estado" style="background:#fef2f2;border-color:#fca5a5;color:#7f1d1d">📁 <b>Expediente VIEJO</b>: ya fue trabajado antes del sistema de Mesa de Entradas. <b>Este ingreso no corresponde</b> — Jorge lo va a anular.</div>' : "") +
         est + expTarjeta(m) + docsTarjeta(m) + obsTarjeta(m._id) + accesosTarjeta(m) + detalleTarjeta(m) +
       "</div>" +
       '<div class="it-acc">' +
