@@ -283,23 +283,6 @@ hr{border:none;border-top:1.5px solid #e2e8f0;margin:16px 0 14px}
 .rg-fix{margin:6px 0;padding:7px 9px;background:#fff;border:1px solid #fde68a;border-radius:8px;font-size:12.5px;color:#334155;line-height:1.9}
 .rg-fix-it{display:inline-block;margin-right:12px}
 .rg-fix .sub{color:#64748b;font-size:11.5px}
-/* ===== Contraseña del buscador de expedientes/OC ===== */
-.bk-ov{position:fixed;inset:0;z-index:99999;background:rgba(15,23,42,.55);display:none;align-items:center;justify-content:center;padding:16px}
-.bk-ov.on{display:flex}
-.bk-box{background:#fff;border-radius:16px;width:100%;max-width:380px;padding:22px 22px 18px;box-shadow:0 24px 60px rgba(0,0,0,.35);font-family:inherit;text-align:left}
-.bk-t{font-size:17px;font-weight:800;color:#1a56a0;margin-bottom:4px}
-.bk-s{font-size:12.5px;color:#64748b;margin-bottom:14px;line-height:1.4}
-.bk-wrap{display:flex;gap:6px}
-.bk-wrap input{flex:1;height:40px;border:1.5px solid #cbd5e1;border-radius:9px;padding:0 12px;font-size:15px;font-family:inherit}
-.bk-wrap input:focus{outline:none;border-color:#1a56a0}
-.bk-wrap button{width:42px;border:1.5px solid #cbd5e1;border-radius:9px;background:#f8fafc;cursor:pointer;font-size:16px}
-.bk-rec{display:flex;align-items:center;gap:6px;font-size:12.5px;color:#334155;margin-top:10px}
-.bk-err{min-height:16px;margin-top:8px;font-size:12px;color:#b91c1c;font-weight:600}
-.bk-acc{display:flex;gap:8px;justify-content:flex-end;margin-top:8px}
-.bk-acc button{border:none;border-radius:9px;padding:10px 16px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit}
-.bk-cancel{background:#e2e8f0;color:#334155}
-.bk-ok{background:#1a56a0;color:#fff}
-.bk-ok:hover{background:#154482}
 </style>
 </head>
 <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
@@ -327,7 +310,7 @@ hr{border:none;border-top:1.5px solid #e2e8f0;margin:16px 0 14px}
     </div>
     <button class="splash-btn" id="btn-ingresar" onclick="ingresar()">Ingresar</button>
     <button type="button" class="pw-olvidar" id="pw-olvidar" onclick="olvidarClave()">🔓 Olvidar la contraseña en esta computadora</button>
-    <button class="splash-btn splash-btn-ent" onclick="abrirBuscadorConClave()">🔎 Buscar expediente / orden de compra</button>
+    <button class="splash-btn splash-btn-ent" onclick="abrirBuscadorRegistro()">🔎 Buscar expediente / orden de compra</button>
     <div class="splash-foot">Internación Domiciliaria · PRIS · SI.PRO.SA.</div>
   </div>
 </div>
@@ -335,7 +318,7 @@ hr{border:none;border-top:1.5px solid #e2e8f0;margin:16px 0 14px}
 <div class="app" id="app-main" style="display:none">
 <div class="card" id="form-card">
   <div class="header" style="position:relative">
-    <button type="button" class="btn-ent-hdr" onclick="abrirBuscadorConClave()" title="Buscar expediente / orden de compra">🔎 Buscar OC</button>
+    <button type="button" class="btn-ent-hdr" onclick="abrirBuscadorRegistro()" title="Buscar expediente / orden de compra">🔎 Buscar OC</button>
     <h1>👓🎧 Prestaciones Ópticas y Auditivas</h1>
     <p>Programa Integrado de Salud — Ministerio de Salud Pública de Tucumán</p>
   </div>
@@ -632,7 +615,7 @@ hr{border:none;border-top:1.5px solid #e2e8f0;margin:16px 0 14px}
   <div class="body">
     <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:6px">
       <div id="ent-resumen" class="ent-estado" style="margin:0">Conectando…</div>
-      <button type="button" class="ent-btn ent-btn-azul" onclick="abrirBuscadorConClave()">🔎 Buscar en el registro</button>
+      <button type="button" class="ent-btn ent-btn-azul" onclick="abrirBuscadorRegistro()">🔎 Buscar en el registro</button>
     </div>
 
     <div class="stitle" style="margin-top:14px">1 · Cargar PDFs (por etapas)</div>
@@ -4137,6 +4120,34 @@ if(typeof module !== "undefined" && module.exports) module.exports = EntConsulta
 .mj-bajar b{flex:1;min-width:180px}
 #mj-leida{position:fixed;right:24px;bottom:84px;z-index:10002;width:360px;max-width:calc(100vw - 32px);background:#fff;border-radius:14px;box-shadow:0 18px 50px rgba(0,0,0,.30);border-left:6px solid #16a34a;padding:12px 14px;font-size:13px;line-height:1.5;animation:mesaEntra .35s ease-out}
 @media(max-width:640px){.mj-f{grid-template-columns:1fr}.mj-it{flex-wrap:wrap}.mj-acc{flex-direction:row;flex-wrap:wrap;width:100%}}
+/* ---- Ingresos como LISTADO (tabla completa) ---- */
+#mesa-modal{padding:2vh 12px 12px}
+#mesa-modal .rg-box{max-width:1500px;height:95vh;max-height:95vh}
+#mj-lista{padding:0;background:#fff}
+.mj-cnt{padding:8px 16px;font-size:13px;color:#475569;background:#f8fafc;border-bottom:1px solid #e2e8f0}
+.mj-tbl{width:100%;border-collapse:separate;border-spacing:0;font-size:13px}
+.mj-tbl th{position:sticky;top:0;z-index:2;background:#1e3a5f;color:#fff;text-align:left;font-size:11.5px;font-weight:800;letter-spacing:.4px;text-transform:uppercase;padding:9px 8px;white-space:nowrap}
+.mj-tbl td{padding:8px;border-bottom:1px solid #e2e8f0;vertical-align:top;line-height:1.4}
+.mj-tbl tr.fila:hover td{background:#f8fafc}
+.mj-tbl tr.fila td:first-child{border-left:6px solid #94a3b8}
+.mj-tbl tr.fila.verde td:first-child{border-left-color:#16a34a}.mj-tbl tr.fila.ambar td:first-child{border-left-color:#d97706}
+.mj-tbl tr.fila.rojo td:first-child{border-left-color:#dc2626}.mj-tbl tr.fila.azul td:first-child{border-left-color:#1a56a0}.mj-tbl tr.fila.gris td:first-child{border-left-color:#94a3b8}
+.mj-tbl tr.fila.nuevo td{background:#fff7f7}
+.mj-tbl tr.fila.ent td{color:#64748b}
+.mj-tbl tr.extra td{padding:0 8px 8px;border-bottom:1px solid #e2e8f0}
+.mj-tbl tr.extra td:first-child{border-left:6px solid transparent}
+.mj-tbl .n{color:#94a3b8;font-weight:700;text-align:right;white-space:nowrap}
+.mj-tbl .exp{font-weight:900;color:#1a56a0;font-size:14px;white-space:nowrap}
+.mj-tbl .pac{font-weight:800;color:#1a2b4a;min-width:150px}
+.mj-tbl .nw{white-space:nowrap}
+.mj-tbl .oc{font-weight:900;font-size:14px;color:#0f172a;white-space:nowrap}
+.mj-tbl .chip{display:inline-block;font-size:11.5px;font-weight:800;border-radius:999px;padding:2px 9px;white-space:nowrap}
+.mj-tbl .chip.verde{background:#dcfce7;color:#166534}.mj-tbl .chip.ambar{background:#fef3c7;color:#92400e}.mj-tbl .chip.rojo{background:#fee2e2;color:#991b1b}.mj-tbl .chip.azul{background:#dbeafe;color:#1e40af}.mj-tbl .chip.gris{background:#e2e8f0;color:#475569}
+.mj-tbl .sub{display:block;font-size:11.5px;color:#64748b;margin-top:2px}
+.mj-tbl .acc{display:flex;gap:4px;flex-wrap:wrap;min-width:160px}
+.mj-tbl td.est{min-width:160px}
+.mj-tbl .acc .mj-btn{padding:5px 8px;font-size:12px}
+.mj-tbl .extra .mj-docs,.mj-tbl .extra .mj-obs,.mj-tbl .extra .mj-exp{margin-top:4px}
 @media print{#mesa-chip,#mesa-alerta,#mesa-modal,#mj-obs-ov,#mj-leida,#mj-oc-ov{display:none!important}}
 </style>
 
@@ -4204,7 +4215,7 @@ if(typeof module !== "undefined" && module.exports) module.exports = EntConsulta
           <option value="vencidos">🔴 Vencidos / vencen hoy</option>
           <option value="en_mesa">📦 OC en mesa</option>
           <option value="entregados">✅ Entregados</option>
-          <option value="todos">Todos</option>
+          <option value="todos" selected>📋 Todos (listado completo)</option>
         </select>
       </div>
       <div class="rg-body" id="mj-lista"></div>
@@ -4827,8 +4838,60 @@ var MesaJ = (function(){
       if(a._ef === "en_mesa" && b._ef === "en_mesa") return (b._m.enMesaMs || 0) - (a._m.enMesaMs || 0);
       return a._sit.restantes - b._sit.restantes || (a._m.ingresoMs || 0) - (b._m.ingresoMs || 0);
     });
-    box.innerHTML = lista.length ? lista.map(tarjeta).join("") :
+    if(!q && f === "todos"){
+      // Listado completo: primero lo pendiente (por plazo), después OC en mesa y al final lo entregado.
+      var rk = function(x){ return x._ef === "en_mesa" ? 1 : x._ef === "entregado" ? 2 : 0; };
+      lista.sort(function(a, b){
+        return rk(a) - rk(b) ||
+          (rk(a) === 0 ? (a._sit.restantes - b._sit.restantes || (a._m.ingresoMs || 0) - (b._m.ingresoMs || 0))
+           : rk(a) === 1 ? (b._m.enMesaMs || 0) - (a._m.enMesaMs || 0) : (b._m.entregadoMs || 0) - (a._m.entregadoMs || 0));
+      });
+    }
+    box.innerHTML = lista.length ? tablaListado(lista) :
       '<div class="rg-vacio">' + (q ? "No se encontró nada con “" + esc(q) + "”." : f === "nuevos" ? "No hay ingresos por empezar. 🎉" : f === "pend" ? "No hay ingresos pendientes. 🎉" : "No hay ingresos en esta vista.") + "</div>";
+  }
+  /* Listado en tabla: una fila por expediente con todos sus datos y acciones. Debajo de la fila,
+     solo si hay, la documentación enviada, las observaciones y el expediente adjunto. */
+  function tablaListado(lista){
+    var cab = ["#", "Tipo", "N° expediente", "Paciente", "Ingreso", "Cargado por", "Plazo", "Estado", "N° OC", "Teléfono", "Acciones"];
+    var n = { pend: 0, mesa: 0, ent: 0 };
+    lista.forEach(function(x){ if(x._ef === "en_mesa") n.mesa++; else if(x._ef === "entregado") n.ent++; else n.pend++; });
+    return '<div class="mj-cnt"><b>' + lista.length + "</b> expediente(s) en la lista · " + n.pend + " pendiente(s) · " + n.mesa + " con OC en mesa · " + n.ent + " entregado(s)</div>" +
+      '<table class="mj-tbl"><thead><tr>' + cab.map(function(c){ return "<th>" + c + "</th>"; }).join("") + "</tr></thead><tbody>" +
+      lista.map(function(x, i){ return filaListado(x, i + 1, cab.length); }).join("") + "</tbody></table>";
+  }
+  function filaListado(x, nro, ncol){
+    var m = x._m, ef = x._ef, sit = x._sit, sem = K.semaforo(sit, ef), ocTxt = x.ocs.join(" / ");
+    var nuevo = !m.vistoJorge && ef === "ingresado";
+    var plazo = (ef === "ingresado" || ef === "trabajo")
+      ? '<span class="chip ' + sem.cls + '">' + esc(sem.txt) + '</span><span class="sub">vence ' + esc(K.fmtLargo(sit.vence)) + "</span>"
+      : '<span class="chip ' + sem.cls + '">' + esc(sem.txt) + "</span>";
+    var estado = ef === "entregado" ? "✅ <b>Entregada al paciente</b><span class=\"sub\">" + esc(m.entregadoTxt || (x._r && x._r.entregadoFecha) || "") + (m.entregadoPor ? " · " + esc(m.entregadoPor) : "") + "</span>"
+      : ef === "en_mesa" ? "📦 <b>OC en mesa</b><span class=\"sub\">desde " + esc(m.enMesaTxt || "") + "</span>"
+      : ef === "trabajo" ? "🛠️ <b>En trabajo</b><span class=\"sub\">desde " + esc(m.trabajoTxt || "") + "</span>"
+      : "🆕 <b>Sin tomar</b>" + (nuevo ? ' <span class="mj-nuevo">NUEVO</span>' : "");
+    if(m.tomadoN) estado += '<span class="sub">✋ tomado en mesa por ' + esc(m.tomadoN) + "</span>";
+    var b = function(acc, cls, txt, tit){ return '<button type="button" class="mj-btn ' + cls + '" data-mj="' + acc + '" data-id="' + esc(m._id) + '"' + (tit ? ' title="' + esc(tit) + '"' : "") + ">" + txt + "</button>"; };
+    var acc = "";
+    if(ef === "ingresado") acc = b("tomar", "mj-verde", "▶ Tomar", "Empezar a trabajarlo") + b("mesa", "mj-azul", "📦 OC a mesa", "Ya llevé la orden de compra a Mesa de Entradas");
+    else if(ef === "trabajo") acc = b("mesa", "mj-azul", "📦 OC a mesa", "Ya llevé la orden de compra a Mesa de Entradas") + b("nuevo", "mj-gris", "↩", "Volver a sin tomar");
+    else if(ef === "en_mesa") acc = b("docs", "mj-azul", docsMeta[m._id] ? "📎 Reenviar docs" : "📎 Enviar docs", "Enviar la OC, DNI y receta para que mesa imprima") + b("deshacer", "mj-gris", "↩", "Quitar la entrega a mesa");
+    if(ef !== "entregado") acc += b("obs", "mj-gris", "📨", "Enviar una observación a Mesa de Entradas");
+    acc += b("anular", "mj-rojo", "🗑️", "Anular este ingreso");
+    var extra = expHtml(m) + docsHtml(m) + obsHtml(m._id);
+    return '<tr class="fila ' + sem.cls + (nuevo ? " nuevo" : "") + (ef === "entregado" ? " ent" : "") + '">' +
+      '<td class="n">' + nro + "</td>" +
+      '<td class="nw">' + tipoIco(m.tipo) + " " + esc(tipoTxt(m.tipo)) + "</td>" +
+      '<td class="exp">' + esc(m.nroExp) + "</td>" +
+      '<td class="pac">' + esc(m.paciente) + "</td>" +
+      '<td class="nw">' + esc(m.ingresoTxt || "") + "</td>" +
+      "<td>" + esc(m.usuarioNombre || m.usuario || "") + "</td>" +
+      '<td class="nw">' + plazo + "</td>" +
+      '<td class="est">' + estado + "</td>" +
+      '<td class="oc">' + (ocTxt ? esc(ocTxt) : '<span style="color:#cbd5e1">—</span>') + "</td>" +
+      '<td class="nw">' + (m.telefono ? esc(m.telefono) : '<span style="color:#cbd5e1">—</span>') + "</td>" +
+      '<td><div class="acc">' + acc + "</div></td></tr>" +
+      (extra ? '<tr class="extra"><td></td><td colspan="' + (ncol - 1) + '">' + extra + "</td></tr>" : "");
   }
   function tarjeta(x){
     var m = x._m, ef = x._ef, sit = x._sit, sem = K.semaforo(sit, ef), ocTxt = x.ocs.join(" / ");
@@ -5237,69 +5300,5 @@ var MesaJ = (function(){
 <!-- Botón flotante "Volver al inicio": vuelve a la pantalla de ingreso -->
 <button type="button" id="btn-volver" onclick="volverInicio()" title="Volver a la pantalla de inicio" aria-label="Volver a la pantalla de inicio">&#8592; Volver al inicio</button>
 <script src="/actualizador-html.js"></script>
-<div class="bk-ov" id="bk-ov" role="dialog" aria-modal="true" aria-labelledby="bk-t">
-  <div class="bk-box">
-    <div class="bk-t" id="bk-t">🔒 Buscador de expedientes y órdenes de compra</div>
-    <div class="bk-s">Ingresá la contraseña de Gerencia para abrir el buscador.</div>
-    <div class="bk-wrap">
-      <input type="password" id="bk-input" autocomplete="off" placeholder="Contraseña" onkeydown="if(event.key==='Enter'){event.preventDefault();confirmarClaveBuscador();} else if(event.key==='Escape'){cerrarClaveBuscador();}">
-      <button type="button" id="bk-ojo" onclick="verClaveBuscador()" title="Mostrar contraseña" aria-label="Mostrar contraseña">👁️</button>
-    </div>
-    <label class="bk-rec"><input type="checkbox" id="bk-recordar" checked> Recordar en esta computadora</label>
-    <div class="bk-err" id="bk-err"></div>
-    <div class="bk-acc">
-      <button type="button" class="bk-cancel" onclick="cerrarClaveBuscador()">Cancelar</button>
-      <button type="button" class="bk-ok" onclick="confirmarClaveBuscador()">Abrir buscador</button>
-    </div>
-  </div>
-</div>
-<script>
-/* ===== Contraseña del buscador de expedientes / OC =====
-   Se guarda SOLO el hash SHA-256 de la contraseña. Para cambiarla, reemplazar
-   BUSCADOR_HASH por el SHA-256 de la nueva. Reusa hashClave() del ingreso. */
-var BUSCADOR_HASH = "2f8f191656429c28ea6f334a5d8568aa0f62f64674b87dd26546368e09f7f756";
-var BUSCADOR_KEY = "genres_buscador_ok";
-var _buscadorOk = false;
-function buscadorRecordado(){ try{ return localStorage.getItem(BUSCADOR_KEY) === BUSCADOR_HASH; }catch(_){ return false; } }
-function abrirBuscadorConClave(){
-  if(_buscadorOk || buscadorRecordado()){ window.abrirBuscadorRegistro(); return; }
-  var ov=document.getElementById('bk-ov'), i=document.getElementById('bk-input'), e=document.getElementById('bk-err');
-  if(e) e.textContent=''; if(i){ i.value=''; i.type='password'; }
-  var o=document.getElementById('bk-ojo'); if(o) o.textContent='👁️';
-  if(ov) ov.classList.add('on');
-  if(i) setTimeout(function(){ i.focus(); }, 30);
-}
-function cerrarClaveBuscador(){ var ov=document.getElementById('bk-ov'); if(ov) ov.classList.remove('on'); }
-function verClaveBuscador(){
-  var i=document.getElementById('bk-input'), b=document.getElementById('bk-ojo'); if(!i) return;
-  var ver=i.type==='password'; i.type=ver?'text':'password';
-  if(b){ b.textContent=ver?'🙈':'👁️'; b.title=ver?'Ocultar contraseña':'Mostrar contraseña'; b.setAttribute('aria-label', b.title); }
-  i.focus();
-}
-function confirmarClaveBuscador(){
-  var i=document.getElementById('bk-input'), e=document.getElementById('bk-err');
-  if(!i || !i.value){ if(e) e.textContent='Escribí la contraseña.'; if(i) i.focus(); return; }
-  hashClave(i.value).then(function(h){
-    if(h !== BUSCADOR_HASH){ if(e) e.textContent='Contraseña incorrecta.'; i.select(); return; }
-    _buscadorOk = true;
-    var rec=document.getElementById('bk-recordar');
-    try{ if(rec && rec.checked) localStorage.setItem(BUSCADOR_KEY, BUSCADOR_HASH); }catch(_){}
-    i.value=''; cerrarClaveBuscador();
-    var o=document.getElementById('pw-olvidar'); if(o) o.style.display='inline-block';
-    window.abrirBuscadorRegistro();
-  }).catch(function(err){ if(e) e.textContent='No se pudo verificar: ' + (err && err.message || err); });
-}
-document.getElementById('bk-ov').addEventListener('click', function(ev){ if(ev.target === this) cerrarClaveBuscador(); });
-// "Olvidar la contraseña" también olvida la del buscador
-(function(){
-  var orig = window.olvidarClave;
-  window.olvidarClave = function(){
-    try{ localStorage.removeItem(BUSCADOR_KEY); }catch(_){}
-    _buscadorOk = false;
-    if(typeof orig === 'function') orig();
-  };
-  setTimeout(function(){ var o=document.getElementById('pw-olvidar'); if(o && buscadorRecordado()) o.style.display='inline-block'; }, 0);
-})();
-</script>
 </body>
 </html>
