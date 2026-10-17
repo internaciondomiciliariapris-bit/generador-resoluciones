@@ -179,6 +179,13 @@ button,input,select{font-family:inherit}
 .val-no{background:#f1f5f9;color:#334155;border:1.5px solid #cbd5e1!important}
 .f input.falta{border-color:#dc2626!important;background:#fef2f2}
 .tipos.falta .tipo{border-color:#dc2626;background:#fef2f2}
+.val-head.naranja{background:linear-gradient(120deg,#c2410c,#ea580c)}
+.imp-big{font-size:24px;font-weight:900;line-height:1.25;text-align:center;color:#9a3412;margin:4px 0 10px}
+.imp-pac{text-align:center;font-size:17px;font-weight:800;color:#1a2b4a;margin-bottom:12px}
+.imp-reglas{list-style:none;margin:0;padding:0}
+.imp-reglas li{display:flex;gap:10px;align-items:flex-start;font-size:16px;font-weight:700;line-height:1.4;padding:10px 12px;border-radius:10px;margin-top:8px;background:#fff7ed;border:1.5px solid #fed7aa;color:#1a2b4a}
+.imp-reglas li span{font-size:22px;line-height:1}
+.it-docs button.imp{background:#ea580c}
 .dni-av{margin-top:6px;padding:8px 11px;border-radius:9px;background:#fffbeb;border:1.5px solid #fde68a;color:#92400e;font-size:13px;font-weight:700;line-height:1.45}
 @media(max-width:600px){.ops{grid-template-columns:1fr}.lote-f{grid-template-columns:1fr}.it{flex-wrap:wrap}.it-acc{flex-direction:row;width:100%}.tipos{grid-template-columns:1fr}}
 @media print{body>*{display:none!important}}
@@ -1237,20 +1244,20 @@ if(typeof module !== "undefined" && module.exports) module.exports = MesaCal;
     var info = "📎 " + esc(contenidoTxt(d.contenido)) + " · " + (d.paginas || "?") + " páginas";
     if(docsBloqueada(m)){
       return '<div class="it-docs bloq"><button type="button" class="lock" disabled title="Ya se imprimió">🔒 Ya impresa</button>' +
-        "<span>" + info + "<br>Impresa por <b>" + esc(m.docsImpresoPor || "") + "</b> el " + esc(m.docsImpresoTxt) + " hs." +
-        "<br><b>Para volver a imprimirla, pedí a la Gerencia que la desbloquee.</b></span></div>";
+        "<span>Impresa por <b>" + esc(m.docsImpresoPor || "") + "</b> el " + esc(m.docsImpresoTxt) + " hs." +
+        "<br>🗑️ <b>Ya no está disponible en Mesa de Entradas.</b> Para volver a imprimirla, pedí a la Gerencia que la desbloquee.</span></div>";
     }
     var desb = m.docsDesbloqueado === true && m.docsImpresoTxt;
-    return '<div class="it-docs"><button type="button" data-acc="imprimir" data-id="' + esc(m._id) + '">🖨️ Imprimir documentación</button>' +
+    return '<div class="it-docs"><button type="button" class="imp" data-acc="imprimir" data-id="' + esc(m._id) + '">🖨️ Imprimir con el paciente presente</button>' +
       "<span>" + info +
       (desb ? "<br>🔓 <b>Desbloqueada por " + esc(m.docsDesbloqueoPor || "la Gerencia") + "</b>" + (m.docsDesbloqueoTxt ? " el " + esc(m.docsDesbloqueoTxt) : "") + " · antes impresa por " + esc(m.docsImpresoPor || "") + " el " + esc(m.docsImpresoTxt)
             : "<br><b>Todavía no se imprimió.</b>") +
-      "<br>⚠️ Se puede imprimir <b>una sola vez</b>: después se bloquea.</span></div>";
+      "<br>⚠️ <b>Imprimí SOLO con el paciente en mesa.</b> Se imprime <b>una sola vez</b> y después se borra de Mesa de Entradas.</span></div>";
   }
   async function imprimirDocs(id, btn){
     var m = porId(id); if(!m) return;
     if(docsBloqueada(m)){ alert("🔒 Esta documentación ya se imprimió. Para volver a imprimirla, pedí a la Gerencia que la desbloquee."); return; }
-    if(!confirm("Vas a imprimir la documentación de " + m.paciente + " (Expte. " + m.nroExp + ").\n\nSe puede imprimir UNA SOLA VEZ: después queda bloqueada y para reimprimirla hay que pedirle a la Gerencia que la desbloquee.\n\n¿Continuar?")) return;
+    if(!(await ventanaImprimir(m))) return;
     btn.disabled = true; var txt = btn.textContent; btn.textContent = "Abriendo…";
     var t = ahora(), ref = db.collection(COL).doc(id), previo = null;
     try{
@@ -1263,8 +1270,8 @@ if(typeof module !== "undefined" && module.exports) module.exports = MesaCal;
           var ajeno = !esMio(x);
           var upd = {
             docsImpresoTxt: t.txt, docsImpresoPor: usuario.n, docsImpresoUsuario: usuario.u, docsImpresoMs: t.ms,
-            docsDesbloqueado: false, docsImpresiones: (Number(x.docsImpresiones) || 0) + 1,
-            historial: firebase.firestore.FieldValue.arrayUnion(t.txt + " · Documentación impresa por " + usuario.n + (ajeno ? " (expediente de " + duenioTxt(x) + ")" : "") + " — queda bloqueada")
+            docsDesbloqueado: false, docsImpresiones: (Number(x.docsImpresiones) || 0) + 1, docsPacientePresente: true,
+            historial: firebase.firestore.FieldValue.arrayUnion(t.txt + " · Documentación impresa por " + usuario.n + (ajeno ? " (expediente de " + duenioTxt(x) + ")" : "") + " con el paciente presente — queda bloqueada y se quita de Mesa de Entradas")
           };
           if(ajeno) upd.accesos = firebase.firestore.FieldValue.arrayUnion(accesoReg("Imprimió la documentación (OC y recetas)", t));
           tx.set(ref, upd, { merge: true });
@@ -1393,6 +1400,29 @@ if(typeof module !== "undefined" && module.exports) module.exports = MesaCal;
     $("val-ov").style.display = "flex";
   }
   function cerrarVentana(){ $("val-ov").style.display = "none"; }
+  /* Antes de imprimir la OC y la receta: ventana grande y clara. Solo se imprime con el paciente
+     presente, una sola vez; después se bloquea y desaparece de Mesa de Entradas (la Gerencia la
+     conserva en el generador y es la única que puede habilitarla de nuevo). */
+  function ventanaImprimir(m){
+    return new Promise(function(resolve){
+      abrirVentana("naranja", "🖨️", "Antes de imprimir", "Leé esto: se imprime una sola vez.",
+        '<div class="imp-big">¿El paciente está AHORA en mesa?</div>' +
+        '<div class="imp-pac">' + tipoIco(m.tipo) + " " + esc(m.paciente) + " · Expte. " + esc(m.nroExp) + "</div>" +
+        '<ul class="imp-reglas">' +
+          "<li><span>🧑</span><div>Imprimí la orden de compra y la receta <u>solo cuando el paciente está presente</u> para retirarlas.</div></li>" +
+          "<li><span>1️⃣</span><div>Se imprime <u>UNA SOLA VEZ</u>.</div></li>" +
+          "<li><span>🔒</span><div>Después se <u>BLOQUEA y se BORRA de Mesa de Entradas</u>. No se puede volver a imprimir.</div></li>" +
+          "<li><span>📞</span><div>Para reimprimir hay que pedírselo a la <u>Gerencia</u>.</div></li>" +
+        "</ul>" +
+        '<label class="val-chk"><input type="checkbox" id="imp-chk"> El paciente está presente y le entrego ahora la documentación.</label>',
+        '<button type="button" class="val-no" id="imp-no">✖ No, todavía no</button><button type="button" class="val-ok" id="imp-si" disabled>🖨️ Imprimir ahora</button>');
+      var chk = $("imp-chk"), si = $("imp-si"), no = $("imp-no");
+      chk.onchange = function(){ si.disabled = !chk.checked; };
+      si.onclick = function(){ if(!chk.checked) return; cerrarVentana(); resolve(true); };
+      no.onclick = function(){ cerrarVentana(); resolve(false); };
+      setTimeout(function(){ no.focus(); }, 30);
+    });
+  }
   function ventanaFaltan(f){
     abrirVentana("rojo", "⚠️", "Faltan completar datos", "No se puede registrar el ingreso hasta completarlos.",
       "Completá estos datos <b>obligatorios</b>:<ul>" + f.map(function(x){ return "<li>" + x.txt + "</li>"; }).join("") + "</ul>" +
