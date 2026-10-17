@@ -4910,6 +4910,8 @@ var MesaJ = (function(){
       : ef === "trabajo" ? "🛠️ <b>En trabajo</b><span class=\"sub\">desde " + esc(m.trabajoTxt || "") + "</span>"
       : "🆕 <b>Sin tomar</b>" + (nuevo ? ' <span class="mj-nuevo">NUEVO</span>' : "");
     if(m.tomadoN) estado += '<span class="sub">✋ tomado en mesa por ' + esc(m.tomadoN) + "</span>";
+    if(m.hipoacusia === "sin_intervencion") estado += '<br><span class="mj-viejo" style="background:#c2410c" title="Mesa revisó en SIGEDIG: la última hoja no tiene la intervención de la Lic. Graciela Isla. Girar primero a la referente del Programa de Hipoacusia.">🎧 SIN intervención Hipoacusia · ' + (m.plazo || 15) + " días</span>";
+    else if(m.hipoacusia === "intervenido") estado += '<span class="sub">🎧 con intervención de Hipoacusia</span>';
     if(x._r && x._r.previoMesa && ef !== "entregado") estado += '<br><span class="mj-viejo" title="Este expediente se cargó como anterior al sistema: el ingreso de mesa no corresponde">📁 EXPEDIENTE VIEJO — anular</span>';
     var b = function(acc, cls, txt, tit){ return '<button type="button" class="mj-btn ' + cls + '" data-mj="' + acc + '" data-id="' + esc(m._id) + '"' + (tit ? ' title="' + esc(tit) + '"' : "") + ">" + txt + "</button>"; };
     var acc = "";
