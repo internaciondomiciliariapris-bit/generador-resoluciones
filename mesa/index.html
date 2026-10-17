@@ -186,6 +186,16 @@ button,input,select{font-family:inherit}
 .imp-reglas li{display:flex;gap:10px;align-items:flex-start;font-size:16px;font-weight:700;line-height:1.4;padding:10px 12px;border-radius:10px;margin-top:8px;background:#fff7ed;border:1.5px solid #fed7aa;color:#1a2b4a}
 .imp-reglas li span{font-size:22px;line-height:1}
 .it-docs button.imp{background:#ea580c}
+.val-head.violeta{background:linear-gradient(120deg,#6d28d9,#1a56a0)}
+.hipo-op{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}
+.hipo-op button{padding:14px 10px;border-radius:12px;font-size:15px;font-weight:800;line-height:1.35;cursor:pointer;font-family:inherit;border:2px solid}
+.hipo-op button small{display:block;font-size:13px;font-weight:700;margin-top:4px}
+.hipo-op button:disabled{opacity:.45;cursor:default}
+.hipo-si{background:#f0fdf4;border-color:#16a34a!important;color:#14532d}
+.hipo-no{background:#fff7ed;border-color:#ea580c!important;color:#7c2d12}
+.it-hipo{display:inline-block;margin-top:8px;font-size:12.5px;font-weight:800;border-radius:999px;padding:4px 11px}
+.it-hipo.si{background:#dcfce7;color:#166534}.it-hipo.no{background:#ffedd5;color:#9a3412}
+@media(max-width:600px){.hipo-op{grid-template-columns:1fr}}
 .dni-av{margin-top:6px;padding:8px 11px;border-radius:9px;background:#fffbeb;border:1.5px solid #fde68a;color:#92400e;font-size:13px;font-weight:700;line-height:1.45}
 @media(max-width:600px){.ops{grid-template-columns:1fr}.lote-f{grid-template-columns:1fr}.it{flex-wrap:wrap}.it-acc{flex-direction:row;width:100%}.tipos{grid-template-columns:1fr}}
 @media print{body>*{display:none!important}}
@@ -1432,6 +1442,33 @@ if(typeof module !== "undefined" && module.exports) module.exports = MesaCal;
     b.onclick = function(){ cerrarVentana(); var el = $(f[0].campo); if(el && el.focus && el.tagName === "INPUT") el.focus(); };
     setTimeout(function(){ b.focus(); }, 30);
   }
+  /* AUDÍFONOS: antes de la tirilla, mesa tiene que abrir el expediente en SIGEDIG y mirar la ÚLTIMA hoja.
+     Con intervención de la referente del Programa de Hipoacusia (Lic. Graciela Isla) → 10 días hábiles.
+     Sin intervención → 15 días hábiles (Jorge primero lo gira a la referente).
+     Devuelve "si" | "no" | null (todavía no lo revisó: no se guarda nada). */
+  var PLAZO_SIN_HIPO = 15;
+  function ventanaHipoacusia(pac, expTxt){
+    return new Promise(function(resolve){
+      abrirVentana("violeta", "🎧", "Audífonos: revisá el expediente en SIGEDIG", "Sin este control no se puede imprimir la tirilla.",
+        '<div class="imp-pac">🎧 ' + esc(pac) + " · Expte. " + esc(expTxt) + "</div>" +
+        '<div class="imp-big" style="color:#5b21b6;font-size:21px">Abrí el expediente en SIGEDIG y mirá la ÚLTIMA hoja</div>' +
+        '<ul class="imp-reglas">' +
+          "<li><span>🔎</span><div>¿Está la <u>intervención de la Lic. Graciela Isla</u>, referente del <u>Programa de Hipoacusia</u>?</div></li>" +
+        "</ul>" +
+        '<label class="val-chk"><input type="checkbox" id="hipo-chk"> Abrí el expediente en SIGEDIG y revisé la última hoja.</label>' +
+        '<div class="hipo-op">' +
+          '<button type="button" class="hipo-si" id="hipo-si" disabled>✅ SÍ, está intervenido<small>Plazo: 10 días hábiles</small></button>' +
+          '<button type="button" class="hipo-no" id="hipo-no" disabled>⏳ NO tiene la intervención<small>Plazo: ' + PLAZO_SIN_HIPO + " días hábiles</small></button>" +
+        "</div>",
+        '<button type="button" class="val-no" id="hipo-cancel" style="flex:1">✖ Todavía no lo revisé (no se registra)</button>');
+      var chk = $("hipo-chk"), si = $("hipo-si"), no = $("hipo-no"), ca = $("hipo-cancel");
+      chk.onchange = function(){ si.disabled = no.disabled = !chk.checked; };
+      si.onclick = function(){ if(!chk.checked) return; cerrarVentana(); resolve("si"); };
+      no.onclick = function(){ if(!chk.checked) return; cerrarVentana(); resolve("no"); };
+      ca.onclick = function(){ cerrarVentana(); resolve(null); };
+      setTimeout(function(){ chk.focus(); }, 30);
+    });
+  }
   function ventanaDni(pac, expTxt, tipo){
     return new Promise(function(resolve){
       abrirVentana("azul", "🪪", "Verificá con el DNI del paciente", "El apellido y nombre tiene que ser EXACTAMENTE el del DNI.",
@@ -1492,17 +1529,26 @@ if(typeof module !== "undefined" && module.exports) module.exports = MesaCal;
     // ---- Apellido y nombre como en el DNI: se confirma en una ventana antes de guardar (recién cuando se sabe que el expediente se puede ingresar) ----
     var okDni = await ventanaDni(pac, expTxt, tipo);
     if(!okDni){ msg("av", "Revisá el apellido y nombre con el DNI del paciente y volvé a tocar <b>Registrar</b>."); $("in-pac").focus(); return; }
+    // ---- Audífonos: intervención del Programa de Hipoacusia (define el plazo: 10 o 15 días hábiles) ----
+    var hipo = null;
+    if(tipo === "audio"){
+      hipo = await ventanaHipoacusia(pac, expTxt);
+      if(!hipo){ msg("av", "🎧 Primero revisá en <b>SIGEDIG</b> la última hoja del expediente (intervención de la Lic. Graciela Isla) y volvé a tocar <b>Registrar</b>. No se guardó nada."); return; }
+    }
+    var plazoIng = hipo === "no" ? PLAZO_SIN_HIPO : K.PLAZO;
     var btn = $("in-btn"); btn.disabled = true; btn.textContent = "Guardando…";
     try{
       var t = ahora(), anio = p.anio || String(new Date().getFullYear());
-      var vence = K.sumarHabiles(t.ms, K.PLAZO, feriados);
+      var vence = K.sumarHabiles(t.ms, plazoIng, feriados);
       var doc = {
         tipo: tipo, nroExp: expTxt, num: p.num, cod: p.cod, letra: p.letra || "", anio: p.anio || "",
-        paciente: pac, telefono: tel, estado: "ingresado", plazo: K.PLAZO,
+        paciente: pac, telefono: tel, estado: "ingresado", plazo: plazoIng,
         ingresoMs: t.ms, ingresoTxt: t.txt, venceMs: vence.getTime(), venceTxt: K.fmt(vence),
         usuario: usuario.u, usuarioNombre: usuario.n, vistoJorge: false, anulado: false,
-        historial: [t.txt + " · Ingreso cargado por " + usuario.n]
+        historial: [t.txt + " · Ingreso cargado por " + usuario.n +
+          (hipo === "si" ? " — con intervención del Programa de Hipoacusia (10 días hábiles)" : hipo === "no" ? " — SIN intervención del Programa de Hipoacusia (" + PLAZO_SIN_HIPO + " días hábiles)" : "")]
       };
+      if(hipo){ doc.hipoacusia = hipo === "si" ? "intervenido" : "sin_intervencion"; doc.hipoRevisadoPor = usuario.n; doc.hipoRevisadoTxt = t.txt; }
       var id = ("m_" + p.num + "_" + p.cod + "_" + anio).replace(/[\/#\?\[\]\*\.]+/g, "_");
       await db.collection(COL).doc(id).set(doc);
       $("in-exp").value = ""; $("in-pac").value = ""; $("in-tel").value = "";
@@ -1533,6 +1579,7 @@ if(typeof module !== "undefined" && module.exports) module.exports = MesaCal;
       '<div class="r">Expediente N°: <b>' + esc(m.nroExp) + "</b></div>" +
       '<div class="r">Fecha de ingreso: <b>' + esc(m.ingresoTxt) + " hs</b></div>" +
       '<div class="v"><div>Plazo: ' + (m.plazo || K.PLAZO) + " días hábiles. Puede volver a retirar su orden de compra a partir del</div><b>" + esc(K.fmtLargo(vence)) + "</b></div>" +
+      (m.hipoacusia === "sin_intervencion" ? '<div class="n" style="border:1px solid #000;padding:2mm;margin-bottom:2mm">Su expediente se envía primero a la <b>referente del Programa de Hipoacusia</b> para su intervención. Por eso el plazo es de ' + (m.plazo || PLAZO_SIN_HIPO) + " días hábiles.</div>" : "") +
       '<div class="n">Presentarse en <b>Mesa de Entradas del PRIS</b> con su <b>DNI</b> y esta tirilla. Con la orden de compra se dirige al proveedor.</div>' +
       '<div class="f">Atendido por: ' + esc(m.usuarioNombre || "") + "</div>" +
       "</div></body></html>";
@@ -1660,6 +1707,7 @@ if(typeof module !== "undefined" && module.exports) module.exports = MesaCal;
           (ef !== "entregado" ? " · vuelve a partir del <b>" + esc(K.fmtLargo(sit.vence)) + "</b>" : "") +
           (m.telefono ? " · 📞 " + esc(m.telefono) : "") + "</div>" +
         quienTarjeta(m) +
+        (m.hipoacusia ? '<div class="it-hipo ' + (m.hipoacusia === "intervenido" ? "si" : "no") + '">' + (m.hipoacusia === "intervenido" ? "🎧 Con intervención de Hipoacusia · 10 días hábiles" : "🎧 SIN intervención de Hipoacusia · " + (m.plazo || PLAZO_SIN_HIPO) + " días hábiles") + "</div>" : "") +
         (r && r.previoMesa && ef !== "entregado" ? '<div class="it-estado" style="background:#fef2f2;border-color:#fca5a5;color:#7f1d1d">📁 <b>Expediente VIEJO</b>: ya fue trabajado antes del sistema de Mesa de Entradas. <b>Este ingreso no corresponde</b> — Jorge lo va a anular.</div>' : "") +
         est + expTarjeta(m) + docsTarjeta(m) + obsTarjeta(m._id) + accesosTarjeta(m) + detalleTarjeta(m) +
       "</div>" +
