@@ -67,7 +67,7 @@ button,input,select{font-family:inherit}
 .bar input{flex:1;min-width:200px;padding:11px 13px;border:1.5px solid #cbd5e1;border-radius:10px;font-size:15px;outline:none;background:#fff}
 .bar input:focus{border-color:#1a56a0;box-shadow:0 0 0 3px rgba(26,86,160,.12)}
 .bar select{padding:10px;border:1.5px solid #cbd5e1;border-radius:10px;font-size:14px;background:#fff}
-.resumen{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+.resumen{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px}
 .it.devuelto{border-left-color:#ea580c;background:#fff7ed}.it-sem.devuelto{background:#ffedd5;color:#9a3412}.chip.devuelto{background:#ffedd5;color:#9a3412}
 .it-dev{margin-top:10px;padding:11px 13px;border-radius:10px;background:#fff7ed;border:1.5px solid #fdba74;color:#7c2d12;font-size:14px;line-height:1.5}
 .it-dev b.mot{display:block;margin:4px 0;font-size:15px;color:#9a3412}
@@ -78,6 +78,30 @@ button,input,select{font-family:inherit}
 .chip{font-size:12px;font-weight:800;border-radius:999px;padding:5px 11px;cursor:pointer;border:1.5px solid transparent}
 .chip.verde{background:#dcfce7;color:#166534}.chip.ambar{background:#fef3c7;color:#92400e}.chip.rojo{background:#fee2e2;color:#991b1b}.chip.azul{background:#dbeafe;color:#1e40af}.chip.gris{background:#f1f5f9;color:#475569}
 .vacio{padding:26px 6px;text-align:center;color:#64748b;font-size:14px;line-height:1.7}
+.fila{display:flex;align-items:center;gap:12px;background:#fff;border:1px solid #e2e8f0;border-left:5px solid #94a3b8;border-radius:10px;padding:8px 12px;margin-bottom:6px;cursor:pointer}
+.fila:hover{background:#f8fafc}
+.fila.verde{border-left-color:#16a34a}.fila.ambar{border-left-color:#d97706}.fila.rojo{border-left-color:#dc2626}.fila.azul{border-left-color:#1a56a0}.fila.gris{border-left-color:#94a3b8;opacity:.8}.fila.devuelto{border-left-color:#ea580c;background:#fff7ed}
+.fila.abierta{border-radius:10px 10px 0 0;margin-bottom:0;background:#eff6ff}
+.fila-grupo{margin-bottom:10px}
+.fila-grupo .it{border-radius:0 0 12px 12px;border-top:none;margin-bottom:0}
+.fila-grupo .it-ico,.fila-grupo .it-kick,.fila-grupo .it-tit{display:none}
+.fila-grupo .it{padding:10px 14px;font-size:13.5px}
+.f-ico{font-size:20px;line-height:1}
+.f-main{flex:1;min-width:0}
+.f-l1{font-size:14px;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.f-exp{color:#1a56a0;font-weight:800}.f-pac{font-weight:700;color:#1a2b4a}
+.f-l2{font-size:12px;color:#64748b;margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.f-bdg{font-size:11px;font-weight:800;background:#fef3c7;color:#92400e;border-radius:6px;padding:0 5px}
+.f-est{text-align:right;white-space:nowrap}
+.fe{display:inline-block;font-size:12px;font-weight:800;border-radius:999px;padding:3px 9px}
+.fe.verde{background:#dcfce7;color:#166534}.fe.ambar{background:#fef3c7;color:#92400e}.fe.rojo{background:#fee2e2;color:#991b1b}.fe.azul{background:#dbeafe;color:#1e40af}.fe.gris{background:#f1f5f9;color:#475569}.fe.naranja{background:#ffedd5;color:#9a3412}
+.f-oc{font-size:15px;font-weight:900;color:#1e3a8a;margin-top:2px}
+.f-acc{display:flex;align-items:center;gap:6px;white-space:nowrap}
+.fb{display:inline-flex;align-items:center;gap:5px;padding:6px 10px;border-radius:8px;font-size:12.5px;font-weight:800;cursor:pointer;border:1.5px solid transparent;font-family:inherit}
+.fb.verde{background:#16a34a;color:#fff}.fb.naranja{background:#ea580c;color:#fff}
+.fb.ent{background:#fff7ed;border-color:#fdba74;color:#7c2d12}.fb.ent input{width:16px;height:16px;accent-color:#16a34a;margin:0}
+.f-mas{color:#94a3b8;font-size:12px;width:14px;text-align:center}
+@media (max-width:640px){.fila{flex-wrap:wrap}.f-est{text-align:left}.f-acc{width:100%;justify-content:flex-end}}
 .it{display:flex;gap:14px;background:#fff;border:1.5px solid #e2e8f0;border-left:6px solid #94a3b8;border-radius:14px;padding:14px 16px;margin-bottom:12px}
 .it.verde{border-left-color:#16a34a}.it.ambar{border-left-color:#d97706}.it.rojo{border-left-color:#dc2626;background:#fffafa}.it.azul{border-left-color:#1a56a0;background:#f5f9ff}.it.gris{border-left-color:#94a3b8;background:#f8fafc}
 .it-ico{font-size:28px;line-height:1}
@@ -1828,7 +1852,39 @@ if(typeof module !== "undefined" && module.exports) module.exports = MesaCal;
     }
     box.innerHTML = html;
   };
+  /* ---------- Lista compacta: una línea por expediente; tocándola se abre la tarjeta completa ---------- */
+  var abiertoFila = {};
   function tarjeta(x){
+    var m = x._m, ef = x._ef, sit = x._sit, sem = K.semaforo(sit, ef), ocTxt = x.ocs.join(" / "), abierto = !!abiertoFila[m._id];
+    var dias = sit.restantes < 0 ? "vencido" : sit.restantes === 0 ? "vence hoy" : "faltan " + K.dh(sit.restantes);
+    var est = ef === "entregado" ? '<span class="fe gris">✅ Entregada' + (m.entregadoTxt ? " " + esc(String(m.entregadoTxt).slice(0, 5)) : "") + "</span>"
+      : ef === "devuelto" ? '<span class="fe naranja">↩️ Devuelto por Jorge: corregir</span>'
+      : ef === "en_mesa" ? '<span class="fe azul">📦 OC lista para entregar</span>'
+      : ocTxt ? '<span class="fe azul">🧾 OC emitida</span>'
+      : ef === "trabajo" ? '<span class="fe ' + sem.cls + '">🛠️ En trabajo · ' + dias + "</span>"
+      : '<span class="fe ' + sem.cls + '">🕐 Esperando · ' + dias + "</span>";
+    var sinLeer = obsDe(m._id).filter(function(o){ return !o.leido; }).length;
+    var acc = "";
+    if(ef === "devuelto") acc = '<button type="button" class="fb verde" data-acc="reenviar" data-id="' + esc(m._id) + '">✅ Corregido, reenviar</button>';
+    else if(ef !== "entregado"){
+      if(docsMeta[m._id] && !docsBloqueada(m)) acc += '<button type="button" class="fb naranja" data-acc="imprimir" data-id="' + esc(m._id) + '" title="Solo con el paciente presente">🖨️ Imprimir</button>';
+      if(ef === "en_mesa" || ocTxt) acc += '<label class="fb ent" title="Tildá cuando le entregás la OC al paciente"><input type="checkbox" data-acc="entregar" data-id="' + esc(m._id) + '"> Entregar</label>';
+    }
+    var fila = '<div class="fila ' + (ef === "devuelto" ? "devuelto" : sem.cls) + (abierto ? " abierta" : "") + '" data-fila="' + esc(m._id) + '" title="Tocá para ver todo">' +
+      '<span class="f-ico">' + tipoIco(m.tipo) + "</span>" +
+      '<div class="f-main"><div class="f-l1"><b class="f-exp">' + esc(m.nroExp) + '</b> <span class="f-pac">' + esc(m.paciente) + "</span>" +
+        (sinLeer ? ' <span class="f-bdg">📨 ' + sinLeer + "</span>" : "") + "</div>" +
+        '<div class="f-l2">' + esc(String(m.ingresoTxt || "").slice(0, 5)) + " · " + (esMio(m) ? "tuyo" : "de " + esc(duenioTxt(m))) + (m.telefono ? " · 📞 " + esc(m.telefono) : "") + "</div></div>" +
+      '<div class="f-est">' + est + (ocTxt ? '<div class="f-oc">OC ' + esc(ocTxt) + "</div>" : "") + "</div>" +
+      '<div class="f-acc">' + acc + '<span class="f-mas">' + (abierto ? "▴" : "▾") + "</span></div></div>";
+    return abierto ? '<div class="fila-grupo">' + fila + tarjetaCompleta(x) + "</div>" : fila;
+  }
+  document.addEventListener("click", function(e){
+    var t = e.target; if(!t || !t.closest || t.closest("button,a,input,label,select,textarea")) return;
+    var f = t.closest("[data-fila]"); if(!f) return;
+    var id = f.getAttribute("data-fila"); abiertoFila[id] = !abiertoFila[id]; window.render();
+  });
+  function tarjetaCompleta(x){
     var m = x._m, r = x._r, sit = x._sit, ef = x._ef, sem = K.semaforo(sit, ef);
     var ocs = x.ocs, ocTxt = ocs.join(" / ");
     var plazoTxt = ef === "entregado" || ef === "en_mesa" || ef === "devuelto" ? "" :
