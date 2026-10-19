@@ -4187,6 +4187,9 @@ if(typeof module !== "undefined" && module.exports) module.exports = EntConsulta
 .mj-tbl td.est{min-width:160px}
 .mj-tbl .acc .mj-btn{padding:5px 8px;font-size:12px}
 .mj-tbl .extra .mj-docs,.mj-tbl .extra .mj-obs,.mj-tbl .extra .mj-exp{margin-top:4px}
+.mj-tbl tr.fila.devuelto td:first-child{border-left-color:#ea580c}.mj-tbl tr.fila.devuelto td{background:#fff7ed}
+.mj-tbl .chip.devuelto{background:#ffedd5;color:#9a3412}
+.mj-tbl .corrido{display:block;font-size:11.5px;color:#9a3412;font-weight:700;margin-top:2px}
 .mj-uf{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:10px 16px;background:#f0fdfa;border-bottom:1px solid #ccfbf1}
 .mj-uf-t{font-size:12px;font-weight:800;color:#0f766e;text-transform:uppercase;letter-spacing:.5px;margin-right:4px}
 .mj-uf-c{display:inline-flex;align-items:center;gap:7px;padding:6px 11px;border:1.5px solid #99f6e4;border-radius:999px;background:#fff;font-size:13px;font-weight:700;color:#1a2b4a;cursor:pointer;font-family:inherit}
@@ -4261,6 +4264,7 @@ if(typeof module !== "undefined" && module.exports) module.exports = EntConsulta
           <option value="trabajo">🛠️ En trabajo</option>
           <option value="pend">Todo lo pendiente (sin OC en mesa)</option>
           <option value="vencidos">🔴 Vencidos / vencen hoy</option>
+          <option value="devueltos">↩️ Devueltos a mesa (para corregir)</option>
           <option value="en_mesa">📦 OC en mesa</option>
           <option value="entregados">✅ Entregados</option>
           <option value="todos" selected>📋 Todos (listado completo)</option>
@@ -4604,16 +4608,25 @@ var MesaCal = (function(){
     while(a < b && g < 4000){ a = sig(a); if(habil(a, s)) c++; g++; }
     return c;
   }
+  /* Días hábiles que el expediente estuvo devuelto a mesa: no cuentan para el plazo.
+     Si lo reenvían el mismo día de la devolución, no se corre nada. */
+  function pausaDe(m, lista, ahoraMs){
+    var p = Number(m.pausaDias) || 0;
+    if(m.estado === "devuelto" && m.devueltoMs) p += habilesEntre(m.devueltoMs, ahoraMs || Date.now(), lista);
+    return p;
+  }
   function situacion(m, lista, ahoraMs){
-    var plazo = m.plazo || PLAZO;
-    var trans = habilesEntre(m.ingresoMs, ahoraMs || Date.now(), lista);
-    return { transcurridos: trans, restantes: plazo - trans, plazo: plazo, vence: sumarHabiles(m.ingresoMs, plazo, lista) };
+    var plazo = m.plazo || PLAZO, pausa = pausaDe(m, lista, ahoraMs);
+    var trans = Math.max(0, habilesEntre(m.ingresoMs, ahoraMs || Date.now(), lista) - pausa);
+    return { transcurridos: trans, restantes: plazo - trans, plazo: plazo, vence: sumarHabiles(m.ingresoMs, plazo + pausa, lista),
+             pausa: pausa, detenido: m.estado === "devuelto" };
   }
   function dh(n){ return n === 1 ? "1 día hábil" : n + " días hábiles"; }
   /* Semáforo según el estado efectivo (entregado / en_mesa / ingresado / trabajo). */
   function semaforo(sit, efectivo){
     if(efectivo === "entregado") return { cls: "gris", txt: "Entregada al paciente" };
     if(efectivo === "en_mesa") return { cls: "azul", txt: "OC lista en Mesa de Entradas" };
+    if(efectivo === "devuelto") return { cls: "devuelto", txt: "Devuelto a mesa · plazo detenido" };
     if(sit.restantes < 0) return { cls: "rojo", txt: "Vencido hace " + dh(-sit.restantes) };
     if(sit.restantes === 0) return { cls: "rojo", txt: "Hoy se cumplen los " + sit.plazo + " días hábiles" };
     if(sit.restantes <= 2) return { cls: "ambar", txt: "Faltan " + dh(sit.restantes) };
@@ -4641,7 +4654,7 @@ var MesaCal = (function(){
     }).join("\n");
   }
   return { PLAZO: PLAZO, DEF: DEF, NOMBRES: NOMBRES, iso: iso, fmt: fmt, fmtLargo: fmtLargo, hora: hora,
-           sumarHabiles: sumarHabiles, habilesEntre: habilesEntre, situacion: situacion, semaforo: semaforo,
+           sumarHabiles: sumarHabiles, habilesEntre: habilesEntre, pausaDe: pausaDe, situacion: situacion, semaforo: semaforo,
            dh: dh, parseLista: parseLista, listaATexto: listaATexto };
 })();
 if(typeof module !== "undefined" && module.exports) module.exports = MesaCal;
@@ -4711,9 +4724,10 @@ var MesaJ = (function(){
       mesa = todosM.filter(function(m){ return !m.anulado; });
       programarLimpieza();
       estado = "ok";
-      var nuevos = mesa.filter(function(m){ return !m.vistoJorge && !conocidos[m._id]; });
+      var llave = function(m){ return m._id + "|" + (m.reenviadoMs || 0); };
+      var nuevos = mesa.filter(function(m){ return !m.vistoJorge && !conocidos[llave(m)]; });
       if(!primeraCarga && nuevos.length){ sonar(); ocultaHasta = 0; }
-      mesa.forEach(function(m){ conocidos[m._id] = true; });
+      mesa.forEach(function(m){ conocidos[llave(m)] = true; });
       primeraCarga = false;
       render(); alerta();
     }, function(err){ console.warn("Mesa J onSnapshot:", err); estado = "sin-acceso"; render(); });
@@ -4822,7 +4836,7 @@ var MesaJ = (function(){
       }).join("") +
       muestra.map(function(m){
         var sit = K.situacion(m, feriados);
-        return '<div class="ma-it"><div class="ma-it-t">' + tipoIco(m.tipo) + " " + esc(m.nroExp) + (expMeta[m._id] || m.sigedigUrl ? " · 📄 con expediente" : "") + '</div><div class="ma-it-p">' + esc(m.paciente) + "</div>" +
+        return '<div class="ma-it"><div class="ma-it-t">' + tipoIco(m.tipo) + " " + esc(m.nroExp) + (expMeta[m._id] || m.sigedigUrl ? " · 📄 con expediente" : "") + (m.reenviadoTxt ? " · ✅ corregido y reenviado" : "") + '</div><div class="ma-it-p">' + esc(m.paciente) + "</div>" +
           '<div class="ma-it-d">' + esc(tipoTxt(m.tipo)) + " · cargado por " + esc(m.usuarioNombre || m.usuario || "") + " el " + esc(m.ingresoTxt) + " hs · vence el " + esc(K.fmt(sit.vence)) + "</div>" +
           '<div class="ma-it-b"><button type="button" class="mj-btn mj-verde" data-mj="tomar" data-id="' + esc(m._id) + '">▶ Tomar</button><button type="button" class="mj-btn mj-gris" data-mj="visto" data-id="' + esc(m._id) + '">Visto</button></div></div>';
       }).join("") +
@@ -4881,8 +4895,9 @@ var MesaJ = (function(){
     var venc = pend.filter(function(x){ return x._sit.restantes <= 0; }).length;
     var enMesa = items.filter(function(x){ return x._ef === "en_mesa"; }).length;
     var obsSL = obs.filter(function(o){ return !o.leido; }).length;
+    var devN = items.filter(function(x){ return x._ef === "devuelto"; }).length;
     var porEmp = items.filter(function(x){ return x._ef === "ingresado"; }).length;
-    if(sub) sub.textContent = porEmp + " por empezar · " + (pend.length - porEmp) + " en trabajo" + (venc ? " · " + venc + " vencido(s) o vencen hoy" : "") + " · " + enMesa + " OC en mesa" + (obsSL ? " · 📨 " + obsSL + " observación(es) sin leer" : "");
+    if(sub) sub.textContent = porEmp + " por empezar · " + (pend.length - porEmp) + " en trabajo" + (venc ? " · " + venc + " vencido(s) o vencen hoy" : "") + " · " + enMesa + " OC en mesa" + (devN ? " · ↩️ " + devN + " devuelto(s) a mesa" : "") + (obsSL ? " · 📨 " + obsSL + " observación(es) sin leer" : "");
     var q = $("mj-q").value.trim(), f = $("mj-f").value, lista;
     if(q) lista = EntConsulta.buscar(items, q);
     else lista = items.filter(function(x){
@@ -4891,6 +4906,7 @@ var MesaJ = (function(){
       if(f === "trabajo") return x._ef === "trabajo";
       if(f === "vencidos") return (x._ef === "ingresado" || x._ef === "trabajo") && x._sit.restantes <= 0;
       if(f === "en_mesa") return x._ef === "en_mesa";
+      if(f === "devueltos") return x._ef === "devuelto";
       if(f === "entregados") return x._ef === "entregado";
       return true;
     }).sort(function(a, b){
@@ -4900,11 +4916,11 @@ var MesaJ = (function(){
     });
     if(!q && f === "todos"){
       // Listado completo: primero lo pendiente (por plazo), después OC en mesa y al final lo entregado.
-      var rk = function(x){ return x._ef === "en_mesa" ? 1 : x._ef === "entregado" ? 2 : 0; };
+      var rk = function(x){ return x._ef === "devuelto" ? 1 : x._ef === "en_mesa" ? 2 : x._ef === "entregado" ? 3 : 0; };
       lista.sort(function(a, b){
         return rk(a) - rk(b) ||
           (rk(a) === 0 ? (a._sit.restantes - b._sit.restantes || (a._m.ingresoMs || 0) - (b._m.ingresoMs || 0))
-           : rk(a) === 1 ? (b._m.enMesaMs || 0) - (a._m.enMesaMs || 0) : (b._m.entregadoMs || 0) - (a._m.entregadoMs || 0));
+           : rk(a) === 1 ? (b._m.devueltoMs || 0) - (a._m.devueltoMs || 0) : rk(a) === 2 ? (b._m.enMesaMs || 0) - (a._m.enMesaMs || 0) : (b._m.entregadoMs || 0) - (a._m.entregadoMs || 0));
       });
     }
     box.innerHTML = lista.length ? tablaListado(lista) :
@@ -4965,8 +4981,8 @@ var MesaJ = (function(){
   function tablaListado(lista){
     var cab = ["#", "Tipo", "N° expediente", "Paciente", "Ingreso", "Cargado por", "Plazo", "Estado", "N° OC", "Teléfono", "Acciones"];
     var n = { pend: 0, mesa: 0, ent: 0 };
-    lista.forEach(function(x){ if(x._ef === "en_mesa") n.mesa++; else if(x._ef === "entregado") n.ent++; else n.pend++; });
-    return '<div class="mj-cnt"><b>' + lista.length + "</b> expediente(s) en la lista · " + n.pend + " pendiente(s) · " + n.mesa + " con OC en mesa · " + n.ent + " entregado(s)</div>" +
+    lista.forEach(function(x){ if(x._ef === "en_mesa") n.mesa++; else if(x._ef === "entregado") n.ent++; else if(x._ef === "devuelto") n.dev = (n.dev || 0) + 1; else n.pend++; });
+    return '<div class="mj-cnt"><b>' + lista.length + "</b> expediente(s) en la lista · " + n.pend + " pendiente(s)" + (n.dev ? " · ↩️ " + n.dev + " devuelto(s) a mesa" : "") + " · " + n.mesa + " con OC en mesa · " + n.ent + " entregado(s)</div>" +
       '<table class="mj-tbl"><thead><tr>' + cab.map(function(c){ return "<th>" + c + "</th>"; }).join("") + "</tr></thead><tbody>" +
       lista.map(function(x, i){ return filaListado(x, i + 1, cab.length); }).join("") + "</tbody></table>";
   }
@@ -4974,20 +4990,28 @@ var MesaJ = (function(){
     var m = x._m, ef = x._ef, sit = x._sit, sem = K.semaforo(sit, ef), ocTxt = x.ocs.join(" / ");
     var nuevo = !m.vistoJorge && ef === "ingresado";
     var plazo = (ef === "ingresado" || ef === "trabajo")
-      ? '<span class="chip ' + sem.cls + '">' + esc(sem.txt) + '</span><span class="sub">vence ' + esc(K.fmtLargo(sit.vence)) + "</span>"
+      ? '<span class="chip ' + sem.cls + '">' + esc(sem.txt) + '</span><span class="sub">vence ' + esc(K.fmtLargo(sit.vence)) + "</span>" +
+        (sit.pausa ? '<span class="corrido">↪ corrido ' + esc(K.dh(sit.pausa)) + " por devolución</span>" : "")
+      : ef === "devuelto"
+      ? '<span class="chip devuelto">↩️ Plazo detenido</span><span class="sub">día hábil ' + Math.min(sit.transcurridos, sit.plazo) + " de " + sit.plazo + " al devolverlo</span>" +
+        (sit.pausa ? '<span class="corrido">lleva ' + esc(K.dh(sit.pausa)) + " sin contar</span>" : "")
       : '<span class="chip ' + sem.cls + '">' + esc(sem.txt) + "</span>";
     var estado = ef === "entregado" ? "✅ <b>Entregada al paciente</b><span class=\"sub\">" + esc(m.entregadoTxt || (x._r && x._r.entregadoFecha) || "") + (m.entregadoPor ? " · " + esc(m.entregadoPor) : "") + "</span>"
       : ef === "en_mesa" ? "📦 <b>OC en mesa</b><span class=\"sub\">desde " + esc(m.enMesaTxt || "") + "</span>"
       : ef === "trabajo" ? "🛠️ <b>En trabajo</b><span class=\"sub\">desde " + esc(m.trabajoTxt || "") + "</span>"
+      : ef === "devuelto" ? "↩️ <b>Devuelto a mesa</b><span class=\"sub\">el " + esc(m.devueltoTxt || "") + " — " + esc(m.devueltoMotivo || "") + "</span>"
       : "🆕 <b>Sin tomar</b>" + (nuevo ? ' <span class="mj-nuevo">NUEVO</span>' : "");
+    if(m.reenviadoTxt && (ef === "ingresado" || ef === "trabajo")) estado += '<span class="sub">✅ Corregido y reenviado por ' + esc(m.reenviadoPor || "mesa") + " el " + esc(m.reenviadoTxt) + (m.reenviadoNota ? " — " + esc(m.reenviadoNota) : "") + "</span>";
     if(m.tomadoN) estado += '<span class="sub">✋ tomado en mesa por ' + esc(m.tomadoN) + "</span>";
     if(m.hipoacusia === "sin_intervencion") estado += '<br><span class="mj-viejo" style="background:#c2410c" title="Mesa revisó en SIGEDIG: la última hoja no tiene la intervención de la Lic. Graciela Isla. Girar primero a la referente del Programa de Hipoacusia.">🎧 SIN intervención Hipoacusia · ' + (m.plazo || 15) + " días</span>";
     else if(m.hipoacusia === "intervenido") estado += '<span class="sub">🎧 con intervención de Hipoacusia</span>';
     if(x._r && x._r.previoMesa && ef !== "entregado") estado += '<br><span class="mj-viejo" title="Este expediente se cargó como anterior al sistema: el ingreso de mesa no corresponde">📁 EXPEDIENTE VIEJO — anular</span>';
     var b = function(acc, cls, txt, tit){ return '<button type="button" class="mj-btn ' + cls + '" data-mj="' + acc + '" data-id="' + esc(m._id) + '"' + (tit ? ' title="' + esc(tit) + '"' : "") + ">" + txt + "</button>"; };
     var acc = "";
-    if(ef === "ingresado") acc = b("tomar", "mj-verde", "▶ Tomar", "Empezar a trabajarlo") + b("mesa", "mj-azul", "📦 OC a mesa", "Ya llevé la orden de compra a Mesa de Entradas");
-    else if(ef === "trabajo") acc = b("mesa", "mj-azul", "📦 OC a mesa", "Ya llevé la orden de compra a Mesa de Entradas") + b("nuevo", "mj-gris", "↩", "Volver a sin tomar");
+    var bDev = b("devolver", "mj-rojo", "↩️ Devolver", "Devolver el expediente a Mesa de Entradas para que lo corrijan (el plazo se detiene)");
+    if(ef === "ingresado") acc = b("tomar", "mj-verde", "▶ Tomar", "Empezar a trabajarlo") + b("mesa", "mj-azul", "📦 OC a mesa", "Ya llevé la orden de compra a Mesa de Entradas") + bDev;
+    else if(ef === "trabajo") acc = b("mesa", "mj-azul", "📦 OC a mesa", "Ya llevé la orden de compra a Mesa de Entradas") + bDev + b("nuevo", "mj-gris", "↩", "Volver a sin tomar");
+    else if(ef === "devuelto") acc = b("cancdev", "mj-gris", "↪ Lo recupero", "Cancelar la devolución: vuelve a tu lista (el tiempo que estuvo en mesa no cuenta)");
     else if(ef === "en_mesa") acc = b("docs", "mj-azul", docsMeta[m._id] ? "📎 Reenviar docs" : "📎 Enviar docs", "Enviar la OC, DNI y receta para que mesa imprima") + b("deshacer", "mj-gris", "↩", "Quitar la entrega a mesa");
     if(ef !== "entregado") acc += b("obs", "mj-gris", "📨", "Enviar una observación a Mesa de Entradas");
     acc += b("anular", "mj-rojo", "🗑️", "Anular este ingreso");
@@ -5043,6 +5067,13 @@ var MesaJ = (function(){
     if(acc === "visto") return guardar(id, { vistoJorge: true });
     if(acc === "tomar") return guardar(id, { estado: "trabajo", trabajoMs: t.ms, trabajoTxt: t.txt, vistoJorge: true, historial: historial(t, "Tomado para trabajar") });
     if(acc === "nuevo") return guardar(id, { estado: "ingresado", trabajoMs: null, trabajoTxt: "", historial: historial(t, "Vuelve a sin tomar") });
+    if(acc === "devolver") return devolver(m);
+    if(acc === "cancdev"){
+      if(!confirm("¿Recuperar el expediente de " + m.paciente + " sin esperar a que mesa lo reenvíe?")) return;
+      var p0 = K.habilesEntre(m.devueltoMs || t.ms, t.ms, feriados);
+      return guardar(id, { estado: m.estadoPrevio === "trabajo" ? "trabajo" : "ingresado", pausaDias: (Number(m.pausaDias) || 0) + p0, devueltoMs: null, vistoJorge: true,
+        historial: historial(t, "Devolución cancelada: el expediente vuelve a la Gerencia" + (p0 ? " (plazo corrido " + K.dh(p0) + ")" : "")) });
+    }
     if(acc === "mesa") return ocAbrir(m, false);
     if(acc === "docs") return ocAbrir(m, true);
     if(acc === "abrirsig"){
@@ -5065,6 +5096,26 @@ var MesaJ = (function(){
     var el = e.target && e.target.closest ? e.target.closest("[data-mj]") : null; if(!el) return;
     accion(el.getAttribute("data-mj"), el.getAttribute("data-id"));
   });
+
+  /* ---------- Devolver a Mesa de Entradas para corregir ----------
+     Sale de las listas de la Gerencia, el plazo se detiene y a mesa le llega la observación obligatoria.
+     Cuando mesa lo corrige y lo reenvía, vuelve como nuevo y el vencimiento se corre los días que estuvo en mesa. */
+  async function devolver(m){
+    var motivo = prompt("Devolver a Mesa de Entradas: " + m.nroExp + " — " + m.paciente + "\n\n¿Qué tienen que corregir?\n(Les llega como observación y no se cierra hasta que la lean. El plazo queda detenido hasta que te lo reenvíen.)", "");
+    if(motivo === null) return;
+    motivo = String(motivo).trim();
+    if(motivo.length < 3){ alert("Escribí qué tienen que corregir."); return; }
+    var t = ahora();
+    try{
+      await db.collection(COL).doc(m._id).set({ estado: "devuelto", estadoPrevio: m.estado || "ingresado", devueltoMs: t.ms, devueltoTxt: t.txt, devueltoMotivo: motivo,
+        devoluciones: (Number(m.devoluciones) || 0) + 1, vistoJorge: true, reenviadoMs: null, reenviadoTxt: "", reenviadoPor: "", reenviadoNota: "",
+        historial: historial(t, "Devuelto a Mesa de Entradas para corregir: " + motivo) }, { merge: true });
+      var id = "o_" + t.ms + "_" + Math.random().toString(36).slice(2, 7);
+      await db.collection(COL_OBS).doc(id).set({ mesaId: m._id, nroExp: m.nroExp, paciente: m.paciente, tipo: m.tipo,
+        texto: "↩️ EXPEDIENTE DEVUELTO PARA CORREGIR: " + motivo + "\nCuando esté corregido, tocá «✅ Corregido, reenviar» en el expediente.",
+        autor: "Jorge", devolucion: true, creadoMs: t.ms, creadoTxt: t.txt, leido: false, leidoPor: "", leidoUsuario: "", leidoMs: null, leidoTxt: "", respuesta: "" });
+    }catch(e){ alert("No se pudo devolver: " + (e && e.message || e)); }
+  }
 
   /* ---------- Documentación para imprimir en mesa (OC ×2 sin precios y con sello + DNI + receta) ---------- */
   function contenidoTxt(c){
@@ -5391,7 +5442,8 @@ var MesaJ = (function(){
     var cols = ["Tipo","Expediente","Paciente","Teléfono","Ingreso","Cargado por","Vence","Estado","N° OC","Tomado","OC a mesa","Entregada al paciente","Entregada por","Observaciones","Documentación","Expediente descargado"];
     var filas = mesa.slice().sort(function(a, b){ return (a.ingresoMs || 0) - (b.ingresoMs || 0); }).map(function(m){
       var r = regDe(m), ef = efectivo(m, r), sit = K.situacion(m, feriados);
-      var est = ef === "entregado" ? "Entregada" : ef === "en_mesa" ? "OC en mesa" : ef === "trabajo" ? "En trabajo" : "Sin tomar";
+      var est = ef === "entregado" ? "Entregada" : ef === "en_mesa" ? "OC en mesa" : ef === "devuelto" ? "Devuelto a mesa (" + (m.devueltoMotivo || "") + ")" : ef === "trabajo" ? "En trabajo" : "Sin tomar";
+      if(sit.pausa) est += " · plazo corrido " + K.dh(sit.pausa);
       if((ef === "ingresado" || ef === "trabajo") && sit.restantes < 0) est += " (vencido)";
       return [tipoTxt(m.tipo), m.nroExp, m.paciente, m.telefono || "", m.ingresoTxt, m.usuarioNombre || m.usuario || "", K.fmt(sit.vence), est,
               m.ocNro || ocsDe(r).join(" / "), m.trabajoTxt || "", m.enMesaTxt || "", m.entregadoTxt || (r && r.entregadoFecha ? r.entregadoFecha + " " + (r.entregadoHora || "") : ""), m.entregadoPor || "",
