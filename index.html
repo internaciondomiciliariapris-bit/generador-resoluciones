@@ -4242,6 +4242,10 @@ if(typeof module !== "undefined" && module.exports) module.exports = EntConsulta
 #mesa-modal .rg-title{font-size:18px}
 #mesa-modal .mj-tab{padding:7px}
 .mj-cuerpo{display:flex;flex:1;min-height:0}
+.mj-side-l{display:flex;flex-direction:column;gap:3px}
+.mj-side-links{margin-top:auto;padding:10px 6px 2px;border-top:1px solid #ccfbf1;display:flex;flex-direction:column;gap:6px}
+.mj-side-links a{font-size:12px;font-weight:700;color:#0f766e;text-decoration:none}
+.mj-side-links a:hover{text-decoration:underline}
 .mj-side{width:190px;flex-shrink:0;display:flex;flex-direction:column;gap:3px;padding:10px 8px;background:#f0fdfa;border-right:1px solid #ccfbf1;overflow-y:auto}
 .mj-side .mj-uf-t{padding:2px 8px 6px;font-size:11px}
 .mj-side .mj-uf-c{display:flex;width:100%;justify-content:space-between;border-radius:8px;padding:6px 9px;font-size:12.5px;border:1px solid transparent;background:transparent;text-align:left}
@@ -4348,7 +4352,14 @@ if(typeof module !== "undefined" && module.exports) module.exports = EntConsulta
         <button type="button" class="mj-btn mj-gris" onclick="MesaJ.elegirCarpeta()" id="mj-carpeta-btn" title="Elegir la carpeta donde se guardan los expedientes">📁 Carpeta</button>
       </div>
       <div class="mj-cuerpo">
-      <aside class="mj-side" id="mj-porusr"></aside>
+      <aside class="mj-side">
+        <div class="mj-side-l" id="mj-porusr"></div>
+        <div class="mj-side-links">
+          <a href="/mesa/" target="_blank" rel="noopener" title="Abrir la página de Mesa de Entradas">🔗 Página de mesa <span id="mj-link" style="display:none"></span></a>
+          <a href="#" onclick="MesaJ.copiarLink(); return false;">📋 Copiar link de mesa</a>
+          <a href="#" onclick="MesaJ.exportar(); return false;">⬇️ Exportar a Excel</a>
+        </div>
+      </aside>
       <div class="mj-main">
       <div class="mj-vistas" id="mj-vistas"></div>
       <div class="mj-buscar">
@@ -4389,10 +4400,6 @@ if(typeof module !== "undefined" && module.exports) module.exports = EntConsulta
         <button type="button" class="mj-btn mj-gris" onclick="MesaJ.feriadosSugeridos()">↺ Cargar la lista sugerida</button>
       </div>
       <div class="mj-msg" id="mj-fer-msg"></div>
-    </div>
-    <div class="rg-foot">
-      <div class="rg-foot-txt">Página de Mesa de Entradas: <a href="/mesa/" target="_blank" rel="noopener" id="mj-link">/mesa</a> · <a href="#" onclick="MesaJ.copiarLink(); return false;">📋 Copiar link</a> · <a href="#" onclick="MesaJ.exportar(); return false;">⬇️ Exportar a Excel (CSV)</a></div>
-      <button type="button" class="rg-btn" onclick="MesaJ.cerrar()">Listo</button>
     </div>
   </div>
 </div>
