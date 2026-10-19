@@ -4236,6 +4236,58 @@ if(typeof module !== "undefined" && module.exports) module.exports = EntConsulta
 .mj-uf-c.on b{background:#fff;color:#0f766e}
 .mj-uf-c.cero{opacity:.55}
 .mj-uf-tot{margin-left:auto;font-size:13px;color:#334155}
+/* ---- Sábana compacta ---- */
+#mesa-modal .rg-head{padding:8px 18px}
+#mesa-modal .rg-head-ico{width:38px;height:38px;font-size:20px}
+#mesa-modal .rg-title{font-size:18px}
+#mesa-modal .mj-tab{padding:7px}
+.mj-cuerpo{display:flex;flex:1;min-height:0}
+.mj-side{width:190px;flex-shrink:0;display:flex;flex-direction:column;gap:3px;padding:10px 8px;background:#f0fdfa;border-right:1px solid #ccfbf1;overflow-y:auto}
+.mj-side .mj-uf-t{padding:2px 8px 6px;font-size:11px}
+.mj-side .mj-uf-c{display:flex;width:100%;justify-content:space-between;border-radius:8px;padding:6px 9px;font-size:12.5px;border:1px solid transparent;background:transparent;text-align:left}
+.mj-side .mj-uf-c:hover{background:#ccfbf1}
+.mj-side .mj-uf-c.on{background:#0f766e;color:#fff}
+.mj-side .mj-uf-c b{font-size:11.5px;min-width:22px;padding:0 6px}
+.mj-side .un{display:flex;flex-direction:column;min-width:0}
+.mj-side .udev{font-style:normal;font-size:10.5px;font-weight:800;color:#c2410c;margin-top:1px}
+.mj-side .mj-uf-c.on .udev{color:#fed7aa}
+.mj-side .mj-uf-tot{margin:8px 0 0;padding:8px 8px 0;border-top:1px solid #ccfbf1;font-size:12px}
+.mj-main{flex:1;min-width:0;display:flex;flex-direction:column}
+.mj-vistas{gap:6px;padding:8px 12px}
+.mj-v{flex:0 1 auto;min-width:0;gap:7px;padding:6px 12px;border-width:1.5px;border-radius:9px}
+.mj-v .ic{font-size:16px}
+.mj-v .tx{font-size:13px;flex-direction:row;align-items:center;gap:6px;white-space:nowrap}
+.mj-v .tx small{display:none}
+.mj-v .alerta{margin-top:0}
+.mj-v .n{font-size:15px;margin-left:6px}
+.mj-buscar{padding:6px 12px}
+.mj-buscar input,.mj-buscar select{padding:6px 10px;font-size:13px}
+.mj-titsec{padding:8px 12px 4px;font-size:11.5px}
+.mj-tbl{font-size:12.5px}
+.mj-tbl th{padding:6px 8px;font-size:10.5px;letter-spacing:.3px}
+.mj-tbl td{padding:4px 8px;line-height:1.25;white-space:nowrap}
+.mj-tbl td.wr{white-space:normal;min-width:90px;max-width:300px}
+#mj-lista{overflow:auto}
+.mj-tbl tr.fila td.r{position:sticky;right:0;background:inherit;box-shadow:-6px 0 6px -6px rgba(0,0,0,.15)}
+.mj-tbl tr.fila td.r{background:#fff}.mj-tbl tr.fila:nth-child(even) td.r{background:#fafbfc}
+.mj-tbl tr.fila td:first-child{border-left-width:4px}
+.mj-tbl tr.fila:nth-child(even) td{background:#fafbfc}
+.mj-tbl tr.fila.nuevo td{background:#f0fdfa}
+.mj-tbl tr.fila.abierta td{background:#eff6ff}
+.mj-tbl .n{color:#94a3b8;font-size:11px;text-align:right}
+.mj-tbl .xp{font-weight:700;color:#1a56a0}
+.mj-tbl .pc{font-weight:800;color:#0f172a}
+.mj-tbl .chip{font-size:11px;padding:1px 7px}
+.mj-tbl .grande{font-size:13px}
+.mj-tbl .sub{display:inline;font-size:11.5px;margin:0 0 0 4px}
+.mj-tbl .mj-bdg{font-size:10px;padding:0 5px;margin-left:4px;vertical-align:0}
+.mj-tbl .acc{gap:4px}
+.mj-tbl .acc .mj-btn{padding:3px 8px;font-size:11.5px;border-radius:6px}
+.mj-tbl .mas{width:16px;font-size:11px}
+.mj-tbl tr.det td{padding:0 8px 8px;white-space:normal}
+.det-in{padding:9px 12px}
+.dt{font-size:12.5px}
+@media (max-width:900px){.mj-side{display:none!important}}
 @media print{#mesa-chip,#mesa-alerta,#mesa-modal,#mj-obs-ov,#mj-leida,#mj-oc-ov{display:none!important}}
 </style>
 
@@ -4295,7 +4347,9 @@ if(typeof module !== "undefined" && module.exports) module.exports = EntConsulta
         <button type="button" class="mj-btn mj-verde" id="mj-bajar-btn" onclick="MesaJ.bajarTodos()">⬇️ Descargar todos</button>
         <button type="button" class="mj-btn mj-gris" onclick="MesaJ.elegirCarpeta()" id="mj-carpeta-btn" title="Elegir la carpeta donde se guardan los expedientes">📁 Carpeta</button>
       </div>
-      <div class="mj-uf" id="mj-porusr"></div>
+      <div class="mj-cuerpo">
+      <aside class="mj-side" id="mj-porusr"></aside>
+      <div class="mj-main">
       <div class="mj-vistas" id="mj-vistas"></div>
       <div class="mj-buscar">
         <span>🔍</span>
@@ -4310,6 +4364,8 @@ if(typeof module !== "undefined" && module.exports) module.exports = EntConsulta
         <select id="mj-uf" onchange="MesaJ.render()" style="display:none"><option value=""></option></select>
       </div>
       <div class="rg-body" id="mj-lista"></div>
+      </div>
+      </div>
     </div>
     <div id="mj-p-usr" class="rg-body" style="display:none">
       <div class="stitle">Crear usuario de Mesa de Entradas</div>
@@ -4965,13 +5021,15 @@ var MesaJ = (function(){
     if(per === "mesant") return [new Date(y, mo - 1, 1).getTime(), new Date(y, mo, 1).getTime()];
     return null;
   }
+  // Cuántas veces Jorge devolvió este ingreso a mesa por estar mal cargado
+  function devolucionesDe(m){ return Number(m.devoluciones) || (m.estado === "devuelto" || m.devueltoTxt || m.reenviadoTxt ? 1 : 0); }
   function filtroUsuarios(items){
     var sel = $("mj-uf"), per = ($("mj-per") || {}).value || "", rg = rangoPeriodo(per);
     if(rg) items = items.filter(function(x){ var t = x._m.ingresoMs || 0; return t >= rg[0] && t < rg[1]; });
     // Conteo por usuario (en el período elegido)
-    var cnt = {};
+    var cnt = {}, dev = {}, devTot = 0;
     usuarios.forEach(function(u){ if(u.activo !== false) cnt[u._id] = 0; });
-    items.forEach(function(x){ var k = usrKey(x._m); cnt[k] = (cnt[k] || 0) + 1; });
+    items.forEach(function(x){ var k = usrKey(x._m), d = devolucionesDe(x._m); cnt[k] = (cnt[k] || 0) + 1; dev[k] = (dev[k] || 0) + d; devTot += d; });
     var claves = Object.keys(cnt).sort(function(a, b){ return cnt[b] - cnt[a] || usrNom(a).localeCompare(usrNom(b)); });
     // Opciones del selector (se conserva lo elegido)
     var uf = sel ? sel.value : "";
@@ -4987,10 +5045,12 @@ var MesaJ = (function(){
     if(box){
       var perTxt = { hoy: "hoy", semana: "esta semana", mes: "este mes", mesant: "el mes pasado" }[per] || "en total";
       box.style.display = claves.length ? "flex" : "none";
-      box.innerHTML = '<span class="mj-uf-t">👤 Cargados por</span>' +
+      box.innerHTML = '<span class="mj-uf-t">👤 Usuarios de mesa</span>' +
         '<button type="button" class="mj-uf-c' + (uf ? "" : " on") + '" data-mjuf="" title="Ver los de todos">Todos <b>' + items.length + "</b></button>" + claves.map(function(k){
-        return '<button type="button" class="mj-uf-c' + (k === uf ? " on" : "") + (cnt[k] ? "" : " cero") + '" data-mjuf="' + esc(k) + '" title="' + (k === uf ? "Quitar filtro" : "Ver solo los ingresos de " + esc(usrNom(k))) + '">' + esc(usrNom(k)) + " <b>" + cnt[k] + "</b></button>";
-      }).join("") + '<span class="mj-uf-tot"><b>' + items.length + "</b> ingresado(s) " + perTxt + "</span>";
+        var d = dev[k] || 0, pct = cnt[k] ? Math.round(d * 100 / cnt[k]) : 0;
+        return '<button type="button" class="mj-uf-c' + (k === uf ? " on" : "") + (cnt[k] ? "" : " cero") + '" data-mjuf="' + esc(k) + '" title="' + esc(usrNom(k)) + ": " + cnt[k] + " cargado(s) · " + d + " devolución(es)" + (cnt[k] ? " (" + pct + "%)" : "") + '">' +
+          '<span class="un">' + esc(usrNom(k)) + (d ? '<i class="udev">↩️ ' + d + " devuelto" + (d === 1 ? "" : "s") + "</i>" : "") + "</span><b>" + cnt[k] + "</b></button>";
+      }).join("") + '<span class="mj-uf-tot"><b>' + items.length + "</b> ingresado(s) " + perTxt + (devTot ? '<br><span style="color:#c2410c">↩️ <b>' + devTot + "</b> devolución(es)</span>" : "") + "</span>";
     }
     return uf ? items.filter(function(x){ return usrKey(x._m) === uf; }) : items;
   }
@@ -5029,18 +5089,19 @@ var MesaJ = (function(){
     var el = e.target && e.target.closest ? e.target.closest("[data-mjv]") : null; if(!el) return;
     vistaAct = el.getAttribute("data-mjv"); $("mj-q").value = ""; render();
   });
+  var BASE = [["n", "#"], ["exp", "N° expediente"], ["pac", "Paciente"], ["ing", "Ingresó"], ["cargo", "Cargó"]];
   var COLS = {
-    nuevo: [["pac", "Paciente y expediente"], ["cargo", "Cargado por"], ["ing", "Ingresó"], ["plazo", "Plazo"], ["acc", ""]],
-    proc: [["pac", "Paciente y expediente"], ["cargo", "Cargado por"], ["desde", "En proceso desde"], ["plazo", "Plazo"], ["acc", ""]],
-    oc: [["pac", "Paciente y expediente"], ["oc", "N° de orden de compra"], ["ocest", "Situación"], ["acc", ""]],
-    dev: [["pac", "Paciente y expediente"], ["motivo", "Qué tienen que corregir"], ["devfecha", "Devuelto el"], ["acc", ""]],
-    ent: [["pac", "Paciente y expediente"], ["oc", "N° de orden de compra"], ["entfecha", "Entregada al paciente"], ["acc", ""]],
-    buscar: [["pac", "Paciente y expediente"], ["donde", "Dónde está"], ["oc", "N° OC"], ["plazo", "Plazo"], ["acc", ""]]
+    nuevo: BASE.concat([["plazo", "Plazo"], ["vence", "Vence"], ["tel", "Teléfono"], ["avisos", "Avisos"], ["acc", ""]]),
+    proc: BASE.concat([["desde", "En proceso desde"], ["plazo", "Plazo"], ["vence", "Vence"], ["tel", "Teléfono"], ["avisos", "Avisos"], ["acc", ""]]),
+    oc: BASE.concat([["oc", "N° OC"], ["fechaoc", "Fecha OC"], ["enmesa", "Enviada a mesa"], ["docs", "Documentación"], ["tel", "Teléfono"], ["avisos", "Avisos"], ["acc", ""]]),
+    dev: BASE.concat([["motivo", "Qué tienen que corregir"], ["devfecha", "Devuelto el"], ["pausa", "Días en mesa"], ["avisos", "Avisos"], ["acc", ""]]),
+    ent: BASE.concat([["oc", "N° OC"], ["enmesa", "Enviada a mesa"], ["entfecha", "Entregada al paciente"], ["entpor", "Entregó"], ["acc", ""]]),
+    buscar: BASE.concat([["donde", "Dónde está"], ["oc", "N° OC"], ["plazo", "Plazo"], ["avisos", "Avisos"], ["acc", ""]])
   };
   function tablaVista(k, lista){
     var cols = COLS[k];
     var tabla = function(l){ return '<table class="mj-tbl"><thead><tr>' + cols.map(function(c){ return "<th" + (c[0] === "acc" ? ' class="r"' : "") + ">" + c[1] + "</th>"; }).join("") +
-      "</tr></thead><tbody>" + l.map(function(x){ return filaVista(x, cols); }).join("") + "</tbody></table>"; };
+      "</tr></thead><tbody>" + l.map(function(x, i){ return filaVista(x, cols, i + 1); }).join("") + "</tbody></table>"; };
     if(k === "oc"){
       var falta = lista.filter(function(x){ return x._ef !== "en_mesa"; }), mesaL = lista.filter(function(x){ return x._ef === "en_mesa"; });
       return (falta.length ? '<div class="mj-titsec">🧾 Con orden de compra — falta enviar a mesa (' + falta.length + ")<small>Tocá «📦 Enviar a mesa» cuando la lleves</small></div>" + tabla(falta) : "") +
@@ -5048,43 +5109,67 @@ var MesaJ = (function(){
     }
     return tabla(lista);
   }
-  function filaVista(x, cols){
+  /* Mismo paciente y mismo tipo con otro ingreso abierto (aunque el N° de expediente sea distinto) */
+  function mismoPac(a, b){
+    var x = C.normNombre(a).split(" ").filter(Boolean), y = C.normNombre(b).split(" ").filter(Boolean);
+    if(x.length < 2 || y.length < 2) return false;
+    var corto = x.length <= y.length ? x : y, largo = corto === x ? y : x;
+    return corto.every(function(w){ return largo.indexOf(w) >= 0; });
+  }
+  function repetidosDe(m){
+    return mesa.filter(function(o){ return o._id !== m._id && o.tipo === m.tipo && o.estado !== "entregado" && mismoPac(o.paciente, m.paciente); });
+  }
+  function filaVista(x, cols, nro){
     var m = x._m, ef = x._ef, sit = x._sit, sem = K.semaforo(sit, ef), ocTxt = x.ocs.join(" / ");
     var nuevo = !m.vistoJorge && ef === "ingresado", abierto = !!abiertos[m._id];
     var b = function(acc, cls, txt, tit){ return '<button type="button" class="mj-btn ' + cls + '" data-mj="' + acc + '" data-id="' + esc(m._id) + '"' + (tit ? ' title="' + esc(tit) + '"' : "") + ">" + txt + "</button>"; };
     var os = obs.filter(function(o){ return o.mesaId === m._id; }), sl = os.filter(function(o){ return !o.leido; }).length;
     var bdg = (nuevo ? '<span class="mj-bdg nv">NUEVO</span>' : "") +
+      (os.length && !sl ? '<span class="mj-bdg ok" title="Observaciones leídas por mesa">📨 ' + os.length + "</span>" : "") +
+      (expMeta[m._id] ? '<span class="mj-bdg" style="background:#dbeafe;color:#1e40af" title="Mesa adjuntó el expediente">📄</span>' : "") +
       (m.reenviadoTxt && ef !== "devuelto" && ef !== "entregado" ? '<span class="mj-bdg ok" title="Corregido y reenviado por ' + esc(m.reenviadoPor || "mesa") + '">✅ Corregido</span>' : "") +
       (sl ? '<span class="mj-bdg am" title="Observaciones que mesa todavía no leyó">📨 ' + sl + " sin leer</span>" : "") +
       (m.hipoacusia === "sin_intervencion" ? '<span class="mj-bdg rj" title="Sin intervención de la Lic. Graciela Isla">🎧 Sin Hipoacusia</span>' : "") +
-      (x._r && x._r.previoMesa && ef !== "entregado" ? '<span class="mj-bdg rj" title="Anterior al sistema: este ingreso no corresponde">📁 Viejo</span>' : "");
+      (x._r && x._r.previoMesa && ef !== "entregado" ? '<span class="mj-bdg rj" title="Anterior al sistema: este ingreso no corresponde">📁 Viejo</span>' : "") +
+      (ef !== "entregado" && repetidosDe(m).length ? '<span class="mj-bdg rj" title="Mismo paciente con otro ingreso abierto: ' + esc(repetidosDe(m).map(function(o){ return o.nroExp; }).join(", ")) + '. Revisá en SIGEDIG cuál es el correcto y anulá el otro.">⚠️ Repetido</span>' : "");
     var plazo = ef === "devuelto" ? '<span class="chip devuelto">⏸ Detenido</span>'
-      : (ef === "ingresado" || ef === "trabajo") ? '<span class="chip ' + sem.cls + '">' + esc(sem.txt.replace(" días hábiles", " días").replace(" día hábil", " día")) + '</span><span class="sub">vence ' + esc(K.fmt(sit.vence)) + (sit.pausa ? " · corrido " + sit.pausa + " d" : "") + "</span>"
+      : (ef === "ingresado" || ef === "trabajo") ? '<span class="chip ' + sem.cls + '">' + esc(sem.txt.replace(" días hábiles", " días").replace(" día hábil", " día")) + "</span>"
       : '<span class="nada">—</span>';
+    var nada = '<span class="nada">—</span>', fc = function(t){ return t ? '<span title="' + esc(t) + '">' + esc(String(t).replace(/\/\d{4}/, "")) + "</span>" : nada; };
     var donde = { nuevo: "🆕 Nuevo ingreso", proc: "🛠️ En proceso", oc: ef === "en_mesa" ? "📦 OC en mesa" : "🧾 Con OC, falta enviar", dev: "↩️ Devuelto a mesa", ent: "✅ Entregado" }[vistaDe(x)];
     var acc = "";
-    if(ef === "ingresado" && !x.ocs.length) acc = b("tomar", "mj-verde", "▶ Tomar") + b("devolver", "mj-rojo", "↩️ Devolver", "Devolver a Mesa de Entradas para corregir (el plazo se detiene)");
-    else if(ef === "trabajo" && !x.ocs.length) acc = b("mesa", "mj-azul", "📦 Enviar a mesa", "Ya tengo la orden de compra: enviarla a Mesa de Entradas") + b("devolver", "mj-rojo", "↩️ Devolver", "Devolver a Mesa de Entradas para corregir (el plazo se detiene)");
-    else if(ef === "ingresado" || ef === "trabajo") acc = b("mesa", "mj-azul", "📦 Enviar a mesa", "Enviar la orden de compra a Mesa de Entradas");
+    if(ef === "ingresado" && !x.ocs.length) acc = b("tomar", "mj-verde", "▶ Tomar") + b("devolver", "mj-rojo", "↩️", "Devolver a Mesa de Entradas para corregir (el plazo se detiene)");
+    else if(ef === "trabajo" && !x.ocs.length) acc = b("mesa", "mj-azul", "📦 A mesa", "Ya tengo la orden de compra: enviarla a Mesa de Entradas") + b("devolver", "mj-rojo", "↩️", "Devolver a Mesa de Entradas para corregir (el plazo se detiene)");
+    else if(ef === "ingresado" || ef === "trabajo") acc = b("mesa", "mj-azul", "📦 A mesa", "Enviar la orden de compra a Mesa de Entradas");
     else if(ef === "devuelto") acc = b("cancdev", "mj-gris", "↪ Lo recupero", "Cancelar la devolución");
-    else if(ef === "en_mesa") acc = b("docs", "mj-gris", docsMeta[m._id] ? "📎 Reenviar docs" : "📎 Enviar docs");
+    else if(ef === "en_mesa") acc = b("docs", "mj-gris", docsMeta[m._id] ? "📎 Reenviar" : "📎 Docs", "Enviar la OC, DNI y receta para que mesa imprima");
     var celda = {
-      pac: '<div class="pac">' + esc(m.paciente) + bdg + '</div><div class="exp">' + tipoIco(m.tipo) + " " + esc(m.nroExp) + "</div>",
-      cargo: esc(m.usuarioNombre || m.usuario || ""),
-      ing: '<span class="nw">' + esc(m.ingresoTxt || "") + "</span>",
-      desde: '<span class="nw">' + esc(m.trabajoTxt || "") + "</span>",
-      plazo: '<span class="nw">' + plazo + "</span>",
-      oc: ocTxt ? '<span class="grande">' + esc(ocTxt) + "</span>" : '<span class="nada">—</span>',
-      ocest: ef === "en_mesa" ? "📦 <b>En mesa</b> desde el " + esc(m.enMesaTxt || "") + (docsMeta[m._id] ? '<span class="sub">' + (m.docsImpresoTxt ? "🔒 Ya impresa por mesa" : "📎 Documentación enviada") + "</span>" : '<span class="sub">Sin documentación digital</span>')
-        : "🧾 <b>OC emitida</b>" + (x._r && x._r.fechaOC ? " el " + esc(x._r.fechaOC) : "") + '<span class="sub">Falta llevarla a Mesa de Entradas</span>',
-      motivo: '<div class="motivo">' + esc(m.devueltoMotivo || "") + "</div>" + (sit.pausa ? '<span class="sub">Lleva ' + esc(K.dh(sit.pausa)) + " sin contar</span>" : ""),
-      devfecha: '<span class="nw">' + esc(m.devueltoTxt || "") + "</span>",
-      entfecha: '<span class="nw">' + esc(m.entregadoTxt || (x._r && x._r.entregadoFecha) || "") + "</span>" + (m.entregadoPor ? '<span class="sub">por ' + esc(m.entregadoPor) + "</span>" : ""),
+      n: nro,
+      exp: '<span title="' + esc(tipoTxt(m.tipo)) + '">' + tipoIco(m.tipo) + '</span> <span class="xp">' + esc(m.nroExp) + "</span>",
+      pac: '<span class="pc">' + esc(m.paciente) + "</span>",
+      tipo: tipoIco(m.tipo) + " " + esc(tipoTxt(m.tipo)),
+      cargo: esc(m.usuarioNombre || m.usuario || "") + (m.tomadoN ? '<span class="sub">✋ ' + esc(m.tomadoN) + "</span>" : ""),
+      ing: fc(m.ingresoTxt),
+      desde: fc(m.trabajoTxt),
+      plazo: plazo,
+      vence: (ef === "ingresado" || ef === "trabajo") ? esc(K.fmt(sit.vence)) + (sit.pausa ? '<span class="sub" title="Corrido por devolución">+' + sit.pausa + "d</span>" : "") : nada,
+      tel: m.telefono ? esc(m.telefono) : nada,
+      avisos: bdg || nada,
+      oc: ocTxt ? '<span class="grande">' + esc(ocTxt) + "</span>" : nada,
+      fechaoc: x._r && x._r.fechaOC ? esc(x._r.fechaOC) : nada,
+      enmesa: ef === "en_mesa" || m.enMesaTxt ? fc(m.enMesaTxt) : '<span class="chip ambar">Falta enviar</span>',
+      docs: docsMeta[m._id] ? (m.docsImpresoTxt ? "🔒 Impresa" : "📎 Enviada") : nada,
+      motivo: '<span class="motivo">' + esc(m.devueltoMotivo || "") + "</span>",
+      devfecha: fc(m.devueltoTxt),
+      pausa: sit.pausa ? esc(K.dh(sit.pausa)) : "0",
+      entfecha: fc(m.entregadoTxt || (x._r && x._r.entregadoFecha) || ""),
+      entpor: m.entregadoPor ? esc(m.entregadoPor) : nada,
       donde: donde,
       acc: '<div class="acc">' + acc + '<span class="mas" title="Ver detalle">' + (abierto ? "▴" : "▾") + "</span></div>"
     };
+    var WR = { motivo: 1, avisos: 1 };
     var fila = '<tr class="fila ' + sem.cls + (nuevo ? " nuevo" : "") + (abierto ? " abierta" : "") + '" data-mjdet="' + esc(m._id) + '" title="Tocá para ver el detalle">' +
-      cols.map(function(c){ return "<td" + (c[0] === "acc" ? ' class="r nw"' : "") + ">" + celda[c[0]] + "</td>"; }).join("") + "</tr>";
+      cols.map(function(c){ return "<td" + (c[0] === "acc" ? ' class="r"' : c[0] === "n" ? ' class="n"' : WR[c[0]] ? ' class="wr"' : "") + ">" + celda[c[0]] + "</td>"; }).join("") + "</tr>";
     if(!abierto) return fila;
     var dato = function(k, v){ return v ? '<div class="dt"><span>' + k + "</span>" + v + "</div>" : ""; };
     var info = dato("Dónde está", donde) +
@@ -5095,7 +5180,8 @@ var MesaJ = (function(){
       dato("Corrección", m.reenviadoTxt && ef !== "devuelto" ? "Reenviado por " + esc(m.reenviadoPor || "mesa") + " el " + esc(m.reenviadoTxt) + (m.reenviadoNota ? " — " + esc(m.reenviadoNota) : "") : "") +
       dato("Orden de compra", ocTxt ? "N° <b>" + esc(ocTxt) + "</b>" + (m.enMesaTxt ? " · en mesa desde el " + esc(m.enMesaTxt) : "") : "") +
       dato("Hipoacusia", m.hipoacusia === "sin_intervencion" ? "SIN intervención de la Lic. Graciela Isla · " + (m.plazo || 15) + " días hábiles" : m.hipoacusia === "intervenido" ? "Con intervención" : "") +
-      dato("Teléfono", m.telefono ? esc(m.telefono) : "");
+      dato("Teléfono", m.telefono ? esc(m.telefono) : "") +
+      dato("⚠️ Posible repetido", repetidosDe(m).length ? "Mismo paciente en: <b>" + esc(repetidosDe(m).map(function(o){ return o.nroExp + " (" + o.paciente + ")"; }).join(" · ")) + "</b>. Revisá en SIGEDIG cuál N° es el correcto y anulá el otro con 🗑️." : "");
     var otras = "";
     if(ef === "ingresado" && !x.ocs.length) otras += b("mesa", "mj-azul", "📦 Enviar a mesa");
     if(ef === "trabajo") otras += b("nuevo", "mj-gris", "↩ Volver a nuevos");
