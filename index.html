@@ -4145,6 +4145,9 @@ if(typeof module !== "undefined" && module.exports) module.exports = EntConsulta
 #mj-obs-ov{position:fixed;inset:0;z-index:10003;background:rgba(15,23,42,.55);display:flex;align-items:flex-start;justify-content:center;padding:10vh 14px 14px}
 .mj-obs-box{background:#fff;width:100%;max-width:520px;border-radius:16px;box-shadow:0 24px 70px rgba(0,0,0,.4);overflow:hidden}
 .mj-obs-box textarea{width:100%;min-height:120px;padding:10px 12px;border:1.5px solid #cbd5e1;border-radius:10px;font-size:15px;font-family:inherit;resize:vertical}
+.mj-junto{display:flex;gap:10px;align-items:flex-start;margin-top:10px;padding:10px 12px;border:1.5px solid #99f6e4;border-radius:10px;background:#f0fdfa;cursor:pointer;font-size:14px;color:#134e4a;line-height:1.35}
+.mj-junto input{width:20px;height:20px;margin-top:1px;flex-shrink:0;accent-color:#0f766e;cursor:pointer}
+.mj-junto small{font-size:12px;color:#475569}
 .mj-up{border:1.5px dashed #cbd5e1;border-radius:10px;padding:10px 12px;margin-top:10px;background:#f8fafc}
 .mj-up b{font-size:14px;color:#1a2b4a}.mj-up span{display:block;font-size:12px;color:#64748b;margin:2px 0 6px}
 .mj-up input[type=file]{font-size:13px;width:100%}
@@ -4226,8 +4229,10 @@ if(typeof module !== "undefined" && module.exports) module.exports = EntConsulta
       <label style="display:block;margin-top:10px;font-size:12px;font-weight:700;color:#374151">N° de orden de compra
         <input id="mj-oc-nro" type="text" autocomplete="off" style="display:block;width:100%;padding:9px 11px;border:1.5px solid #cbd5e1;border-radius:8px;font-size:15px;margin-top:4px;font-family:inherit" placeholder="Se completa solo al adjuntar la OC"></label>
       <div class="mj-up"><b>1 · Orden de compra (PDF)</b><span>El PDF tal cual sale del sistema: se borran solos los precios y se pone el sello. Va 2 veces.</span><input type="file" id="mj-oc-f-oc" accept="application/pdf,.pdf" onchange="MesaJ.ocCambio()"></div>
-      <div class="mj-up"><b>2 · Copia del DNI</b><span>PDF o foto (podés elegir frente y dorso juntos).</span><input type="file" id="mj-oc-f-dni" accept="application/pdf,.pdf,image/*" multiple onchange="MesaJ.ocCambio()"></div>
-      <div class="mj-up"><b>3 · Receta / pedido médico</b><span>PDF o foto.</span><input type="file" id="mj-oc-f-rec" accept="application/pdf,.pdf,image/*" multiple onchange="MesaJ.ocCambio()"></div>
+      <label class="mj-junto"><input type="checkbox" id="mj-oc-junto" onchange="MesaJ.ocJunto()"> <span><b>Tengo el DNI y la receta juntos en un solo PDF</b><br><small>Tildalo y te pide un solo archivo en lugar de dos.</small></span></label>
+      <div class="mj-up" id="mj-oc-up-dni"><b>2 · Copia del DNI</b><span>PDF o foto (podés elegir frente y dorso juntos).</span><input type="file" id="mj-oc-f-dni" accept="application/pdf,.pdf,image/*" multiple onchange="MesaJ.ocCambio()"></div>
+      <div class="mj-up" id="mj-oc-up-rec"><b>3 · Receta / pedido médico</b><span>PDF o foto.</span><input type="file" id="mj-oc-f-rec" accept="application/pdf,.pdf,image/*" multiple onchange="MesaJ.ocCambio()"></div>
+      <div class="mj-up" id="mj-oc-up-jun" style="display:none"><b>2 · DNI y receta (un solo PDF)</b><span>El PDF con la copia del DNI y la receta juntos.</span><input type="file" id="mj-oc-f-jun" accept="application/pdf,.pdf,image/*" multiple onchange="MesaJ.ocCambio()"></div>
       <div class="hint" style="margin-top:8px">A mesa le llega <b>un solo PDF</b> listo para imprimir. Si no adjuntás nada, queda registrado igual y llevás los papeles como siempre.</div>
       <div class="mj-msg" id="mj-oc-msg"></div>
     </div>
@@ -5180,16 +5185,28 @@ var MesaJ = (function(){
     $("mj-oc-tit").textContent = soloDocs ? "Documentación para Mesa de Entradas" : "OC a Mesa de Entradas";
     $("mj-oc-dest").textContent = tipoIco(m.tipo) + " " + m.nroExp + " — " + m.paciente;
     $("mj-oc-nro").value = m.ocNro || ocsDe(regDe(m))[0] || "";
-    ["mj-oc-f-oc", "mj-oc-f-dni", "mj-oc-f-rec"].forEach(function(id){ $(id).value = ""; });
+    ["mj-oc-f-oc", "mj-oc-f-dni", "mj-oc-f-rec", "mj-oc-f-jun"].forEach(function(id){ $(id).value = ""; });
+    var pref = false; try{ pref = localStorage.getItem("mj_oc_junto") === "1"; }catch(_){}
+    $("mj-oc-junto").checked = pref; ocJunto(true);
     $("mj-oc-msg").textContent = ""; $("mj-oc-env").disabled = false; $("mj-oc-ver").disabled = false;
     $("mj-oc-env").textContent = soloDocs ? "📎 Enviar documentación" : "📦 Enviar a mesa";
     $("mj-oc-ov").style.display = "flex";
   }
   function ocCerrar(){ $("mj-oc-ov").style.display = "none"; ocPara = null; ocCache = null; }
   function ocCambio(){ ocCache = null; $("mj-oc-msg").textContent = ""; }
+  // DNI y receta en un solo PDF: un casillero en lugar de dos (la elección se recuerda en esta compu)
+  function ocJunto(sinGuardar){
+    var j = $("mj-oc-junto").checked;
+    $("mj-oc-up-dni").style.display = j ? "none" : "";
+    $("mj-oc-up-rec").style.display = j ? "none" : "";
+    $("mj-oc-up-jun").style.display = j ? "" : "none";
+    if(!sinGuardar){ try{ localStorage.setItem("mj_oc_junto", j ? "1" : "0"); }catch(_){} }
+    ocCambio();
+  }
   function ocMsg(ok, txt){ var m = $("mj-oc-msg"); m.style.color = ok ? "#1e3a8a" : "#b91c1c"; m.textContent = txt; }
   function ocArchivos(){
     var lista = function(id){ return Array.prototype.slice.call($(id).files || []); };
+    if($("mj-oc-junto").checked) return { oc: lista("mj-oc-f-oc")[0] || null, dni: lista("mj-oc-f-jun"), rec: [], junto: true };
     return { oc: lista("mj-oc-f-oc")[0] || null, dni: lista("mj-oc-f-dni"), rec: lista("mj-oc-f-rec") };
   }
   function ocHay(f){ return !!(f.oc || f.dni.length || f.rec.length); }
@@ -5197,6 +5214,7 @@ var MesaJ = (function(){
     if(ocCache) return ocCache;
     var f = ocArchivos(); if(!ocHay(f)) return null;
     ocCache = await MesaDocs.armar(f.oc, f.dni, f.rec, function(t){ ocMsg(true, "⏳ " + t); });
+    if(f.junto && ocCache.contenido.dni) ocCache.contenido.receta = ocCache.contenido.dni;   // el mismo PDF trae las dos cosas
     ocMsg(true, "");
     return ocCache;
   }
@@ -5500,7 +5518,7 @@ var MesaJ = (function(){
   }
 
   return { abrir: abrir, cerrar: cerrar, tab: tab, render: render, crearUsuario: crearUsuario, ojo: ojo,
-           bajarTodos: bajarTodos, elegirCarpeta: elegirCarpeta, obsCerrar: obsCerrar, obsEnviar: obsEnviar, ocCerrar: ocCerrar, ocCambio: ocCambio, ocVista: ocVista, ocEnviar: ocEnviar, guardarFeriados: guardarFeriados, feriadosSugeridos: feriadosSugeridos, copiarLink: copiarLink, exportar: exportar };
+           bajarTodos: bajarTodos, elegirCarpeta: elegirCarpeta, obsCerrar: obsCerrar, obsEnviar: obsEnviar, ocCerrar: ocCerrar, ocCambio: ocCambio, ocJunto: ocJunto, ocVista: ocVista, ocEnviar: ocEnviar, guardarFeriados: guardarFeriados, feriadosSugeridos: feriadosSugeridos, copiarLink: copiarLink, exportar: exportar };
 })();
 </script>
 
