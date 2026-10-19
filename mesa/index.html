@@ -68,6 +68,13 @@ button,input,select{font-family:inherit}
 .bar input:focus{border-color:#1a56a0;box-shadow:0 0 0 3px rgba(26,86,160,.12)}
 .bar select{padding:10px;border:1.5px solid #cbd5e1;border-radius:10px;font-size:14px;background:#fff}
 .resumen{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+.it.devuelto{border-left-color:#ea580c;background:#fff7ed}.it-sem.devuelto{background:#ffedd5;color:#9a3412}.chip.devuelto{background:#ffedd5;color:#9a3412}
+.it-dev{margin-top:10px;padding:11px 13px;border-radius:10px;background:#fff7ed;border:1.5px solid #fdba74;color:#7c2d12;font-size:14px;line-height:1.5}
+.it-dev b.mot{display:block;margin:4px 0;font-size:15px;color:#9a3412}
+.it-dev button{margin-top:8px;padding:9px 14px;border:none;border-radius:9px;background:#16a34a;color:#fff;font-size:14px;font-weight:800;cursor:pointer;font-family:inherit}
+#rv-ov{position:fixed;inset:0;z-index:10001;background:rgba(15,23,42,.62);display:none;align-items:flex-start;justify-content:center;padding:6vh 14px 14px;overflow:auto}
+#rv-ov label{display:block;margin-top:10px;font-size:13px;font-weight:700;color:#334155}
+#rv-ov input{display:block;width:100%;margin-top:4px;padding:9px 11px;border:1.5px solid #cbd5e1;border-radius:9px;font-size:15px;font-family:inherit;box-sizing:border-box}
 .chip{font-size:12px;font-weight:800;border-radius:999px;padding:5px 11px;cursor:pointer;border:1.5px solid transparent}
 .chip.verde{background:#dcfce7;color:#166534}.chip.ambar{background:#fef3c7;color:#92400e}.chip.rojo{background:#fee2e2;color:#991b1b}.chip.azul{background:#dbeafe;color:#1e40af}.chip.gris{background:#f1f5f9;color:#475569}
 .vacio{padding:26px 6px;text-align:center;color:#64748b;font-size:14px;line-height:1.7}
@@ -282,6 +289,7 @@ button,input,select{font-family:inherit}
       <select id="ls-u" onchange="render()" style="display:none" title="Filtrar por usuario"><option value="">👥 Todos los usuarios</option></select>
       <select id="ls-f" onchange="render()">
         <option value="activos">En curso (sin entregar)</option>
+        <option value="devueltos">↩️ Devueltos por Jorge (corregir)</option>
         <option value="en_mesa">📦 OC lista en mesa</option>
         <option value="vencidos">🔴 Vencidos sin OC</option>
         <option value="entregados">✅ Entregados</option>
@@ -291,6 +299,24 @@ button,input,select{font-family:inherit}
     <div class="resumen" id="ls-res"></div>
     <div id="ls-aviso"></div>
     <div id="ls-lista"><div class="vacio">Conectando…</div></div>
+  </div>
+</div>
+
+<!-- Reenviar a Jorge un expediente devuelto, ya corregido -->
+<div id="rv-ov" role="dialog" aria-label="Corregido, reenviar a Jorge" onclick="if(event.target===this) cerrarReenvio()">
+  <div class="obs-box">
+    <div class="obs-head" style="background:linear-gradient(120deg,#16a34a,#0f766e)"><div style="font-size:30px">✅</div><div><b id="rv-tit">Corregido, reenviar a Jorge</b><span>Le vuelve a llegar como nuevo. El plazo sigue desde donde quedó.</span></div></div>
+    <div style="padding:14px 20px 18px">
+      <div id="rv-mot" class="obs-txt" style="margin-top:0"></div>
+      <label>Apellido y nombre del paciente (como figura en el DNI)<input id="rv-pac" type="text" autocomplete="off" oninput="this.value=this.value.toUpperCase()"></label>
+      <label>Teléfono (opcional)<input id="rv-tel" type="text" autocomplete="off" inputmode="tel"></label>
+      <label>¿Qué corregiste? (opcional)<input id="rv-nota" type="text" autocomplete="off" placeholder="Ej.: se completó el nombre según DNI"></label>
+      <div id="rv-msg" style="margin-top:8px;font-size:13px;font-weight:700;color:#b91c1c"></div>
+      <div style="display:flex;gap:8px;margin-top:12px">
+        <button type="button" class="obs-ok" style="background:#e2e8f0;color:#334155;margin-top:0" onclick="cerrarReenvio()">Cancelar</button>
+        <button type="button" class="obs-ok" style="margin-top:0" id="rv-ok" onclick="confirmarReenvio()">✅ Reenviar a Jorge</button>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -933,16 +959,25 @@ var MesaCal = (function(){
     while(a < b && g < 4000){ a = sig(a); if(habil(a, s)) c++; g++; }
     return c;
   }
+  /* Días hábiles que el expediente estuvo devuelto a mesa: no cuentan para el plazo.
+     Si lo reenvían el mismo día de la devolución, no se corre nada. */
+  function pausaDe(m, lista, ahoraMs){
+    var p = Number(m.pausaDias) || 0;
+    if(m.estado === "devuelto" && m.devueltoMs) p += habilesEntre(m.devueltoMs, ahoraMs || Date.now(), lista);
+    return p;
+  }
   function situacion(m, lista, ahoraMs){
-    var plazo = m.plazo || PLAZO;
-    var trans = habilesEntre(m.ingresoMs, ahoraMs || Date.now(), lista);
-    return { transcurridos: trans, restantes: plazo - trans, plazo: plazo, vence: sumarHabiles(m.ingresoMs, plazo, lista) };
+    var plazo = m.plazo || PLAZO, pausa = pausaDe(m, lista, ahoraMs);
+    var trans = Math.max(0, habilesEntre(m.ingresoMs, ahoraMs || Date.now(), lista) - pausa);
+    return { transcurridos: trans, restantes: plazo - trans, plazo: plazo, vence: sumarHabiles(m.ingresoMs, plazo + pausa, lista),
+             pausa: pausa, detenido: m.estado === "devuelto" };
   }
   function dh(n){ return n === 1 ? "1 día hábil" : n + " días hábiles"; }
   /* Semáforo según el estado efectivo (entregado / en_mesa / ingresado / trabajo). */
   function semaforo(sit, efectivo){
     if(efectivo === "entregado") return { cls: "gris", txt: "Entregada al paciente" };
     if(efectivo === "en_mesa") return { cls: "azul", txt: "OC lista en Mesa de Entradas" };
+    if(efectivo === "devuelto") return { cls: "devuelto", txt: "Devuelto a mesa · plazo detenido" };
     if(sit.restantes < 0) return { cls: "rojo", txt: "Vencido hace " + dh(-sit.restantes) };
     if(sit.restantes === 0) return { cls: "rojo", txt: "Hoy se cumplen los " + sit.plazo + " días hábiles" };
     if(sit.restantes <= 2) return { cls: "ambar", txt: "Faltan " + dh(sit.restantes) };
@@ -970,7 +1005,7 @@ var MesaCal = (function(){
     }).join("\n");
   }
   return { PLAZO: PLAZO, DEF: DEF, NOMBRES: NOMBRES, iso: iso, fmt: fmt, fmtLargo: fmtLargo, hora: hora,
-           sumarHabiles: sumarHabiles, habilesEntre: habilesEntre, situacion: situacion, semaforo: semaforo,
+           sumarHabiles: sumarHabiles, habilesEntre: habilesEntre, pausaDe: pausaDe, situacion: situacion, semaforo: semaforo,
            dh: dh, parseLista: parseLista, listaATexto: listaATexto };
 })();
 if(typeof module !== "undefined" && module.exports) module.exports = MesaCal;
@@ -1320,6 +1355,37 @@ if(typeof module !== "undefined" && module.exports) module.exports = MesaCal;
       historial: firebase.firestore.FieldValue.arrayUnion(t.txt + " · " + accion + " — " + usuario.n + " (expediente de " + duenioTxt(m) + ")")
     }, { merge: true }).catch(function(e){ console.warn("No se pudo registrar el acceso:", e); });
   }
+  /* ---------- Expediente devuelto por Jorge: corregir y reenviar ---------- */
+  var rvId = null;
+  window.abrirReenvio = function(id){
+    var m = porId(id); if(!m || m.estado !== "devuelto") return;
+    rvId = id;
+    $("rv-tit").textContent = "Corregido: " + m.nroExp;
+    $("rv-mot").textContent = "Jorge pidió: " + (m.devueltoMotivo || "");
+    $("rv-pac").value = m.paciente || ""; $("rv-tel").value = m.telefono || ""; $("rv-nota").value = ""; $("rv-msg").textContent = "";
+    $("rv-ok").disabled = false;
+    $("rv-ov").style.display = "flex";
+    setTimeout(function(){ $("rv-pac").focus(); }, 30);
+  };
+  window.cerrarReenvio = function(){ $("rv-ov").style.display = "none"; rvId = null; };
+  window.confirmarReenvio = async function(){
+    var m = porId(rvId); if(!m) return window.cerrarReenvio();
+    var pac = $("rv-pac").value.trim().replace(/\s+/g, " ").toUpperCase(), tel = $("rv-tel").value.trim(), nota = $("rv-nota").value.trim();
+    if(pac.split(" ").length < 2){ $("rv-msg").textContent = "Escribí apellido y nombre completos, como figuran en el DNI."; return; }
+    var t = ahora(), p = K.habilesEntre(m.devueltoMs || t.ms, t.ms, feriados), cambios = [];
+    if(pac !== m.paciente) cambios.push("paciente: " + m.paciente + " → " + pac);
+    if(tel !== (m.telefono || "")) cambios.push("teléfono: " + (tel || "(sin)"));
+    $("rv-ok").disabled = true;
+    try{
+      await db.collection(COL).doc(m._id).set({
+        estado: "ingresado", paciente: pac, telefono: tel, pausaDias: (Number(m.pausaDias) || 0) + p, devueltoMs: null,
+        reenviadoMs: t.ms, reenviadoTxt: t.txt, reenviadoPor: usuario.n, reenviadoNota: nota, vistoJorge: false,
+        historial: firebase.firestore.FieldValue.arrayUnion(t.txt + " · Corregido y reenviado a Jorge por " + usuario.n +
+          (cambios.length ? " (" + cambios.join("; ") + ")" : "") + (nota ? " — " + nota : "") + (p ? " · plazo corrido " + K.dh(p) : " · sin corrimiento de plazo"))
+      }, { merge: true });
+      window.cerrarReenvio();
+    }catch(e){ $("rv-msg").textContent = "No se pudo reenviar: " + (e && e.message || e); $("rv-ok").disabled = false; }
+  };
   async function tomarExp(id){
     var m = porId(id); if(!m || esMio(m)) return;
     if(!confirm("¿Tomar el expediente " + m.nroExp + " — " + m.paciente + "?\n\nEs de " + duenioTxt(m) + ". Va a aparecer también en tus expedientes y queda registrado que lo tomaste vos.")) return;
@@ -1626,7 +1692,7 @@ if(typeof module !== "undefined" && module.exports) module.exports = MesaCal;
     return { mesa: lista, solos: solos };
   }
   function orden(a, b){
-    var pr = function(x){ return x._ef === "en_mesa" ? 0 : x._ef === "entregado" ? 3 : 1; };
+    var pr = function(x){ return x._ef === "devuelto" ? -1 : x._ef === "en_mesa" ? 0 : x._ef === "entregado" ? 3 : 1; };
     return pr(a) - pr(b) || (a._ef === "entregado" ? (b._m.entregadoMs || 0) - (a._m.entregadoMs || 0) : a._sit.restantes - b._sit.restantes);
   }
   window.render = function(){
@@ -1648,9 +1714,9 @@ if(typeof module !== "undefined" && module.exports) module.exports = MesaCal;
       : (selU.value ? todosMesa.filter(function(x){ return x._m.usuario === selU.value || x._m.tomadoU === selU.value; }) : todosMesa);
     it = { mesa: base, solos: it.solos };
     var act = base.filter(function(x){ return x._ef !== "entregado"; });
-    var n = { verde: 0, ambar: 0, rojo: 0, azul: 0 };
+    var n = { verde: 0, ambar: 0, rojo: 0, azul: 0, devuelto: 0 };
     act.forEach(function(x){ var s = K.semaforo(x._sit, x._ef).cls; if(n[s] != null) n[s]++; });
-    res.innerHTML =
+    res.innerHTML = (n.devuelto ? '<span class="chip devuelto" data-f="devueltos">↩️ ' + n.devuelto + " devuelto(s) para corregir</span>" : "") +
       '<span class="chip azul" data-f="en_mesa">📦 ' + n.azul + " OC en mesa</span>" +
       '<span class="chip verde" data-f="activos">🟢 ' + n.verde + " en plazo</span>" +
       '<span class="chip ambar" data-f="activos">🟡 ' + n.ambar + " por vencer</span>" +
@@ -1667,7 +1733,8 @@ if(typeof module !== "undefined" && module.exports) module.exports = MesaCal;
       lista = it.mesa.filter(function(x){
         if(f === "activos") return x._ef !== "entregado";
         if(f === "en_mesa") return x._ef === "en_mesa";
-        if(f === "vencidos") return x._ef !== "entregado" && x._ef !== "en_mesa" && x._sit.restantes <= 0;
+        if(f === "devueltos") return x._ef === "devuelto";
+        if(f === "vencidos") return x._ef !== "entregado" && x._ef !== "en_mesa" && x._ef !== "devuelto" && x._sit.restantes <= 0;
         if(f === "entregados") return x._ef === "entregado";
         return true;
       }).sort(orden);
@@ -1678,7 +1745,7 @@ if(typeof module !== "undefined" && module.exports) module.exports = MesaCal;
   function tarjeta(x){
     var m = x._m, r = x._r, sit = x._sit, ef = x._ef, sem = K.semaforo(sit, ef);
     var ocs = x.ocs, ocTxt = ocs.join(" / ");
-    var plazoTxt = ef === "entregado" || ef === "en_mesa" ? "" :
+    var plazoTxt = ef === "entregado" || ef === "en_mesa" || ef === "devuelto" ? "" :
       " · Día hábil " + Math.min(Math.max(sit.transcurridos, 0), sit.plazo) + " de " + sit.plazo;
     var est;
     if(ef === "entregado"){
@@ -1688,6 +1755,11 @@ if(typeof module !== "undefined" && module.exports) module.exports = MesaCal;
       est = '<div class="it-estado azul">📦 <b>La orden de compra está en Mesa de Entradas</b> desde el ' + esc(m.enMesaTxt || "") + ' hs.' +
         (ocTxt ? '<div class="it-oc">OC N° ' + esc(ocTxt) + "</div>" : "") + "Buscá el papel y entregáselo al paciente.</div>" +
         '<label class="it-ent"><input type="checkbox" data-acc="entregar" data-id="' + esc(m._id) + '"><span><b>¿Le estás entregando la orden de compra al paciente?</b> Tildá para registrar la entrega con fecha y hora.</span></label>';
+    } else if(ef === "devuelto"){
+      est = '<div class="it-dev">↩️ <b>Jorge devolvió este expediente el ' + esc(m.devueltoTxt || "") + " para corregir:</b>" +
+        '<b class="mot">' + esc(m.devueltoMotivo || "") + "</b>" +
+        "El plazo está <b>detenido</b> (iba por el día hábil " + Math.min(sit.transcurridos, sit.plazo) + " de " + sit.plazo + "). Cuando lo corrijas, reenvialo: los días que estuvo acá no cuentan." +
+        '<br><button type="button" data-acc="reenviar" data-id="' + esc(m._id) + '">✅ Corregido, reenviar a Jorge</button></div>';
     } else if(ocs.length){
       est = '<div class="it-estado">🧾 La OC N° <b>' + esc(ocTxt) + "</b> ya fue emitida, pero todavía <b>no figura entregada a Mesa de Entradas</b>. Si el papel está en mesa, podés entregarla igual.</div>" +
         '<label class="it-ent"><input type="checkbox" data-acc="entregar" data-id="' + esc(m._id) + '"><span><b>¿Le estás entregando la orden de compra al paciente?</b> Tildá para registrar la entrega con fecha y hora.</span></label>';
@@ -1704,7 +1776,8 @@ if(typeof module !== "undefined" && module.exports) module.exports = MesaCal;
         '<div class="it-tit"><span class="it-exp">' + esc(m.nroExp) + '</span><span class="it-pac">' + esc(m.paciente) + "</span></div>" +
         '<div class="it-sem ' + sem.cls + '">' + esc(sem.txt) + esc(plazoTxt) + "</div>" +
         '<div class="it-dato">Ingresó el ' + esc(m.ingresoTxt) + " hs · cargado por " + esc(m.usuarioNombre || m.usuario || "") +
-          (ef !== "entregado" ? " · vuelve a partir del <b>" + esc(K.fmtLargo(sit.vence)) + "</b>" : "") +
+          (ef !== "entregado" && ef !== "devuelto" ? " · vuelve a partir del <b>" + esc(K.fmtLargo(sit.vence)) + "</b>" + (sit.pausa ? " (corrido " + esc(K.dh(sit.pausa)) + " por devolución)" : "") : "") +
+          (m.reenviadoTxt && ef !== "devuelto" && ef !== "entregado" ? "<br>✅ Corregido y reenviado a Jorge por " + esc(m.reenviadoPor || "") + " el " + esc(m.reenviadoTxt) + " hs" : "") +
           (m.telefono ? " · 📞 " + esc(m.telefono) : "") + "</div>" +
         quienTarjeta(m) +
         (m.hipoacusia ? '<div class="it-hipo ' + (m.hipoacusia === "intervenido" ? "si" : "no") + '">' + (m.hipoacusia === "intervenido" ? "🎧 Con intervención de Hipoacusia · 10 días hábiles" : "🎧 SIN intervención de Hipoacusia · " + (m.plazo || PLAZO_SIN_HIPO) + " días hábiles") + "</div>" : "") +
@@ -1788,6 +1861,7 @@ if(typeof module !== "undefined" && module.exports) module.exports = MesaCal;
     if(el.getAttribute("data-acc") === "tirilla"){ var m = porId(el.getAttribute("data-id")); if(m){ registrarAcceso(m, "Reimprimió la tirilla"); imprimirTirilla(m); } return; }
     if(el.getAttribute("data-acc") === "wa"){ var mw = porId(el.getAttribute("data-id")); if(mw) registrarAcceso(mw, "Avisó al paciente por WhatsApp"); return; }
     if(el.getAttribute("data-acc") === "tomar"){ tomarExp(el.getAttribute("data-id")); return; }
+    if(el.getAttribute("data-acc") === "reenviar"){ abrirReenvio(el.getAttribute("data-id")); return; }
     if(el.getAttribute("data-acc") === "ver-todos"){ cambiarTab("todos"); return; }
     if(el.getAttribute("data-acc") === "detalle"){
       var idd = el.getAttribute("data-id"), md = porId(idd); if(!md) return;
