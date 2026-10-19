@@ -4187,6 +4187,15 @@ if(typeof module !== "undefined" && module.exports) module.exports = EntConsulta
 .mj-tbl td.est{min-width:160px}
 .mj-tbl .acc .mj-btn{padding:5px 8px;font-size:12px}
 .mj-tbl .extra .mj-docs,.mj-tbl .extra .mj-obs,.mj-tbl .extra .mj-exp{margin-top:4px}
+.mj-uf{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:10px 16px;background:#f0fdfa;border-bottom:1px solid #ccfbf1}
+.mj-uf-t{font-size:12px;font-weight:800;color:#0f766e;text-transform:uppercase;letter-spacing:.5px;margin-right:4px}
+.mj-uf-c{display:inline-flex;align-items:center;gap:7px;padding:6px 11px;border:1.5px solid #99f6e4;border-radius:999px;background:#fff;font-size:13px;font-weight:700;color:#1a2b4a;cursor:pointer;font-family:inherit}
+.mj-uf-c:hover{background:#ccfbf1}
+.mj-uf-c b{background:#0f766e;color:#fff;border-radius:999px;min-width:24px;padding:1px 8px;font-size:12.5px;text-align:center}
+.mj-uf-c.on{background:#0f766e;color:#fff;border-color:#0f766e}
+.mj-uf-c.on b{background:#fff;color:#0f766e}
+.mj-uf-c.cero{opacity:.55}
+.mj-uf-tot{margin-left:auto;font-size:13px;color:#334155}
 @media print{#mesa-chip,#mesa-alerta,#mesa-modal,#mj-obs-ov,#mj-leida,#mj-oc-ov{display:none!important}}
 </style>
 
@@ -4256,7 +4265,18 @@ if(typeof module !== "undefined" && module.exports) module.exports = EntConsulta
           <option value="entregados">✅ Entregados</option>
           <option value="todos" selected>📋 Todos (listado completo)</option>
         </select>
+        <select id="mj-uf" onchange="MesaJ.render()" title="Cargado por">
+          <option value="">👤 Todos los usuarios</option>
+        </select>
+        <select id="mj-per" onchange="MesaJ.render()" title="Fecha de ingreso">
+          <option value="">📅 Todas las fechas</option>
+          <option value="hoy">Hoy</option>
+          <option value="semana">Esta semana</option>
+          <option value="mes">Este mes</option>
+          <option value="mesant">Mes pasado</option>
+        </select>
       </div>
+      <div class="mj-uf" id="mj-porusr" style="display:none"></div>
       <div class="rg-body" id="mj-lista"></div>
     </div>
     <div id="mj-p-usr" class="rg-body" style="display:none">
@@ -4700,7 +4720,7 @@ var MesaJ = (function(){
     db.collection(COL_U).onSnapshot(function(snap){
       usuarios = snap.docs.map(function(d){ var x = d.data(); x._id = d.id; return x; });
       usuarios.sort(function(a, b){ return String(a.nombre || "").localeCompare(String(b.nombre || "")); });
-      renderUsuarios();
+      renderUsuarios(); render();
     }, function(err){ console.warn("Mesa J usuarios:", err); var l = $("mj-u-lista"); if(l) l.innerHTML = '<div class="rg-vacio">Sin acceso: falta la regla de Firestore de <b>genres_mesa_usuarios</b>.</div>'; });
     db.collection(COL_REG).onSnapshot(function(snap){
       reg = snap.docs.map(function(d){ var x = d.data(); x._id = d.id; return x; }).filter(function(r){ return !r.descartado; });
@@ -4856,6 +4876,7 @@ var MesaJ = (function(){
       return { num: m.num, cod: m.cod, letra: m.letra, anio: m.anio, claves: r ? r.claves : null, ocs: ocs, paciente: m.paciente,
                pacienteNorm: C.normNombre(m.paciente), tipo: m.tipo, creadoMs: m.ingresoMs, _m: m, _r: r, _ef: efectivo(m, r), _sit: K.situacion(m, feriados) };
     });
+    items = filtroUsuarios(items);
     var pend = items.filter(function(x){ return x._ef === "ingresado" || x._ef === "trabajo"; });
     var venc = pend.filter(function(x){ return x._sit.restantes <= 0; }).length;
     var enMesa = items.filter(function(x){ return x._ef === "en_mesa"; }).length;
@@ -4891,6 +4912,56 @@ var MesaJ = (function(){
   }
   /* Listado en tabla: una fila por expediente con todos sus datos y acciones. Debajo de la fila,
      solo si hay, la documentación enviada, las observaciones y el expediente adjunto. */
+  /* ---------- Filtro y conteo por usuario de mesa (columna "Cargado por") ---------- */
+  function usrKey(m){ return normUser(m.usuario) || normUser(m.usuarioNombre) || "sin_usuario"; }
+  function usrNom(k){
+    var u = usuarios.filter(function(x){ return x._id === k; })[0];
+    if(u && u.nombre) return u.nombre;
+    var m = mesa.filter(function(x){ return usrKey(x) === k; })[0];
+    return m ? (m.usuarioNombre || m.usuario || "Sin usuario") : k;
+  }
+  function rangoPeriodo(per){
+    var d = new Date(), y = d.getFullYear(), mo = d.getMonth(), dd = d.getDate();
+    if(per === "hoy") return [new Date(y, mo, dd).getTime(), new Date(y, mo, dd + 1).getTime()];
+    if(per === "semana"){ var w = (d.getDay() + 6) % 7; return [new Date(y, mo, dd - w).getTime(), new Date(y, mo, dd - w + 7).getTime()]; }
+    if(per === "mes") return [new Date(y, mo, 1).getTime(), new Date(y, mo + 1, 1).getTime()];
+    if(per === "mesant") return [new Date(y, mo - 1, 1).getTime(), new Date(y, mo, 1).getTime()];
+    return null;
+  }
+  function filtroUsuarios(items){
+    var sel = $("mj-uf"), per = ($("mj-per") || {}).value || "", rg = rangoPeriodo(per);
+    if(rg) items = items.filter(function(x){ var t = x._m.ingresoMs || 0; return t >= rg[0] && t < rg[1]; });
+    // Conteo por usuario (en el período elegido)
+    var cnt = {};
+    usuarios.forEach(function(u){ if(u.activo !== false) cnt[u._id] = 0; });
+    items.forEach(function(x){ var k = usrKey(x._m); cnt[k] = (cnt[k] || 0) + 1; });
+    var claves = Object.keys(cnt).sort(function(a, b){ return cnt[b] - cnt[a] || usrNom(a).localeCompare(usrNom(b)); });
+    // Opciones del selector (se conserva lo elegido)
+    var uf = sel ? sel.value : "";
+    if(sel){
+      var html = '<option value="">👤 Todos los usuarios</option>' + claves.map(function(k){
+        return '<option value="' + esc(k) + '"' + (k === uf ? " selected" : "") + ">" + esc(usrNom(k)) + " (" + cnt[k] + ")</option>";
+      }).join("");
+      if(uf && claves.indexOf(uf) < 0) html += '<option value="' + esc(uf) + '" selected>' + esc(usrNom(uf)) + " (0)</option>";
+      if(sel.getAttribute("data-html") !== html){ sel.innerHTML = html; sel.setAttribute("data-html", html); sel.value = uf; }
+    }
+    // Resumen con cada usuario y su cantidad (tocando uno se filtra)
+    var box = $("mj-porusr");
+    if(box){
+      var perTxt = { hoy: "hoy", semana: "esta semana", mes: "este mes", mesant: "el mes pasado" }[per] || "en total";
+      box.style.display = claves.length ? "flex" : "none";
+      box.innerHTML = '<span class="mj-uf-t">👤 Ingresos por usuario</span>' + claves.map(function(k){
+        return '<button type="button" class="mj-uf-c' + (k === uf ? " on" : "") + (cnt[k] ? "" : " cero") + '" data-mjuf="' + esc(k) + '" title="' + (k === uf ? "Quitar filtro" : "Ver solo los ingresos de " + esc(usrNom(k))) + '">' + esc(usrNom(k)) + " <b>" + cnt[k] + "</b></button>";
+      }).join("") + '<span class="mj-uf-tot"><b>' + items.length + "</b> expediente(s) ingresado(s) " + perTxt + "</span>";
+    }
+    return uf ? items.filter(function(x){ return usrKey(x._m) === uf; }) : items;
+  }
+  document.addEventListener("click", function(e){
+    var el = e.target && e.target.closest ? e.target.closest("[data-mjuf]") : null; if(!el) return;
+    var sel = $("mj-uf"), k = el.getAttribute("data-mjuf");
+    if(sel){ sel.value = sel.value === k ? "" : k; render(); }
+  });
+
   function tablaListado(lista){
     var cab = ["#", "Tipo", "N° expediente", "Paciente", "Ingreso", "Cargado por", "Plazo", "Estado", "N° OC", "Teléfono", "Acciones"];
     var n = { pend: 0, mesa: 0, ent: 0 };
