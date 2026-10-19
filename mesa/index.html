@@ -244,7 +244,7 @@ button,input,select{font-family:inherit}
       <h1>👓🎧 Prestaciones Ópticas y Auditivas</h1>
     </div>
     <button type="button" class="hdr-obs" id="hdr-obs" onclick="mostrarObs(true)" title="Observaciones sin leer">📨 0</button>
-    <div class="hdr-user">👤 <span id="hdr-nombre"></span><button type="button" onclick="cerrarSesion()">Cerrar sesión</button></div>
+    <div class="hdr-user">👤 <span id="hdr-nombre"></span><span id="hdr-stats" style="font-size:12px;opacity:.95;margin-left:6px"></span><button type="button" onclick="cerrarSesion()">Cerrar sesión</button></div>
   </div>
 
   <div class="tabs">
@@ -260,6 +260,11 @@ button,input,select{font-family:inherit}
       <label for="in-exp">N° de expediente <span>*</span></label>
       <input type="text" id="in-exp" autocomplete="off" maxlength="20" placeholder="Ej. 8871/410/U/2026" onkeydown="expKeydown(this,event)" style="text-transform:uppercase">
       <div class="hint">Completo, con las <b>4 partes</b>: número / código / <b>letra</b> / año. Escribí cada parte y apretá <b>Tab</b>: pone la barra sola (8871 Tab 410 Tab U Tab 2026).</div>
+    </div>
+    <div class="f">
+      <label for="in-exp2">Repetí el N° de expediente <span>*</span></label>
+      <input type="text" id="in-exp2" autocomplete="off" maxlength="20" placeholder="Volvé a escribirlo mirando el expediente" onkeydown="expKeydown(this,event)" onpaste="return false" ondrop="return false" style="text-transform:uppercase">
+      <div class="hint">Escribilo <b>de nuevo</b> (no se puede pegar). Si los dos no son iguales, no deja registrar: así se evitan los errores de tipeo.</div>
     </div>
     <div class="f">
       <label for="in-pac">Apellido y nombre del paciente <span>*</span></label>
@@ -308,6 +313,7 @@ button,input,select{font-family:inherit}
     <div class="obs-head" style="background:linear-gradient(120deg,#16a34a,#0f766e)"><div style="font-size:30px">✅</div><div><b id="rv-tit">Corregido, reenviar a Jorge</b><span>Le vuelve a llegar como nuevo. El plazo sigue desde donde quedó.</span></div></div>
     <div style="padding:14px 20px 18px">
       <div id="rv-mot" class="obs-txt" style="margin-top:0"></div>
+      <label>N° de expediente (corregilo si estaba mal)<input id="rv-exp" type="text" autocomplete="off" oninput="this.value=this.value.toUpperCase()"></label>
       <label>Apellido y nombre del paciente (como figura en el DNI)<input id="rv-pac" type="text" autocomplete="off" oninput="this.value=this.value.toUpperCase()"></label>
       <label>Teléfono (opcional)<input id="rv-tel" type="text" autocomplete="off" inputmode="tel"></label>
       <label>¿Qué corregiste? (opcional)<input id="rv-nota" type="text" autocomplete="off" placeholder="Ej.: se completó el nombre según DNI"></label>
@@ -1362,7 +1368,7 @@ if(typeof module !== "undefined" && module.exports) module.exports = MesaCal;
     rvId = id;
     $("rv-tit").textContent = "Corregido: " + m.nroExp;
     $("rv-mot").textContent = "Jorge pidió: " + (m.devueltoMotivo || "");
-    $("rv-pac").value = m.paciente || ""; $("rv-tel").value = m.telefono || ""; $("rv-nota").value = ""; $("rv-msg").textContent = "";
+    $("rv-exp").value = m.nroExp || ""; $("rv-pac").value = m.paciente || ""; $("rv-tel").value = m.telefono || ""; $("rv-nota").value = ""; $("rv-msg").textContent = "";
     $("rv-ok").disabled = false;
     $("rv-ov").style.display = "flex";
     setTimeout(function(){ $("rv-pac").focus(); }, 30);
@@ -1372,13 +1378,24 @@ if(typeof module !== "undefined" && module.exports) module.exports = MesaCal;
     var m = porId(rvId); if(!m) return window.cerrarReenvio();
     var pac = $("rv-pac").value.trim().replace(/\s+/g, " ").toUpperCase(), tel = $("rv-tel").value.trim(), nota = $("rv-nota").value.trim();
     if(pac.split(" ").length < 2){ $("rv-msg").textContent = "Escribí apellido y nombre completos, como figuran en el DNI."; return; }
+    var exp = $("rv-exp").value.trim().toUpperCase().replace(/\s+/g, "");
+    if(!RE_EXP_COMPLETO.test(exp)){ $("rv-msg").textContent = "El N° de expediente tiene que estar completo, por ejemplo 8871/410/U/2026."; return; }
+    var pe = C.partirExpediente(exp), ke = C.clave(pe.num, pe.cod);
+    var otro = mesa.filter(function(o){ return o._id !== m._id && claveDe(o) === ke && (!o.anio || String(o.anio) === pe.anio); })[0];
+    if(otro){ $("rv-msg").textContent = "Ese N° de expediente ya está cargado (" + otro.paciente + "). Revisalo en SIGEDIG."; return; }
+    if(exp !== m.nroExp){
+      var rep = prompt("Cambiaste el N° de expediente (" + m.nroExp + " → " + exp + ").\n\nVolvé a escribirlo mirando el expediente en SIGEDIG para confirmar:", "");
+      if(rep === null) return;
+      if(String(rep).trim().toUpperCase().replace(/\s+/g, "") !== exp){ $("rv-msg").textContent = "Los dos N° de expediente no coinciden. Revisalo en SIGEDIG y probá de nuevo."; return; }
+    }
     var t = ahora(), p = K.habilesEntre(m.devueltoMs || t.ms, t.ms, feriados), cambios = [];
     if(pac !== m.paciente) cambios.push("paciente: " + m.paciente + " → " + pac);
+    if(exp !== m.nroExp) cambios.push("expediente: " + m.nroExp + " → " + exp);
     if(tel !== (m.telefono || "")) cambios.push("teléfono: " + (tel || "(sin)"));
     $("rv-ok").disabled = true;
     try{
       await db.collection(COL).doc(m._id).set({
-        estado: "ingresado", paciente: pac, telefono: tel, pausaDias: (Number(m.pausaDias) || 0) + p, devueltoMs: null,
+        estado: "ingresado", paciente: pac, telefono: tel, nroExp: exp, num: pe.num, cod: pe.cod, letra: pe.letra || "", anio: pe.anio || "", pausaDias: (Number(m.pausaDias) || 0) + p, devueltoMs: null,
         reenviadoMs: t.ms, reenviadoTxt: t.txt, reenviadoPor: usuario.n, reenviadoNota: nota, vistoJorge: false,
         historial: firebase.firestore.FieldValue.arrayUnion(t.txt + " · Corregido y reenviado a Jorge por " + usuario.n +
           (cambios.length ? " (" + cambios.join("; ") + ")" : "") + (nota ? " — " + nota : "") + (p ? " · plazo corrido " + K.dh(p) : " · sin corrimiento de plazo"))
@@ -1552,10 +1569,17 @@ if(typeof module !== "undefined" && module.exports) module.exports = MesaCal;
     });
   }
   // Al corregir un campo marcado en rojo, se quita la marca.
-  ["in-exp", "in-pac"].forEach(function(id){ var el = $(id); if(el) el.addEventListener("input", function(){ el.classList.remove("falta"); }); });
+  ["in-exp", "in-exp2", "in-pac"].forEach(function(id){ var el = $(id); if(el) el.addEventListener("input", function(){ el.classList.remove("falta"); }); });
   document.addEventListener("change", function(e){ if(e.target && e.target.name === "in-tipo"){ var t = $("in-tipos"); if(t) t.classList.remove("falta"); } });
 
   /* ---------- Nuevo ingreso ---------- */
+  /* Mismo paciente: todas las palabras del nombre más corto están en el más largo (ALBORNOZ FATIMA = ALBORNOZ FATIMA SOLEDAD). */
+  function mismoPaciente(a, b){
+    var x = C.normNombre(a).split(" ").filter(Boolean), y = C.normNombre(b).split(" ").filter(Boolean);
+    if(x.length < 2 || y.length < 2) return false;
+    var corto = x.length <= y.length ? x : y, largo = corto === x ? y : x;
+    return corto.every(function(w){ return largo.indexOf(w) >= 0; });
+  }
   window.registrar = async function(){
     var expTxt = $("in-exp").value.trim().toUpperCase().replace(/\s+/g, "");
     var pac = $("in-pac").value.trim().replace(/\s+/g, " ").toUpperCase();
@@ -1563,7 +1587,11 @@ if(typeof module !== "undefined" && module.exports) module.exports = MesaCal;
     var p = C.partirExpediente(expTxt);
     // ---- Datos OBLIGATORIOS: expediente completo (con letra y año), apellido y nombre completos, anteojos/audífonos ----
     var faltan = faltantesIngreso(expTxt, pac, tipo);
+    var exp2 = $("in-exp2").value.trim().toUpperCase().replace(/\s+/g, "");
+    if(!exp2) faltan.push({ campo: "in-exp2", txt: "<b>Repetí el N° de expediente</b>: está vacío. Escribilo de nuevo mirando el expediente." });
+    else if(exp2 !== expTxt) faltan.push({ campo: "in-exp2", txt: "<b>Los dos N° de expediente no coinciden</b>: escribiste <b>" + esc(expTxt) + "</b> y <b>" + esc(exp2) + "</b>. Mirá bien el expediente en SIGEDIG y corregí el que esté mal." });
     marcarFaltantes(faltan);
+    $("in-exp2").classList.toggle("falta", faltan.some(function(x){ return x.campo === "in-exp2"; }));
     if(faltan.length){
       msg("er", "⛔ Faltan datos obligatorios. Completalos para poder registrar el ingreso.");
       ventanaFaltan(faltan);
@@ -1575,6 +1603,20 @@ if(typeof module !== "undefined" && module.exports) module.exports = MesaCal;
     if(dup){
       msg("er", "⛔ <b>Este N° de expediente ya fue ingresado</b> el " + esc(dup.ingresoTxt) + " por " + esc(dup.usuarioNombre || dup.usuario) + " (" + esc(dup.paciente) + "). Lo dejé abierto en <b>Expedientes</b>.");
       $("ls-q").value = dup.nroExp || k; $("ls-f").value = "todos"; cambiarTab("lista"); return;
+    }
+    // ---- Mismo PACIENTE con un ingreso abierto del mismo tipo (aunque el N° de expediente sea distinto) ----
+    var mismos = mesa.filter(function(m){ return m.estado !== "entregado" && m.tipo === tipo && mismoPaciente(pac, m.paciente); });
+    var devu = mismos.filter(function(m){ return m.estado === "devuelto"; })[0];
+    if(devu){
+      ventanaFaltan([{ campo: "in-exp", txt: "<b>Este paciente ya tiene un expediente DEVUELTO por Jorge</b>: " + esc(devu.nroExp) + " — " + esc(devu.paciente) +
+        " (devuelto el " + esc(devu.devueltoTxt || "") + ": <b>" + esc(devu.devueltoMotivo || "") + "</b>).<br><br>No se carga de nuevo: abrilo y tocá <b>«✅ Corregido, reenviar a Jorge»</b>. Ahí podés corregir el nombre <b>y también el N° de expediente</b> si estaba mal." }]);
+      $("val-tit").textContent = "No se puede ingresar de nuevo"; $("val-sub").textContent = "Ese expediente está devuelto: se corrige y se reenvía.";
+      $("ls-q").value = devu.nroExp; $("ls-f").value = "todos"; cambiarTab("lista"); return;
+    }
+    if(mismos.length && !confirm("⚠️ ATENCIÓN: ya hay un ingreso de " + tipoTxt(tipo).toUpperCase() + " abierto para este paciente:\n\n" +
+        mismos.map(function(m){ return "• " + m.nroExp + " — " + m.paciente + " (cargado el " + (m.ingresoTxt || "") + " por " + (m.usuarioNombre || m.usuario || "") + ")"; }).join("\n") +
+        "\n\nNo puede haber expedientes repetidos.\n¿Es realmente OTRO expediente distinto? (Aceptar = sí, cargarlo igual · Cancelar = no cargar)")){
+      msg("av", "No se cargó. Revisá el N° de expediente en SIGEDIG: ese paciente ya tiene un ingreso abierto."); return;
     }
     // ¿Ya existe en el sistema? (registro de órdenes: cuadro, resolución, OC o entregada)
     var r = regDe(Object.assign({}, p, { anio: p.anio || String(new Date().getFullYear()) }));
@@ -1617,7 +1659,7 @@ if(typeof module !== "undefined" && module.exports) module.exports = MesaCal;
       if(hipo){ doc.hipoacusia = hipo === "si" ? "intervenido" : "sin_intervencion"; doc.hipoRevisadoPor = usuario.n; doc.hipoRevisadoTxt = t.txt; }
       var id = ("m_" + p.num + "_" + p.cod + "_" + anio).replace(/[\/#\?\[\]\*\.]+/g, "_");
       await db.collection(COL).doc(id).set(doc);
-      $("in-exp").value = ""; $("in-pac").value = ""; $("in-tel").value = "";
+      $("in-exp").value = ""; $("in-exp2").value = ""; $("in-pac").value = ""; $("in-tel").value = "";
       document.querySelectorAll('input[name="in-tipo"]').forEach(function(x){ x.checked = false; }); window.marcarTipo();
       msg("ok", "✅ Ingreso registrado: <b>" + esc(expTxt) + "</b> — " + esc(pac) + " (" + tipoTxt(tipo) + ").<br>Vuelve a retirar la orden de compra a partir del <b>" + esc(K.fmtLargo(vence)) + "</b>. Imprimiendo la tirilla…");
       imprimirTirilla(Object.assign({ _id: id }, doc));
@@ -1700,6 +1742,12 @@ if(typeof module !== "undefined" && module.exports) module.exports = MesaCal;
     if(estado.mesa === "sin-acceso"){ box.innerHTML = '<div class="vacio" style="color:#b91c1c">Sin acceso a la base. Falta la regla de Firestore para <b>genres_mesa</b> (o el login anónimo).</div>'; return; }
     if(estado.mesa !== "ok"){ box.innerHTML = '<div class="vacio">Conectando…</div>'; return; }
     var it = items(), q = $("ls-q").value.trim(), f = $("ls-f").value;
+    // Mi registro: cuántos cargué y cuántos me devolvió Jorge por estar mal cargados
+    if(usuario && $("hdr-stats")){
+      var mios = mesa.filter(function(m){ return m.usuario === usuario.u; });
+      var devs = mios.reduce(function(s, m){ return s + (Number(m.devoluciones) || (m.estado === "devuelto" || m.devueltoTxt || m.reenviadoTxt ? 1 : 0)); }, 0);
+      $("hdr-stats").innerHTML = "· " + mios.length + " cargado(s)" + (devs ? ' · <b style="background:#fed7aa;color:#7c2d12;border-radius:6px;padding:1px 6px">↩️ ' + devs + " devuelto(s) por errores</b>" : " · ✅ sin devoluciones");
+    }
     // Pestañas: "Mis expedientes" (cargados o tomados por mí) / "Todos los usuarios" (con filtro por usuario)
     var todosMesa = it.mesa;
     var misMesa = todosMesa.filter(function(x){ return esMio(x._m); });
