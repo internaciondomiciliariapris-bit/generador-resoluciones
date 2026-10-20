@@ -3749,6 +3749,7 @@ if(typeof module !== "undefined" && module.exports) module.exports = EntConsulta
           (datos ? '<div class="rg-datos">' + datos + "</div>" : "") + alertas + UI.previoHtml(r) + entrega + UI.docsMesa(r) +
         "</div>" +
         '<div class="rg-acc"><button type="button" class="ent-mini" title="Copiar paciente, expediente y OC" onclick="EntUI.copiar(\'' + r._id + '\', this)">📋</button>' +
+        '<button type="button" class="ent-mini" title="Imprimir tirilla" onclick="EntUI.tirilla(\'' + r._id + '\')">🖨️</button>' +
         '<button type="button" class="ent-mini rojo" title="Eliminar del registro" onclick="EntUI.eliminar(\'' + r._id + '\')">🗑️</button></div>' +
       "</div>";
     },
@@ -3798,6 +3799,7 @@ if(typeof module !== "undefined" && module.exports) module.exports = EntConsulta
         .then(function(){ chk.disabled = false; });
     },
     rec: function(id){ return cache.filter(function(r){ return r._id === id; })[0]; },
+    tirilla: function(id){ var r = UI.rec(id); if(r && typeof MesaJ !== "undefined") MesaJ.tirillaReg(r); },
     copiar: function(id, btn){
       var r = UI.rec(id); if(!r) return;
       var ocs = (r.ocs && r.ocs.length) ? r.ocs : (r.oc ? [r.oc] : []);
@@ -4242,6 +4244,8 @@ if(typeof module !== "undefined" && module.exports) module.exports = EntConsulta
 #mesa-modal .rg-title{font-size:18px}
 #mesa-modal .mj-tab{padding:7px}
 .mj-cuerpo{display:flex;flex:1;min-height:0}
+.mj-lapiz{border:none;background:transparent;cursor:pointer;font-size:12px;padding:0 2px;opacity:.35}
+tr.fila:hover .mj-lapiz{opacity:1}
 .mj-side-l{display:flex;flex-direction:column;gap:3px}
 .mj-side-links{margin-top:auto;padding:10px 6px 2px;border-top:1px solid #ccfbf1;display:flex;flex-direction:column;gap:6px}
 .mj-side-links a{font-size:12px;font-weight:700;color:#0f766e;text-decoration:none}
@@ -5153,7 +5157,7 @@ var MesaJ = (function(){
     var celda = {
       n: nro,
       exp: '<span title="' + esc(tipoTxt(m.tipo)) + '">' + tipoIco(m.tipo) + '</span> <span class="xp">' + esc(m.nroExp) + "</span>",
-      pac: '<span class="pc">' + esc(m.paciente) + "</span>",
+      pac: '<span class="pc">' + esc(m.paciente) + '</span> <button type="button" class="mj-lapiz" data-mj="editar" data-id="' + esc(m._id) + '" title="Editar nombre, N° de expediente o teléfono">✏️</button>',
       tipo: tipoIco(m.tipo) + " " + esc(tipoTxt(m.tipo)),
       cargo: esc(m.usuarioNombre || m.usuario || "") + (m.tomadoN ? '<span class="sub">✋ ' + esc(m.tomadoN) + "</span>" : ""),
       ing: fc(m.ingresoTxt),
@@ -5189,7 +5193,7 @@ var MesaJ = (function(){
       dato("Hipoacusia", m.hipoacusia === "sin_intervencion" ? "SIN intervención de la Lic. Graciela Isla · " + (m.plazo || 15) + " días hábiles" : m.hipoacusia === "intervenido" ? "Con intervención" : "") +
       dato("Teléfono", m.telefono ? esc(m.telefono) : "") +
       dato("⚠️ Posible repetido", repetidosDe(m).length ? "Mismo paciente en: <b>" + esc(repetidosDe(m).map(function(o){ return o.nroExp + " (" + o.paciente + ")"; }).join(" · ")) + "</b>. Revisá en SIGEDIG cuál N° es el correcto y anulá el otro con 🗑️." : "");
-    var otras = "";
+    var otras = b("editar", "mj-gris", "✏️ Editar datos", "Corregir nombre del paciente, N° de expediente o teléfono") + b("tirilla", "mj-gris", "🖨️ Tirilla", "Imprimir la tirilla (constancia de inicio de trámite)");
     if(ef === "ingresado" && !x.ocs.length) otras += b("mesa", "mj-azul", "📦 Enviar a mesa");
     if(ef === "trabajo") otras += b("nuevo", "mj-gris", "↩ Volver a nuevos");
     if((ef === "ingresado" || ef === "trabajo") && x.ocs.length) otras += b("devolver", "mj-rojo", "↩️ Devolver a mesa");
@@ -5242,6 +5246,8 @@ var MesaJ = (function(){
     if(acc === "tomar") return guardar(id, { estado: "trabajo", trabajoMs: t.ms, trabajoTxt: t.txt, vistoJorge: true, historial: historial(t, "Tomado para trabajar") });
     if(acc === "nuevo") return guardar(id, { estado: "ingresado", trabajoMs: null, trabajoTxt: "", historial: historial(t, "Vuelve a sin tomar") });
     if(acc === "devolver") return devolver(m);
+    if(acc === "editar") return editarDatos(m);
+    if(acc === "tirilla") return imprimirTirilla(m);
     if(acc === "cancdev"){
       if(!confirm("¿Recuperar el expediente de " + m.paciente + " sin esperar a que mesa lo reenvíe?")) return;
       var p0 = K.habilesEntre(m.devueltoMs || t.ms, t.ms, feriados);
@@ -5270,6 +5276,48 @@ var MesaJ = (function(){
     var el = e.target && e.target.closest ? e.target.closest("[data-mj]") : null; if(!el) return;
     accion(el.getAttribute("data-mj"), el.getAttribute("data-id"));
   });
+
+  /* ---------- Editar datos del ingreso (paciente, N° de expediente, teléfono) desde la Gerencia ---------- */
+  function editarDatos(m){
+    var ov = document.getElementById("mj-ed-ov");
+    if(!ov){
+      ov = document.createElement("div"); ov.id = "mj-ed-ov";
+      ov.style.cssText = "position:fixed;inset:0;z-index:10090;background:rgba(15,23,42,.6);display:flex;align-items:flex-start;justify-content:center;padding:8vh 14px 14px";
+      ov.innerHTML = '<div style="background:#fff;width:100%;max-width:520px;border-radius:16px;overflow:hidden;box-shadow:0 24px 70px rgba(0,0,0,.45)">' +
+        '<div style="background:linear-gradient(120deg,#0f766e,#1a56a0);color:#fff;padding:14px 18px;font-size:18px;font-weight:800">✏️ Editar datos del ingreso</div>' +
+        '<div style="padding:14px 18px;display:flex;flex-direction:column;gap:10px;font-size:13px;font-weight:700;color:#334155">' +
+          '<label>N° de expediente<input id="mj-ed-exp" style="display:block;width:100%;box-sizing:border-box;margin-top:4px;padding:9px 11px;border:1.5px solid #cbd5e1;border-radius:9px;font-size:15px;text-transform:uppercase"></label>' +
+          '<label>Apellido y nombre (como en el DNI)<input id="mj-ed-pac" style="display:block;width:100%;box-sizing:border-box;margin-top:4px;padding:9px 11px;border:1.5px solid #cbd5e1;border-radius:9px;font-size:15px;text-transform:uppercase"></label>' +
+          '<label>Teléfono<input id="mj-ed-tel" style="display:block;width:100%;box-sizing:border-box;margin-top:4px;padding:9px 11px;border:1.5px solid #cbd5e1;border-radius:9px;font-size:15px"></label>' +
+          '<div id="mj-ed-msg" style="color:#b91c1c;min-height:16px"></div>' +
+          '<div style="display:flex;gap:8px"><button type="button" class="mj-btn mj-gris" id="mj-ed-no" style="flex:1;padding:10px">Cancelar</button><button type="button" class="mj-btn mj-verde" id="mj-ed-si" style="flex:1;padding:10px">💾 Guardar cambios</button></div>' +
+        "</div></div>";
+      document.body.appendChild(ov);
+    }
+    $("mj-ed-exp").value = m.nroExp || ""; $("mj-ed-pac").value = m.paciente || ""; $("mj-ed-tel").value = m.telefono || ""; $("mj-ed-msg").textContent = "";
+    ov.style.display = "flex"; setTimeout(function(){ var el = $("mj-ed-pac"); el.focus(); el.setSelectionRange(el.value.length, el.value.length); }, 30);
+    $("mj-ed-no").onclick = function(){ ov.style.display = "none"; };
+    $("mj-ed-si").onclick = async function(){
+      var exp = $("mj-ed-exp").value.trim().toUpperCase().replace(/\s+/g, ""), pac = $("mj-ed-pac").value.trim().replace(/\s+/g, " ").toUpperCase(), tel = $("mj-ed-tel").value.trim();
+      if(!/^\d{1,6}\/\d{2,4}\/[A-ZÑ]\/20\d{2}$/.test(exp)){ $("mj-ed-msg").textContent = "El N° de expediente tiene que estar completo, por ejemplo 8871/410/U/2026."; return; }
+      if(pac.split(" ").length < 2 || /\d/.test(pac)){ $("mj-ed-msg").textContent = "Escribí apellido y nombre completos, como figuran en el DNI."; return; }
+      var pe = C.partirExpediente(exp), k = C.clave(pe.num, pe.cod);
+      var otro = mesa.filter(function(o){ return o._id !== m._id && C.clave(o.num, o.cod) === k && (!o.anio || String(o.anio) === pe.anio); })[0];
+      if(otro){ $("mj-ed-msg").textContent = "Ese N° de expediente ya está cargado (" + otro.paciente + ")."; return; }
+      var cambios = [];
+      if(exp !== m.nroExp) cambios.push("expediente: " + m.nroExp + " → " + exp);
+      if(pac !== m.paciente) cambios.push("paciente: " + m.paciente + " → " + pac);
+      if(tel !== (m.telefono || "")) cambios.push("teléfono: " + (tel || "(sin)"));
+      if(!cambios.length){ ov.style.display = "none"; return; }
+      var t = ahora(); $("mj-ed-si").disabled = true;
+      try{
+        await db.collection(COL).doc(m._id).set({ nroExp: exp, num: pe.num, cod: pe.cod, letra: pe.letra || "", anio: pe.anio || "", paciente: pac, telefono: tel,
+          historial: historial(t, "Datos corregidos por la Gerencia (" + cambios.join("; ") + ")") }, { merge: true });
+        ov.style.display = "none";
+      }catch(e){ $("mj-ed-msg").textContent = "No se pudo guardar: " + (e && e.message || e); }
+      $("mj-ed-si").disabled = false;
+    };
+  }
 
   /* ---------- Devolver a Mesa de Entradas para corregir ----------
      Sale de las listas de la Gerencia, el plazo se detiene y a mesa le llega la observación obligatoria.
@@ -5644,7 +5692,55 @@ var MesaJ = (function(){
     document.body.appendChild(a); a.click(); setTimeout(function(){ URL.revokeObjectURL(a.href); a.remove(); }, 500);
   }
 
-  return { abrir: abrir, cerrar: cerrar, tab: tab, render: render, crearUsuario: crearUsuario, ojo: ojo,
+  /* ---------- Tirilla (constancia de inicio de trámite) — solo la Gerencia, cuando haga falta ---------- */
+  function imprimirTirilla(m){
+    var vence = K.situacion(m, feriados).vence;
+    var L1 = typeof LOGO1 !== "undefined" ? LOGO1 : "", L2 = typeof LOGO2 !== "undefined" ? LOGO2 : "";
+    var html = '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Tirilla</title><style>' +
+      '@page{size:auto;margin:0}*{box-sizing:border-box;margin:0;padding:0}body{font-family:Arial,sans-serif;color:#000;padding:10mm}' +
+      '.t{width:95mm;border:1.5px dashed #000;border-radius:6px;padding:9mm 7mm 7mm;margin:0 auto}' +
+      '.lg{display:flex;flex-direction:column;align-items:center;gap:3mm;margin-bottom:4mm}.lg img{display:block;height:auto;max-width:100%}.lg .l1{width:58mm}.lg .l2{width:50mm}' +
+      '.k{font-size:9pt;font-weight:bold;letter-spacing:1px;text-transform:uppercase;text-align:center;border-top:1px solid #000;border-bottom:1px solid #000;padding:1.5mm 0;margin-bottom:4mm}' +
+      '.r{font-size:10.5pt;margin:1.6mm 0}.r b{font-size:11pt}.big{font-size:13pt;font-weight:bold}' +
+      '.v{border:2px solid #000;border-radius:5px;padding:3mm;text-align:center;margin:4mm 0 3mm}.v div{font-size:9.5pt}.v b{display:block;font-size:15pt;margin-top:1mm;text-transform:capitalize}' +
+      '.n{font-size:9pt;line-height:1.4}.f{font-size:8pt;color:#333;margin-top:3mm;text-align:right}</style></head><body><div class="t">' +
+      '<div class="lg">' + (L1 ? '<img class="l1" src="' + L1 + '">' : "") + (L2 ? '<img class="l2" src="' + L2 + '">' : "") + "</div>" +
+      '<div class="k">PRIS · Mesa de Entradas · Constancia de inicio de trámite</div>' +
+      '<div class="r">Prestación: <span class="big">' + tipoIco(m.tipo) + " " + esc(tipoTxt(m.tipo).toUpperCase()) + "</span></div>" +
+      '<div class="r">Paciente: <b>' + esc(m.paciente) + "</b></div>" +
+      '<div class="r">Expediente N°: <b>' + esc(m.nroExp) + "</b></div>" +
+      '<div class="r">Fecha de ingreso: <b>' + esc(m.ingresoTxt) + " hs</b></div>" +
+      '<div class="v"><div>Plazo: ' + (m.plazo || K.PLAZO) + " días hábiles. Puede volver a retirar su orden de compra a partir del</div><b>" + esc(K.fmtLargo(vence)) + "</b></div>" +
+      (m.hipoacusia === "sin_intervencion" ? '<div class="n" style="border:1px solid #000;padding:2mm;margin-bottom:2mm">Su expediente se envía primero a la <b>referente del Programa de Hipoacusia</b> para su intervención. Por eso el plazo es de ' + (m.plazo || 15) + " días hábiles.</div>" : "") +
+      '<div class="n">Presentarse en <b>Mesa de Entradas del PRIS</b> con su <b>DNI</b> y esta tirilla. Con la orden de compra se dirige al proveedor.</div>' +
+      '<div class="f">Atendido por: ' + esc(m.usuarioNombre || "Gerencia") + "</div>" +
+      "</div></body></html>";
+    var f = document.getElementById("mj-print-frame");
+    if(!f){ f = document.createElement("iframe"); f.id = "mj-print-frame"; f.title = "Impresión"; f.style.cssText = "position:fixed;width:0;height:0;border:0;right:0;bottom:0;visibility:hidden"; document.body.appendChild(f); }
+    var w = f.contentWindow, d = w.document;
+    d.open(); d.write(html); d.close();
+    var imgs = Array.prototype.slice.call(d.images || []);
+    var cargadas = Promise.all(imgs.map(function(im){ return im.complete ? 0 : new Promise(function(res){ im.onload = im.onerror = res; }); }));
+    Promise.race([cargadas, new Promise(function(res){ setTimeout(res, 1500); })])
+      .then(function(){ setTimeout(function(){ try{ w.focus(); w.print(); }catch(e){ alert("No se pudo abrir la impresión: " + (e && e.message || e)); } }, 150); });
+    if(m._id && db) db.collection(COL).doc(m._id).set({ historial: historial(ahora(), "Tirilla emitida por la Gerencia") }, { merge: true }).catch(function(){});
+  }
+  // Desde el buscador de expedientes / órdenes: usa el ingreso de mesa si existe; si no, arma la tirilla con la fecha que indiques.
+  function tirillaReg(r){
+    if(!r) return;
+    var k = C.clave(r.num, r.cod), m = k ? mesa.filter(function(x){ return C.clave(x.num, x.cod) === k && (!r.anio || !x.anio || String(x.anio) === String(r.anio)); })[0] : null;
+    if(m) return imprimirTirilla(m);
+    var hoy = K.fmt(new Date());
+    var f = prompt("Este expediente no ingresó por Mesa de Entradas.\nFecha de ingreso para la tirilla (dd/mm/aaaa):", hoy);
+    if(f === null) return;
+    var mm = String(f).trim().match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+    if(!mm){ alert("Fecha inválida. Usá el formato dd/mm/aaaa."); return; }
+    var d = new Date(+mm[3], +mm[2] - 1, +mm[1], new Date().getHours(), new Date().getMinutes());
+    imprimirTirilla({ tipo: r.tipo, paciente: r.paciente || "", nroExp: r.nroExp || C.expedienteTexto(r), ingresoMs: d.getTime(),
+      ingresoTxt: K.fmt(d) + " " + K.hora(d), plazo: K.PLAZO, usuarioNombre: "Gerencia" });
+  }
+  return { tirilla: function(id){ var m = porId(id); if(m) imprimirTirilla(m); }, tirillaReg: tirillaReg,
+           abrir: abrir, cerrar: cerrar, tab: tab, render: render, crearUsuario: crearUsuario, ojo: ojo,
            bajarTodos: bajarTodos, elegirCarpeta: elegirCarpeta, obsCerrar: obsCerrar, obsEnviar: obsEnviar, ocCerrar: ocCerrar, ocCambio: ocCambio, ocJunto: ocJunto, ocVista: ocVista, ocEnviar: ocEnviar, guardarFeriados: guardarFeriados, feriadosSugeridos: feriadosSugeridos, copiarLink: copiarLink, exportar: exportar };
 })();
 </script>
