@@ -5370,6 +5370,7 @@ var MesaJ = (function(){
       (sl ? '<span class="mj-bdg am" title="Observaciones que mesa todavía no leyó">📨 ' + sl + " sin leer</span>" : "") +
       (m.hipoacusia === "sin_intervencion" ? '<span class="mj-bdg rj" title="Sin intervención de la Lic. Graciela Isla">🎧 Sin Hipoacusia</span>' : "") +
       (x._r && x._r.previoMesa && ef !== "entregado" ? '<span class="mj-bdg rj" title="Anterior al sistema: este ingreso no corresponde">📁 Viejo</span>' : "") +
+      (m.docsReclamo ? '<span class="mj-bdg rj" title="' + esc((m.docsReclamoPor || "Mesa") + ": " + m.docsReclamo) + '">⚠️ Docs mal</span>' : "") +
       (ef !== "entregado" && repetidosDe(m).length ? '<span class="mj-bdg rj" title="Mismo paciente con otro ingreso abierto: ' + esc(repetidosDe(m).map(function(o){ return o.nroExp; }).join(", ")) + '. Revisá en SIGEDIG cuál es el correcto y anulá el otro.">⚠️ Repetido</span>' : "");
     var plazo = ef === "devuelto" ? '<span class="chip devuelto">⏸ Detenido</span>'
       : (ef === "ingresado" || ef === "trabajo") ? '<span class="chip ' + sem.cls + '">' + esc(sem.txt.replace(" días hábiles", " días").replace(" día hábil", " día")) + "</span>"
@@ -5420,6 +5421,7 @@ var MesaJ = (function(){
       dato("Orden de compra", ocTxt ? "N° <b>" + esc(ocTxt) + "</b>" + (m.enMesaTxt ? " · en mesa desde el " + esc(m.enMesaTxt) : "") : "") +
       dato("Hipoacusia", m.hipoacusia === "sin_intervencion" ? "SIN intervención de la Lic. Graciela Isla · " + (m.plazo || 15) + " días hábiles" : m.hipoacusia === "intervenido" ? "Con intervención" : "") +
       dato("Teléfono", m.telefono ? esc(m.telefono) : "") +
+      dato("⚠️ Mesa avisa que la documentación está mal", m.docsReclamo ? "<b>" + esc(m.docsReclamo) + "</b> — " + esc(m.docsReclamoPor || "") + " el " + esc(m.docsReclamoTxt || "") + ". Corregila con 📎 Reenviar docs." : "") +
       dato("⚠️ Posible repetido", repetidosDe(m).length ? "Mismo paciente en: <b>" + esc(repetidosDe(m).map(function(o){ return o.nroExp + " (" + o.paciente + ")"; }).join(" · ")) + "</b>. Revisá en SIGEDIG cuál N° es el correcto y anulá el otro con 🗑️." : "");
     var otras = b("editar", "mj-gris", "✏️ Editar datos", "Corregir nombre del paciente, N° de expediente o teléfono") + b("tirilla", "mj-gris", "🖨️ Tirilla", "Imprimir la tirilla (constancia de inicio de trámite)");
     if(ef === "ingresado" && !x.ocs.length) otras += b("mesa", "mj-azul", "📦 Enviar a mesa");
@@ -5427,6 +5429,7 @@ var MesaJ = (function(){
     if((ef === "ingresado" || ef === "trabajo") && x.ocs.length) otras += b("devolver", "mj-rojo", "↩️ Devolver a mesa");
     if(ef === "en_mesa") otras += b("deshacer", "mj-gris", "↩ Quitar envío a mesa");
     if(ef !== "entregado") otras += b("obs", "mj-gris", "📨 Mandar observación");
+    if(m.docsImpresoTxt) otras += b("desimprimir", "mj-gris", "↩ Deshacer impresión", "Volver la documentación a «sin imprimir» (por ejemplo, si se imprimió de prueba)");
     otras += b("anular", "mj-rojo", "🗑️ Anular ingreso");
     return fila + '<tr class="det"><td colspan="' + cols.length + '"><div class="det-in"><div class="det-g">' + info + "</div>" +
       expHtml(m) + docsHtml(m) + obsHtml(m._id) + '<div class="det-acc">' + otras + "</div></div></td></tr>";
@@ -5495,6 +5498,13 @@ var MesaJ = (function(){
       return guardar(id, { estado: m.trabajoMs ? "trabajo" : "ingresado", enMesaMs: null, enMesaTxt: "", historial: historial(t, "Se quitó la entrega a Mesa de Entradas") });
     }
     if(acc === "obs") return obsAbrir(m);
+    if(acc === "desimprimir"){
+      if(!confirm("¿Deshacer la impresión de " + m.paciente + "?\n\nLa documentación vuelve a quedar como \"Todavía no se imprimió\" en Mesa de Entradas, lista para imprimir cuando venga el paciente." +
+        (m.docsImpresoTxt ? "\n\n(La imprimió " + (m.docsImpresoPor || "mesa") + " el " + m.docsImpresoTxt + ")" : ""))) return;
+      return guardar(id, { docsImpresoTxt: "", docsImpresoPor: "", docsImpresoUsuario: "", docsImpresoMs: null, docsDesbloqueado: false, docsPacientePresente: false,
+        docsImpresiones: Math.max(0, (Number(m.docsImpresiones) || 1) - 1),
+        historial: historial(t, "Se deshizo la impresión de la documentación (vuelve a «sin imprimir»)" + (m.docsImpresoTxt ? " — la había impreso " + (m.docsImpresoPor || "mesa") + " el " + m.docsImpresoTxt : "")) });
+    }
     if(acc === "anular"){
       if(!confirm("¿Anular el ingreso de " + m.paciente + " (Expte. " + m.nroExp + ")?\nDeja de aparecer en Mesa de Entradas.")) return;
       return guardar(id, { anulado: true, historial: historial(t, "Ingreso anulado") });
@@ -5697,6 +5707,7 @@ var MesaJ = (function(){
         if(res){ d.docsImpresoTxt = ""; d.docsImpresoPor = ""; }
       }
       if(nro) d.ocNro = nro;
+      if(res){ d.docsReclamo = ""; d.docsReclamoTxt = ""; d.docsReclamoPor = ""; }
       await db.collection(COL).doc(m._id).set(d, { merge: true });
       ocCerrar();
     }catch(e){
