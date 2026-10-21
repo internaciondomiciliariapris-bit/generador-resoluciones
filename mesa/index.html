@@ -98,7 +98,7 @@ button,input,select{font-family:inherit}
 .f-oc{font-size:15px;font-weight:900;color:#1e3a8a;margin-top:2px}
 .f-acc{display:flex;align-items:center;gap:6px;white-space:nowrap}
 .fb{display:inline-flex;align-items:center;gap:5px;padding:6px 10px;border-radius:8px;font-size:12.5px;font-weight:800;cursor:pointer;border:1.5px solid transparent;font-family:inherit}
-.fb.verde{background:#16a34a;color:#fff}.fb.naranja{background:#ea580c;color:#fff}
+.fb.verde{background:#16a34a;color:#fff}.fb.azul{background:#1a56a0;color:#fff}.fb.naranja{background:#ea580c;color:#fff}
 .fb.ent{background:#fff7ed;border-color:#fdba74;color:#7c2d12}.fb.ent input{width:16px;height:16px;accent-color:#16a34a;margin:0}
 .f-mas{color:#94a3b8;font-size:12px;width:14px;text-align:center}
 @media (max-width:640px){.fila{flex-wrap:wrap}.f-est{text-align:left}.f-acc{width:100%;justify-content:flex-end}}
@@ -192,6 +192,20 @@ button,input,select{font-family:inherit}
 .aviso-otros{margin:-4px 0 12px;font-size:13px;color:#1e3a8a;background:#eff6ff;border:1px solid #bfdbfe;border-radius:9px;padding:8px 12px;cursor:pointer}
 @media(max-width:600px){.tab{font-size:13px;padding:10px 6px}}
 /* ---- Ventana de control del ingreso (datos obligatorios / nombre como en el DNI) ---- */
+#vis-ov{position:fixed;inset:0;z-index:10040;background:rgba(15,23,42,.75);display:flex;align-items:stretch;justify-content:center;padding:2vh 12px}
+.vis-box{background:#fff;width:100%;max-width:900px;border-radius:14px;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 24px 70px rgba(0,0,0,.5)}
+.vis-head{display:flex;align-items:center;gap:10px;padding:12px 16px;background:linear-gradient(120deg,#0f766e,#1a56a0);color:#fff}
+.vis-head div{flex:1}.vis-head b{display:block;font-size:17px}.vis-head span{font-size:12.5px;opacity:.9}
+.vis-head button{border:1px solid rgba(255,255,255,.5);background:transparent;color:#fff;border-radius:8px;font-size:16px;padding:4px 10px;cursor:pointer}
+.vis-aviso{padding:9px 16px;font-size:13.5px;background:#fffbeb;border-bottom:1px solid #fde68a;color:#78350f}
+.vis-pags{flex:1;overflow:auto;background:#475569;padding:14px;display:flex;flex-direction:column;align-items:center;gap:14px}
+.vis-pags img{display:block;max-width:100%;background:#fff;box-shadow:0 4px 18px rgba(0,0,0,.35);user-select:none;-webkit-user-drag:none;pointer-events:none}
+.vis-pags .vis-n{color:#e2e8f0;font-size:12px;font-weight:700;margin-bottom:-8px}
+.vis-pags .vis-cargando{color:#fff;font-size:15px;font-weight:700;padding:40px}
+.vis-pie{display:flex;gap:8px;padding:10px 14px;border-top:1px solid #e2e8f0;flex-wrap:wrap}
+.vis-pie button{padding:10px 14px;border:none;border-radius:9px;font-size:14px;font-weight:800;cursor:pointer;font-family:inherit}
+.vis-no{background:#f1f5f9;color:#334155}.vis-mal{background:#fee2e2;color:#991b1b}.vis-ok{background:#ea580c;color:#fff;margin-left:auto}
+@media print{#vis-ov{display:none!important}}
 #dlg-ov{position:fixed;inset:0;z-index:10080;background:rgba(15,23,42,.62);display:flex;align-items:flex-start;justify-content:center;padding:8vh 14px 14px;overflow:auto}
 #dlg-body input{display:block;width:100%;box-sizing:border-box;margin-top:10px;padding:11px 12px;border:2px solid #1a56a0;border-radius:10px;font-size:17px;font-weight:700;font-family:inherit;text-transform:uppercase}
 #val-ov{position:fixed;inset:0;z-index:10050;background:rgba(15,23,42,.62);display:flex;align-items:flex-start;justify-content:center;padding:8vh 14px 14px;overflow:auto}
@@ -374,6 +388,15 @@ button,input,select{font-family:inherit}
     <div class="val-head" id="dlg-head"><div style="font-size:30px" id="dlg-ico">⚠️</div><div><b id="dlg-tit"></b><span id="dlg-sub"></span></div></div>
     <div class="val-body" id="dlg-body"></div>
     <div class="val-pie" id="dlg-pie"></div>
+  </div>
+</div>
+<!-- Visor de la documentación (solo para ver: no tiene botón de imprimir ni de descargar) -->
+<div id="vis-ov" style="display:none" role="dialog" aria-label="Ver documentación">
+  <div class="vis-box">
+    <div class="vis-head"><div><b id="vis-tit">Documentación</b><span id="vis-sub"></span></div><button type="button" onclick="cerrarVisor()" title="Cerrar">✕</button></div>
+    <div class="vis-aviso">👀 <b>Revisá antes de imprimir</b>: que la orden de compra, el DNI y la receta sean de este paciente y se vean bien. Si algo está mal, <b>no imprimas</b> y avisale a Jorge.</div>
+    <div id="vis-pags" class="vis-pags" oncontextmenu="return false"></div>
+    <div class="vis-pie"><button type="button" class="vis-no" onclick="cerrarVisor()">Cerrar</button><button type="button" class="vis-mal" id="vis-mal">⚠️ Algo está mal: avisar a Jorge</button><button type="button" class="vis-ok" id="vis-imp">🖨️ Está bien: imprimir con el paciente presente</button></div>
   </div>
 </div>
 <iframe id="print-frame" title="Impresión" style="position:fixed;width:0;height:0;border:0;right:0;bottom:0;visibility:hidden"></iframe>
@@ -1335,12 +1358,64 @@ if(typeof module !== "undefined" && module.exports) module.exports = MesaCal;
         "<br>🗑️ <b>Ya no está disponible en Mesa de Entradas.</b> Para volver a imprimirla, pedí a la Gerencia que la desbloquee.</span></div>";
     }
     var desb = m.docsDesbloqueado === true && m.docsImpresoTxt;
-    return '<div class="it-docs"><button type="button" class="imp" data-acc="imprimir" data-id="' + esc(m._id) + '">🖨️ Imprimir con el paciente presente</button>' +
+    return '<div class="it-docs"><button type="button" class="imp" style="background:#1a56a0;margin-right:6px" data-acc="verdocs" data-id="' + esc(m._id) + '">👁️ Ver antes de imprimir</button><button type="button" class="imp" data-acc="imprimir" data-id="' + esc(m._id) + '">🖨️ Imprimir con el paciente presente</button>' +
       "<span>" + info +
       (desb ? "<br>🔓 <b>Desbloqueada por " + esc(m.docsDesbloqueoPor || "la Gerencia") + "</b>" + (m.docsDesbloqueoTxt ? " el " + esc(m.docsDesbloqueoTxt) : "") + " · antes impresa por " + esc(m.docsImpresoPor || "") + " el " + esc(m.docsImpresoTxt)
             : "<br><b>Todavía no se imprimió.</b>") +
       "<br>⚠️ <b>Imprimí SOLO con el paciente en mesa.</b> Se imprime <b>una sola vez</b> y después se borra de Mesa de Entradas.</span></div>";
   }
+  /* ---------- Visor: ver la documentación ANTES de imprimir (sin imprimir ni descargar) ---------- */
+  var visId = null;
+  window.cerrarVisor = function(){ $("vis-ov").style.display = "none"; $("vis-pags").innerHTML = ""; visId = null; };
+  async function verDocs(id){
+    var m = porId(id); if(!m) return;
+    visId = id;
+    $("vis-tit").textContent = "Documentación — " + m.paciente;
+    $("vis-sub").textContent = tipoTxt(m.tipo) + " · Expte. " + m.nroExp + (docsMeta[id] ? " · " + contenidoTxt(docsMeta[id].contenido) + " · " + (docsMeta[id].paginas || "?") + " páginas" : "");
+    $("vis-pags").innerHTML = '<div class="vis-cargando">⏳ Cargando la documentación…</div>';
+    $("vis-imp").style.display = docsBloqueada(m) ? "none" : "";
+    $("vis-ov").style.display = "flex";
+    try{
+      var blob = await MesaDocs.bajar(db, id);
+      var lib = await import(/* @vite-ignore */ "https://cdn.jsdelivr.net/npm/pdfjs-dist@4.7.76/build/pdf.min.mjs");
+      lib.GlobalWorkerOptions.workerSrc = "https://cdn.jsdelivr.net/npm/pdfjs-dist@4.7.76/build/pdf.worker.min.mjs";
+      var doc = await lib.getDocument({ data: new Uint8Array(await blob.arrayBuffer()) }).promise, html = [];
+      $("vis-pags").innerHTML = "";
+      for(var n = 1; n <= doc.numPages; n++){
+        if(visId !== id) return;
+        var page = await doc.getPage(n), vp = page.getViewport({ scale: 1.3 });
+        var cv = document.createElement("canvas"); cv.width = Math.ceil(vp.width); cv.height = Math.ceil(vp.height);
+        var ctx = cv.getContext("2d"); ctx.fillStyle = "#fff"; ctx.fillRect(0, 0, cv.width, cv.height);
+        await page.render({ canvasContext: ctx, viewport: vp }).promise;
+        var nd = document.createElement("div"); nd.className = "vis-n"; nd.textContent = "Página " + n + " de " + doc.numPages;
+        var im = document.createElement("img"); im.src = cv.toDataURL("image/jpeg", 0.85); im.alt = "Página " + n; im.draggable = false;
+        $("vis-pags").appendChild(nd); $("vis-pags").appendChild(im);
+      }
+      try{ doc.destroy(); }catch(_){ }
+      registrarAcceso(m, "Vio la documentación antes de imprimir");
+    }catch(e){
+      if(visId === id) $("vis-pags").innerHTML = '<div class="vis-cargando">No se pudo abrir la documentación: ' + esc(e && e.message || e) + "</div>";
+    }
+  }
+  document.addEventListener("click", function(e){
+    if(!e.target || !e.target.closest) return;
+    if(e.target.closest("#vis-imp")){ var id = visId, b = e.target.closest("#vis-imp"); window.cerrarVisor(); var bt = document.querySelector('[data-acc="imprimir"][data-id="' + id + '"]') || b; imprimirDocs(id, bt); return; }
+    if(e.target.closest("#vis-mal")){
+      var mm = porId(visId); if(!mm) return;
+      var idv = visId; window.cerrarVisor();
+      (async function(){
+        var txt = await pedirTextoLibre("¿Qué está mal en la documentación de " + mm.paciente + "?\nEj.: la receta es de otro paciente, falta el DNI, no se lee.");
+        if(!txt) return;
+        var t = ahora();
+        try{
+          await db.collection(COL).doc(idv).set({ docsReclamo: txt, docsReclamoTxt: t.txt, docsReclamoPor: usuario.n, vistoJorge: false,
+            historial: firebase.firestore.FieldValue.arrayUnion(t.txt + " · ⚠️ " + usuario.n + " avisó que la documentación está mal: " + txt) }, { merge: true });
+          aviso("✅ Listo, le avisamos a Jorge. No imprimas hasta que la corrija.");
+        }catch(e){ aviso("No se pudo avisar: " + (e && e.message || e)); }
+      })();
+    }
+  });
+  function pedirTextoLibre(t){ return dialogo({ tit: "Avisar a Jorge", ico: "⚠️", cls: "rojo", txt: t, input: true, si: "Enviar aviso", no: "Cancelar" }).then(function(v){ return v == null ? "" : String(v).trim(); }); }
   async function imprimirDocs(id, btn){
     var m = porId(id); if(!m) return;
     if(docsBloqueada(m)){ aviso("🔒 Esta documentación ya se imprimió. Para volver a imprimirla, pedí a la Gerencia que la desbloquee."); return; }
@@ -1867,13 +1942,13 @@ if(typeof module !== "undefined" && module.exports) module.exports = MesaCal;
     var acc = "";
     if(ef === "devuelto") acc = '<button type="button" class="fb verde" data-acc="reenviar" data-id="' + esc(m._id) + '">✅ Corregido, reenviar</button>';
     else if(ef !== "entregado"){
-      if(docsMeta[m._id] && !docsBloqueada(m)) acc += '<button type="button" class="fb naranja" data-acc="imprimir" data-id="' + esc(m._id) + '" title="Solo con el paciente presente">🖨️ Imprimir</button>';
+      if(docsMeta[m._id] && !docsBloqueada(m)) acc += '<button type="button" class="fb azul" data-acc="verdocs" data-id="' + esc(m._id) + '" title="Ver la documentación antes de imprimir">👁️ Ver</button><button type="button" class="fb naranja" data-acc="imprimir" data-id="' + esc(m._id) + '" title="Solo con el paciente presente">🖨️ Imprimir</button>';
       if(ef === "en_mesa" || ocTxt) acc += '<label class="fb ent" title="Tildá cuando le entregás la OC al paciente"><input type="checkbox" data-acc="entregar" data-id="' + esc(m._id) + '"> Entregar</label>';
     }
     var fila = '<div class="fila ' + (ef === "devuelto" ? "devuelto" : sem.cls) + (abierto ? " abierta" : "") + '" data-fila="' + esc(m._id) + '" title="Tocá para ver todo">' +
       '<span class="f-ico">' + tipoIco(m.tipo) + "</span>" +
       '<div class="f-main"><div class="f-l1"><b class="f-exp">' + esc(m.nroExp) + '</b> <span class="f-pac">' + esc(m.paciente) + "</span>" +
-        (sinLeer ? ' <span class="f-bdg">📨 ' + sinLeer + "</span>" : "") + "</div>" +
+        (sinLeer ? ' <span class="f-bdg">📨 ' + sinLeer + "</span>" : "") + (m.docsReclamo ? ' <span class="f-bdg" title="' + esc(m.docsReclamo) + '">⚠️ Avisaste a Jorge: documentación en revisión</span>' : "") + "</div>" +
         '<div class="f-l2">' + esc(String(m.ingresoTxt || "").slice(0, 5)) + " · " + (esMio(m) ? "tuyo" : "de " + esc(duenioTxt(m))) + (m.telefono ? " · 📞 " + esc(m.telefono) : "") + "</div></div>" +
       '<div class="f-est">' + est + (ocTxt ? '<div class="f-oc">OC ' + esc(ocTxt) + "</div>" : "") + "</div>" +
       '<div class="f-acc">' + acc + '<span class="f-mas">' + (abierto ? "▴" : "▾") + "</span></div></div>";
@@ -2003,6 +2078,7 @@ if(typeof module !== "undefined" && module.exports) module.exports = MesaCal;
     if(el.getAttribute("data-acc") === "tirilla"){ var m = porId(el.getAttribute("data-id")); if(m){ registrarAcceso(m, "Reimprimió la tirilla"); imprimirTirilla(m); } return; }
     if(el.getAttribute("data-acc") === "wa"){ var mw = porId(el.getAttribute("data-id")); if(mw) registrarAcceso(mw, "Avisó al paciente por WhatsApp"); return; }
     if(el.getAttribute("data-acc") === "tomar"){ tomarExp(el.getAttribute("data-id")); return; }
+    if(el.getAttribute("data-acc") === "verdocs"){ verDocs(el.getAttribute("data-id")); return; }
     if(el.getAttribute("data-acc") === "reenviar"){ abrirReenvio(el.getAttribute("data-id")); return; }
     if(el.getAttribute("data-acc") === "ver-todos"){ cambiarTab("todos"); return; }
     if(el.getAttribute("data-acc") === "detalle"){
