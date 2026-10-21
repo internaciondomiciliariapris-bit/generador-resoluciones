@@ -4154,6 +4154,17 @@ if(typeof module !== "undefined" && module.exports) module.exports = EntConsulta
 .mj-ext b{font-size:14px;color:#065f46}.mj-ext span{display:block;font-size:12px;color:#475569;margin:2px 0 6px}.mj-ext span b{font-size:12px;color:#065f46}
 .mj-ext input[type=file]{font-size:13px;width:100%}
 .mj-up.lleno{border-color:#16a34a;background:#f0fdf4}
+.mj-extok{border:2px solid #16a34a;border-radius:10px;padding:10px 12px;margin-top:10px;background:#f0fdf4}
+.mj-extok-t{font-size:14px;font-weight:800;color:#166534}
+.mj-extok-g{display:flex;gap:10px;flex-wrap:wrap;margin-top:8px}
+.mj-extok-g figure{margin:0;width:96px;cursor:zoom-in}
+.mj-extok-g img{display:block;width:96px;height:128px;object-fit:contain;background:#fff;border:2px solid #cbd5e1;border-radius:6px}
+.mj-extok-g figure.dni img{border-color:#2563eb}.mj-extok-g figure.receta img{border-color:#16a34a}
+.mj-extok-g figcaption{font-size:11px;font-weight:800;text-align:center;margin-top:3px;color:#334155}
+.mj-extok-acc{display:flex;gap:8px;margin-top:10px}
+.mj-manual{margin-top:10px;font-size:13px}
+.mj-manual summary{cursor:pointer;color:#475569;font-weight:700;padding:4px 0}
+.mj-manual[open] summary{margin-bottom:2px}
 #ex-ov{position:fixed;inset:0;z-index:10010;background:rgba(15,23,42,.6);display:flex;align-items:flex-start;justify-content:center;padding:3vh 12px 12px;overflow:auto}
 .ex-box{background:#fff;width:100%;max-width:1100px;border-radius:16px;overflow:hidden;box-shadow:0 24px 70px rgba(0,0,0,.45);display:flex;flex-direction:column;max-height:94vh}
 .ex-ayuda{padding:10px 16px;font-size:13px;color:#334155;background:#f8fafc;border-bottom:1px solid #e2e8f0}
@@ -4333,11 +4344,18 @@ tr.fila:hover .mj-lapiz{opacity:1}
       <label style="display:block;margin-top:10px;font-size:12px;font-weight:700;color:#374151">N° de orden de compra
         <input id="mj-oc-nro" type="text" autocomplete="off" style="display:block;width:100%;padding:9px 11px;border:1.5px solid #cbd5e1;border-radius:8px;font-size:15px;margin-top:4px;font-family:inherit" placeholder="Se completa solo al adjuntar la OC"></label>
       <div class="mj-up"><b>1 · Orden de compra (PDF)</b><span>El PDF tal cual sale del sistema: se borran solos los precios y se pone el sello. Va 2 veces.</span><input type="file" id="mj-oc-f-oc" accept="application/pdf,.pdf" onchange="MesaJ.ocCambio()"></div>
-      <div class="mj-ext"><b>📂 ¿Tenés el expediente completo de SIGEDIG?</b><span>Subilo y te saco <b>solo el DNI y la receta</b> (las hojas con la graduación). Se arma en la compu: <b>no se guarda nada</b>.</span><input type="file" id="mj-oc-f-exp" accept="application/pdf,.pdf" onchange="MesaJ.ocExtraer(this)"></div>
+      <div class="mj-ext" id="mj-oc-ext-box"><b>2 · DNI y receta: subí el expediente completo de SIGEDIG</b><span>Te saco <b>solo el DNI y la receta</b> (las hojas con la graduación). Se arma en la compu: <b>no se guarda nada</b>.</span><input type="file" id="mj-oc-f-exp" accept="application/pdf,.pdf" onchange="MesaJ.ocExtraer(this)"></div>
+      <div class="mj-extok" id="mj-oc-ext-res" style="display:none">
+        <div class="mj-extok-t">✅ 2 · DNI y receta <b>cargados</b> — así le llegan a mesa:</div>
+        <div class="mj-extok-g" id="mj-oc-ext-th"></div>
+        <div class="mj-extok-acc"><button type="button" class="mj-btn mj-gris" onclick="MesaJ.ocExtOtra()">🔄 Elegir otras hojas</button><button type="button" class="mj-btn mj-gris" onclick="MesaJ.ocExtQuitar()">✕ Quitar</button></div>
+      </div>
+      <details class="mj-manual" id="mj-oc-manual"><summary>¿No tenés el expediente? Subí el DNI y la receta sueltos</summary>
       <label class="mj-junto"><input type="checkbox" id="mj-oc-junto" onchange="MesaJ.ocJunto()"> <span><b>Tengo el DNI y la receta juntos en un solo PDF</b><br><small>Tildalo y te pide un solo archivo en lugar de dos.</small></span></label>
       <div class="mj-up" id="mj-oc-up-dni"><b>2 · Copia del DNI</b><span>PDF o foto (podés elegir frente y dorso juntos).</span><input type="file" id="mj-oc-f-dni" accept="application/pdf,.pdf,image/*" multiple onchange="MesaJ.ocCambio()"></div>
       <div class="mj-up" id="mj-oc-up-rec"><b>3 · Receta / pedido médico</b><span>PDF o foto.</span><input type="file" id="mj-oc-f-rec" accept="application/pdf,.pdf,image/*" multiple onchange="MesaJ.ocCambio()"></div>
       <div class="mj-up" id="mj-oc-up-jun" style="display:none"><b>2 · DNI y receta (un solo PDF)</b><span>El PDF con la copia del DNI y la receta juntos.</span><input type="file" id="mj-oc-f-jun" accept="application/pdf,.pdf,image/*" multiple onchange="MesaJ.ocCambio()"></div>
+      </details>
       <div class="hint" style="margin-top:8px">A mesa le llega <b>un solo PDF</b> listo para imprimir. Si no adjuntás nada, queda registrado igual y llevás los papeles como siempre.</div>
       <div class="mj-msg" id="mj-oc-msg"></div>
     </div>
@@ -4956,7 +4974,8 @@ var ExtraerExp = (function(){
     try{
       var dni = await armarPdf(dniP, "DNI"), rec = await armarPdf(recP, "Receta"), cb = st.listo;
       cerrar();
-      cb && cb({ dni: dni, rec: rec, nDni: dniP.length, nRec: recP.length });
+      cb && cb({ dni: dni, rec: rec, nDni: dniP.length, nRec: recP.length,
+        hojas: dniP.map(function(p){ return { n: p.n, tipo: "dni", thumb: p.thumb }; }).concat(recP.map(function(p){ return { n: p.n, tipo: "receta", thumb: p.thumb }; })) });
     }catch(e){ if(st){ st.trabajando = false; pintar(); } est("No se pudo armar el PDF: " + esc(e && e.message || e), true); }
   }
   function cerrar(){
@@ -5573,15 +5592,24 @@ var MesaJ = (function(){
     ocExt = null; marcarExt();
     var pref = false; try{ pref = localStorage.getItem("mj_oc_junto") === "1"; }catch(_){}
     $("mj-oc-junto").checked = pref; ocJunto(true);
+    $("mj-oc-manual").open = false; ocExtArchivo = null;
     $("mj-oc-msg").textContent = ""; $("mj-oc-env").disabled = false; $("mj-oc-ver").disabled = false;
     $("mj-oc-env").textContent = soloDocs ? "📎 Enviar documentación" : "📦 Enviar a mesa";
     $("mj-oc-ov").style.display = "flex";
   }
   function ocCerrar(){ $("mj-oc-ov").style.display = "none"; ocPara = null; ocCache = null; ocExt = null; marcarExt(); }
   /* DNI y receta sacados del expediente completo (en memoria, no se guarda nada) */
-  var ocExt = null;
+  var ocExt = null, ocExtArchivo = null;
+  function ocExtOtra(){ if(ocExtArchivo && ocPara) ocExtraer({ files: [ocExtArchivo], value: "" }); else $("mj-oc-f-exp").click(); }
+  function ocExtQuitar(){ ocExt = null; ocExtArchivo = null; ocCache = null; marcarExt(); ocMsg(true, ""); }
   function marcarExt(){
-    var d = $("mj-oc-up-dni"), r = $("mj-oc-up-rec");
+    var ok = !!(ocExt && (ocExt.dni || ocExt.rec));
+    $("mj-oc-ext-box").style.display = ok ? "none" : "";
+    $("mj-oc-ext-res").style.display = ok ? "" : "none";
+    $("mj-oc-ext-th").innerHTML = ok ? (ocExt.hojas || []).map(function(h){
+      return '<figure class="' + h.tipo + '" title="Ver grande" onclick="var z=document.getElementById(\'ex-zoom\');document.getElementById(\'ex-zimg\').src=this.querySelector(\'img\').src;z.style.display=\'flex\'"><img src="' + h.thumb + '" alt=""><figcaption>' + (h.tipo === "dni" ? "🪪 DNI" : "👓 Receta") + " · hoja " + h.n + "</figcaption></figure>";
+    }).join("") : "";
+    if(ok){ var det = $("mj-oc-manual"); if(det) det.open = false; }
     [["mj-oc-up-dni", ocExt && ocExt.dni, ocExt && ocExt.nDni, "2 · Copia del DNI"], ["mj-oc-up-rec", ocExt && ocExt.rec, ocExt && ocExt.nRec, "3 · Receta / pedido médico"]].forEach(function(x){
       var box = $(x[0]); if(!box) return;
       box.classList.toggle("lleno", !!x[1]);
@@ -5591,11 +5619,12 @@ var MesaJ = (function(){
   function ocExtraer(input){
     var f = input.files && input.files[0]; input.value = "";
     if(!f || !ocPara) return;
+    ocExtArchivo = f;
     ExtraerExp.abrir(f, ocPara.m, function(res){
       $("mj-oc-junto").checked = false; ocJunto(true);
       ["mj-oc-f-dni", "mj-oc-f-rec"].forEach(function(id){ $(id).value = ""; });
       ocExt = res; marcarExt(); ocCache = null;
-      ocMsg(true, "✅ Listo: " + (res.dni ? res.nDni + " hoja(s) de DNI" : "sin DNI") + " y " + (res.rec ? res.nRec + " de receta" : "sin receta") + " sacadas del expediente. Tocá 👁️ Vista previa para controlar.");
+      ocMsg(true, (!res.dni ? "⚠️ No elegiste hoja de DNI. " : "") + (!res.rec ? "⚠️ No elegiste hoja de receta. " : "") + (($("mj-oc-f-oc").files || []).length ? "✅ Todo listo: tocá 📦 Enviar a mesa (o 👁️ Vista previa para controlar)." : "Ahora falta el paso 1: subí la orden de compra."));
     });
   }
   function ocCambio(){
@@ -5976,7 +6005,7 @@ var MesaJ = (function(){
   }
   return { tirilla: function(id){ var m = porId(id); if(m) imprimirTirilla(m); }, tirillaReg: tirillaReg,
            abrir: abrir, cerrar: cerrar, tab: tab, render: render, crearUsuario: crearUsuario, ojo: ojo,
-           bajarTodos: bajarTodos, elegirCarpeta: elegirCarpeta, obsCerrar: obsCerrar, obsEnviar: obsEnviar, ocCerrar: ocCerrar, ocCambio: ocCambio, ocJunto: ocJunto, ocExtraer: ocExtraer, ocVista: ocVista, ocEnviar: ocEnviar, guardarFeriados: guardarFeriados, feriadosSugeridos: feriadosSugeridos, copiarLink: copiarLink, exportar: exportar };
+           bajarTodos: bajarTodos, elegirCarpeta: elegirCarpeta, obsCerrar: obsCerrar, obsEnviar: obsEnviar, ocCerrar: ocCerrar, ocCambio: ocCambio, ocJunto: ocJunto, ocExtraer: ocExtraer, ocExtOtra: ocExtOtra, ocExtQuitar: ocExtQuitar, ocVista: ocVista, ocEnviar: ocEnviar, guardarFeriados: guardarFeriados, feriadosSugeridos: feriadosSugeridos, copiarLink: copiarLink, exportar: exportar };
 })();
 </script>
 
