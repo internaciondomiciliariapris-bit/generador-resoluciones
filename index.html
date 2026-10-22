@@ -4342,7 +4342,7 @@ tr.fila:hover .mj-lapiz{opacity:1}
     <div style="padding:14px 16px">
       <div id="mj-oc-dest" style="font-size:15px;font-weight:800;color:#1a56a0"></div>
       <label style="display:block;margin-top:10px;font-size:12px;font-weight:700;color:#374151">N° de orden de compra
-        <input id="mj-oc-nro" type="text" autocomplete="off" style="display:block;width:100%;padding:9px 11px;border:1.5px solid #cbd5e1;border-radius:8px;font-size:15px;margin-top:4px;font-family:inherit" placeholder="Se completa solo al adjuntar la OC"></label>
+        <input id="mj-oc-nro" type="text" autocomplete="off" oninput="this.removeAttribute('data-auto')" style="display:block;width:100%;padding:9px 11px;border:1.5px solid #cbd5e1;border-radius:8px;font-size:15px;margin-top:4px;font-family:inherit" placeholder="Se completa solo al adjuntar la OC"></label>
       <div class="mj-up"><b>1 · Orden de compra (PDF)</b><span>El PDF tal cual sale del sistema: se borran solos los precios y se pone el sello. Va 2 veces.</span><input type="file" id="mj-oc-f-oc" accept="application/pdf,.pdf" onchange="MesaJ.ocCambio()"></div>
       <div class="mj-ext" id="mj-oc-ext-box"><b>2 · DNI y receta: subí el expediente completo de SIGEDIG</b><span>Te saco <b>solo el DNI y la receta</b> (las hojas con la graduación). Se arma en la compu: <b>no se guarda nada</b>.</span><input type="file" id="mj-oc-f-exp" accept="application/pdf,.pdf" onchange="MesaJ.ocExtraer(this)"></div>
       <div class="mj-extok" id="mj-oc-ext-res" style="display:none">
@@ -4606,6 +4606,31 @@ var MesaDocs = (function(){
     return out;
   }
 
+  /* ---------- N° de OC al elegir el archivo (liviano: solo texto, sin dibujar) ----------
+     1° el número al lado de "Nro:" en la capa de texto del PDF; 2° el nombre del archivo ("… OC 20962.pdf"). */
+  async function leerNroOC(file){
+    try{
+      if(esPdf(file)){
+        var lib = await pdfjs(), doc = await lib.getDocument({ data: await leer(file) }).promise;
+        for(var n = 1; n <= Math.min(doc.numPages, 2); n++){
+          var items = (await (await doc.getPage(n)).getTextContent()).items.filter(function(i){ return i.str && i.str.trim(); });
+          var nro = items.filter(function(i){ return /^Nro:?$/i.test(i.str.trim()); })[0];
+          if(nro){
+            var cand = items.filter(function(i){ return /^\d{4,7}$/.test(i.str.trim()) && Math.abs(i.transform[5] - nro.transform[5]) < 4 && i.transform[4] > nro.transform[4]; })
+              .sort(function(a, b){ return a.transform[4] - b.transform[4]; })[0];
+            if(cand) return cand.str.trim();
+          }
+          var plano = items.map(function(i){ return i.str; }).join(" ");
+          var m = plano.match(/ORDEN\s+DE\s+COMPRA[\s\S]{0,60}?N\s*r\s*o\.?\s*:?\s*(\d{4,7})\b/i);
+          if(m) return m[1];
+        }
+      }
+    }catch(e){ /* se intenta con el nombre del archivo */ }
+    var f = String(file && file.name || "").replace(/\.[a-z0-9]+$/i, "");
+    var mf = f.match(/\bO\.?\s*C\.?\s*(?:N\s*[°º]?\.?\s*)?[-_ ]*(\d{4,7})\b/i);
+    return mf ? mf[1] : "";
+  }
+
   /* ---------- DNI / receta: PDF o foto ---------- */
   async function procesarAdjunto(file){
     if(esPdf(file)){
@@ -4746,7 +4771,7 @@ var MesaDocs = (function(){
       setTimeout(function(){ URL.revokeObjectURL(url); }, 120000);
     }, function(e){ if(w) try{ w.close(); }catch(_){ } throw e; });
   }
-  return { procesarOC: procesarOC, armar: armar, subir: subir, bajar: bajar, borrar: borrar, abrir: abrir,
+  return { procesarOC: procesarOC, leerNroOC: leerNroOC, armar: armar, subir: subir, bajar: bajar, borrar: borrar, abrir: abrir,
            linkSigedig: linkSigedig, subirExp: subirExp, bajarExp: bajarExp, borrarExp: borrarExp, textoPdf: textoPdf, mencionaExp: mencionaExp,
            COL_D: COL_D, COL_DP: COL_DP, COL_E: COL_E, COL_EP: COL_EP, MAX_EXP: MAX_EXP, aB64: aB64, deB64: deB64 };
 })();
@@ -5639,6 +5664,7 @@ var MesaJ = (function(){
     $("mj-oc-tit").textContent = soloDocs ? "Documentación para Mesa de Entradas" : "OC a Mesa de Entradas";
     $("mj-oc-dest").textContent = tipoIco(m.tipo) + " " + m.nroExp + " — " + m.paciente;
     $("mj-oc-nro").value = m.ocNro || ocsDe(regDe(m))[0] || "";
+    $("mj-oc-nro").removeAttribute("data-auto");
     ["mj-oc-f-oc", "mj-oc-f-dni", "mj-oc-f-rec", "mj-oc-f-jun", "mj-oc-f-exp"].forEach(function(id){ $(id).value = ""; });
     ocExt = null; marcarExt();
     var pref = false; try{ pref = localStorage.getItem("mj_oc_junto") === "1"; }catch(_){}
@@ -5680,6 +5706,16 @@ var MesaJ = (function(){
   }
   function ocCambio(){
     ocCache = null; $("mj-oc-msg").textContent = "";
+    // N° de OC: se completa solo al elegir el PDF (si el casillero está vacío o lo había llenado el sistema)
+    var fOC = ($("mj-oc-f-oc").files || [])[0], inp = $("mj-oc-nro");
+    if(fOC && (!inp.value.trim() || inp.getAttribute("data-auto") === "1")){
+      MesaDocs.leerNroOC(fOC).then(function(nro){
+        if(!nro) return;
+        if(($("mj-oc-f-oc").files || [])[0] !== fOC) return;           // cambió de archivo mientras leía
+        if(inp.value.trim() && inp.getAttribute("data-auto") !== "1") return; // lo escribió a mano: no se pisa
+        inp.value = nro; inp.setAttribute("data-auto", "1");
+      }).catch(function(){});
+    }
     // Si elige un archivo a mano, ese reemplaza lo que se sacó del expediente
     if(ocExt && (($("mj-oc-f-dni").files || []).length || ($("mj-oc-f-rec").files || []).length || ($("mj-oc-f-jun").files || []).length)){ ocExt = null; marcarExt(); }
   }
