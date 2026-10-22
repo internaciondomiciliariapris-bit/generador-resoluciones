@@ -4506,6 +4506,44 @@ var MesaDocs = (function(){
   function esPdf(f){ return /\.pdf$/i.test(f.name || "") || f.type === "application/pdf"; }
   function jpeg(cv, q){ return cv.toDataURL("image/jpeg", q || 0.85); }
 
+  /* ---------- ¿Ya hay un sello arriba de "Autorizó"? ----------
+     Cuenta la "tinta" (trazo oscuro o azul/violeta de sello y firma) en el lugar donde iría el sello,
+     sin contar el texto impreso de la OC ni las líneas horizontales del formulario. En una OC tal cual
+     sale del sistema ese lugar está en blanco; si ya tiene sello o firma, la tinta supera el 1,5 %. */
+  function yaSellada(ctx, x, y, w, h, items, vp){
+    try{
+      var W = ctx.canvas.width, Hc = ctx.canvas.height;
+      var x0 = Math.max(0, Math.floor(x)), y0 = Math.max(0, Math.floor(y));
+      var x1 = Math.min(W, Math.ceil(x + w)), y1 = Math.min(Hc, Math.ceil(y + h));
+      var aw = x1 - x0, ah = y1 - y0;
+      if(aw < 10 || ah < 10) return false;
+      var data = ctx.getImageData(x0, y0, aw, ah).data;
+      // máscara del texto impreso (no es sello)
+      var mask = new Uint8Array(aw * ah);
+      items.forEach(function(it){
+        var t = it.transform, fs = Math.hypot(t[2], t[3]) || Math.abs(t[3]) || 8;
+        var q = vp.convertToViewportRectangle([t[4] - 1, t[5] - fs * 0.3, t[4] + it.width + 1, t[5] + fs * 0.95]);
+        var qx0 = Math.max(0, Math.floor(Math.min(q[0], q[2])) - x0), qx1 = Math.min(aw, Math.ceil(Math.max(q[0], q[2])) - x0);
+        var qy0 = Math.max(0, Math.floor(Math.min(q[1], q[3])) - y0), qy1 = Math.min(ah, Math.ceil(Math.max(q[1], q[3])) - y0);
+        for(var yy = qy0; yy < qy1; yy++) for(var xx = qx0; xx < qx1; xx++) mask[yy * aw + xx] = 1;
+      });
+      var tinta = 0, total = 0;
+      for(var yy = 0; yy < ah; yy++){
+        var fila = 0, filaTot = 0;
+        for(var xx = 0; xx < aw; xx++){
+          if(mask[yy * aw + xx]) continue;
+          var k = (yy * aw + xx) * 4, R = data[k], G = data[k + 1], B = data[k + 2];
+          var lum = 0.299 * R + 0.587 * G + 0.114 * B;
+          if(lum < 160 || (B - R > 50 && B - G > 30)) fila++;
+          filaTot++;
+        }
+        if(filaTot && fila > filaTot * 0.5) continue;   // línea horizontal del formulario
+        tinta += fila; total += filaTot;
+      }
+      return total > 0 && tinta / total > 0.015;
+    }catch(e){ return false; }
+  }
+
   /* ---------- OC: render + borrar precios + sello ---------- */
   async function procesarOC(file){
     var lib = await pdfjs();
@@ -4555,7 +4593,10 @@ var MesaDocs = (function(){
         var fsA = fsDe(aut), cx = aut.transform[4] + aut.width / 2, lineaY = aut.transform[5] + fsA * 1.4;
         var H = SELLO_ALTO, W = H * sello.naturalWidth / sello.naturalHeight, abajo = lineaY + H * 0.03;
         var r = vp.convertToViewportRectangle([cx - W / 2, abajo, cx + W / 2, abajo + H]);
-        ctx.drawImage(sello, Math.min(r[0], r[2]), Math.min(r[1], r[3]), Math.abs(r[2] - r[0]), Math.abs(r[3] - r[1]));
+        var rx = Math.min(r[0], r[2]), ry = Math.min(r[1], r[3]), rw = Math.abs(r[2] - r[0]), rh = Math.abs(r[3] - r[1]);
+        // Si la OC YA viene sellada/firmada (sello puesto a mano antes de subirla), no se pone otro encima.
+        if(yaSellada(ctx, rx, ry, rw, rh, items, vp)){ out.selloPrevio = true; }
+        else ctx.drawImage(sello, rx, ry, rw, rh);
         out.sello = true;
       }
       out.paginas.push({ img: jpeg(cv, 0.86), w: vp.width / ESC, h: vp.height / ESC });
@@ -5688,6 +5729,7 @@ var MesaJ = (function(){
         if(res.oc){
           if(!res.oc.tapados) av.push("No encontré precios para borrar en la OC.");
           if(!res.oc.sello) av.push("No encontré la línea “Autorizó” para poner el sello.");
+          if(res.oc.selloPrevio) av.push("La OC ya venía sellada: dejé ese sello y NO le agregué otro.");
           if(res.oc.expte && (res.oc.expte.num !== String(parseInt(m.num, 10)) || res.oc.expte.cod !== String(parseInt(m.cod, 10))))
             av.push("La OC es del EXPTE " + res.oc.expte.num + "/" + res.oc.expte.cod + ", pero este ingreso es " + m.nroExp + ". ¿Es la OC correcta?");
           if(res.oc.ocNro && nro && res.oc.ocNro !== nro) av.push("La OC adjunta es la N° " + res.oc.ocNro + " y escribiste " + nro + ".");
