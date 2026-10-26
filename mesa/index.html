@@ -432,7 +432,7 @@ var EntCore = (function(){
   function leerNombreArchivo(nombre){
     var s = String(nombre||"").replace(/\.pdf$/i,"").replace(/_/g," ").replace(/\s+/g," ").trim();
     var u = sinTildes(s).toUpperCase();
-    var m = u.match(/EXPEDIENTE\s+(\d{1,6})\s*[-\/]\s*(\d{2,4})\s+LETRA\s+([A-Z])\s+A(?:Ñ|N|NI)?O\s+(\d{4})\d?\s+(.+)$/);
+    var m = u.match(/EXPEDIENTE\s+(\d{1,6})\s*[-\/]\s*(\d{2,4})\s+LETRA\s+([A-Z]{1,3})\s+A(?:Ñ|N|NI)?O\s+(\d{4})\d?\s+(.+)$/);
     if(m){
       var resto = m[5], t = resto.match(RE_TIPO), pac = t ? resto.slice(0, t.index) : resto, desp = t ? resto.slice(t.index + t[0].length) : "";
       var x = desp.match(/\bX\s*(\d{1,2})\b/);
@@ -453,7 +453,7 @@ var EntCore = (function(){
     var r = { rol:"" }, m;
     if(/ORDEN\s+DE\s+COMPRA/.test(t) && /EXPTE/.test(t)){
       r.rol = "oc";
-      m = t.match(/EXPTE\.?\s*:?\s*(\d{1,6})\s*\/\s*(\d{2,4})\s*\/\s*([A-Z])\s*\/\s*(\d{4})/);
+      m = t.match(/EXPTE\.?\s*:?\s*(\d{1,6})\s*\/\s*(\d{2,4})\s*\/\s*([A-Z]{1,3})\s*\/\s*(\d{4})/);
       if(m){ r.num = soloNum(m[1]); r.cod = soloNum(m[2]); r.letra = m[3]; r.anio = m[4]; }
       m = t.match(/PACIENTE\s*:?\s*([A-ZÑ ,.'-]{4,80}?)\s*(?:\n|$|\.\s)/);
       if(m) r.paciente = normNombre(m[1]);
@@ -482,7 +482,7 @@ var EntCore = (function(){
       r.rol = "expediente";
       var lin = (t.split(/\n/).filter(function(l){ return /EXPEDIENTE/.test(l) && /LETRA/.test(l); })[0]) || "";
       if(lin){
-        var lm = lin.match(/LETRA\s+([A-Z])\b/); if(lm) r.letra = lm[1];
+        var lm = lin.match(/LETRA\s+([A-Z]{1,3})\b/); if(lm) r.letra = lm[1];
         var cm = lin.match(/\/\s*(\d{2,4})\b/); if(cm) r.cod = soloNum(cm[1]);
         // pdf.js a veces desordena el renglón ("EXPEDIENTE 2026 / 410 LETRA U AÑO 8871"):
         // el año es el 20xx, el código va después de "/", el número es el que queda.
@@ -628,7 +628,7 @@ var EntCore = (function(){
   }
   /* "8871/410/U/2026" (formato del generador) → partes */
   function partirExpediente(s){
-    var m = sinTildes(String(s||"")).toUpperCase().match(/(\d{1,6})\s*[\/\-]\s*(\d{2,4})(?:\s*[\/\-]\s*([A-Z]))?(?:\s*[\/\-]\s*(\d{4}))?/);
+    var m = sinTildes(String(s||"")).toUpperCase().match(/(\d{1,6})\s*[\/\-]\s*(\d{2,4})(?:\s*[\/\-]\s*([A-Z]{1,3}))?(?:\s*[\/\-]\s*(\d{4}))?/);
     return m ? { num:soloNum(m[1]), cod:soloNum(m[2]), letra:m[3]||"", anio:m[4]||"" } : null;
   }
   return { normNombre:normNombre, leerNombreArchivo:leerNombreArchivo, leerContenido:leerContenido, combinar:combinar,
@@ -1582,7 +1582,7 @@ if(typeof module !== "undefined" && module.exports) module.exports = MesaCal;
   };
 
   /* ---------- Control del ingreso ---------- */
-  var RE_EXP_COMPLETO = /^(\d{1,6})\/(\d{2,4})\/([A-ZÑ])\/(20\d{2})$/;
+  var RE_EXP_COMPLETO = /^(\d{1,6})\/(\d{2,4})\/([A-ZÑ]{1,3})\/(20\d{2})$/;
   function faltantesIngreso(expTxt, pac, tipo){
     var f = [];
     if(!expTxt) f.push({ campo: "in-exp", txt: "<b>N° de expediente</b>: está vacío." });
