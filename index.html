@@ -3840,7 +3840,12 @@ if(typeof module !== "undefined" && module.exports) module.exports = EntConsulta
       var vecesTxt = Number(m.docsImpresiones) > 1 ? " · impresa " + Number(m.docsImpresiones) + " veces" : "";
       var hist = (m.historial || []).filter(function(h){ return /Documentaci[oó]n (impresa|abierta)|desbloque/i.test(h); });
       var detalle = hist.length > 1 ? "<details><summary>Ver historial de impresiones (" + hist.length + ")</summary>" + hist.slice().reverse().map(function(h){ return "• " + esc(h); }).join("<br>") + "</details>" : "";
-      if(!m.docsImpresoTxt) return "";
+      if(!m.docsImpresoTxt){
+        // Todavía no se imprimió: se avisa igual, para que se sepa dónde va a aparecer el desbloqueo.
+        if(m.estado !== "en_mesa" || r.entregado) return "";
+        return '<div class="rg-docs" style="background:#f8fafc;border:1px dashed #cbd5e1;color:#475569">⏳ <b>Mesa todavía no imprimió la documentación</b> (OC y recetas).' +
+          "<br>Cuando la imprima queda bloqueada, y acá mismo aparece el botón <b>🔓 Desbloquear para reimprimir</b>." + detalle + "</div>";
+      }
       if(m.docsDesbloqueado === true){
         return '<div class="rg-docs desb">🔓 <b>Documentación desbloqueada</b>' + (m.docsDesbloqueoTxt ? " el " + esc(m.docsDesbloqueoTxt) : "") +
           (m.docsDesbloqueoMotivo ? " — " + esc(m.docsDesbloqueoMotivo) : "") + ". Mesa la puede volver a imprimir una vez." +
