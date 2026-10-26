@@ -2915,7 +2915,9 @@ var EntCore = (function(){
         if(!resto.length && anios.length > 1) resto = [anios[0]];
         if(resto.length) r.num = soloNum(resto[0]);
       }
-      m = t.match(/CAUSANTE\s+(.+?)\s*(?:\n|ASUNTO)/); if(m) r.paciente = normNombre(m[1]);
+      // El causante a veces es una dependencia (ej. GERENCIA ADMINISTRATIVA): eso NO es el paciente.
+      m = t.match(/CAUSANTE\s+(.+?)\s*(?:\n|ASUNTO)/);
+      if(m && !/\b(GERENCIA|DIRECCION|DEPARTAMENTO|DPTO|DIVISION|PROGRAMA|MINISTERIO|SIPROSA|SECRETARIA|SUBSECRETARIA|COORDINACION|JEFATURA|OFICINA|MESA DE ENTRADAS|HOSPITAL|PRIS)\b/.test(normNombre(m[1]))) r.paciente = normNombre(m[1]);
       m = t.match(/ASUNTO\s+(.+?)\s*(?:\n|SELLOS|$)/); if(m){ r.asunto = m[1].trim(); r.tipo = tipoDe(m[1]); }
       return r;
     }
@@ -3170,6 +3172,27 @@ if(typeof module !== "undefined" && module.exports) module.exports = EntConsulta
     measurementId: "G-GHDRCXE81C"
   };
   var C = EntCore;
+  /* Registro "limpio" para mostrar: un expediente tiene UNA sola OC, así que si ya hay un registro
+     con OC para ese N° de expediente, no se muestra otro "en trámite" del mismo expediente.
+     Tampoco se muestran como paciente las dependencias (ej. "GERENCIA ADMINISTRATIVA", que es el
+     causante del expediente y no el paciente), ni los avisos que las nombran. */
+  var RE_INSTITUCION = /\b(GERENCIA|DIRECCION|DEPARTAMENTO|DPTO|DIVISION|PROGRAMA|MINISTERIO|SIPROSA|SECRETARIA|SUBSECRETARIA|COORDINACION|JEFATURA|OFICINA|MESA DE ENTRADAS|HOSPITAL|PRIS)\b/;
+  function esInstitucion(s){ return RE_INSTITUCION.test(String(s || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase()); }
+  function regLimpio(arr){
+    var oc = function(r){ return !!((r.ocs && r.ocs.length) || r.oc); };
+    var k = function(r){ var n = String(r.num || "").replace(/^0+/, ""), c = String(r.cod || "").replace(/^0+/, ""); return n && c ? n + "/" + c : ""; };
+    var conOc = {};
+    arr.forEach(function(r){ if(oc(r) && k(r)) (conOc[k(r)] = conOc[k(r)] || []).push(String(r.anio || "")); });
+    return arr.filter(function(r){
+      if(oc(r) || r.entregado) return true;
+      if(esInstitucion(r.paciente)) return false;
+      var a = conOc[k(r)]; if(!a) return true;
+      return !a.some(function(x){ return !x || !r.anio || x === String(r.anio); });
+    }).map(function(r){
+      var al = (r.alertas || []).filter(function(t){ return !esInstitucion(t); });
+      return al.length === (r.alertas || []).length ? r : Object.assign({}, r, { alertas: al });
+    });
+  }
   var db = null, cache = [], todos = [], estado = "conectando", escuchando = false, propuesta = [];
   // Expedientes en trámite (cuadro hecho / resolución en proceso) que todavía no tienen OC
   var ETAPA_RANK = { mesa: 0, cuadro: 1, proceso: 2, resolucion: 3 };
@@ -3742,7 +3765,7 @@ if(typeof module !== "undefined" && module.exports) module.exports = EntConsulta
     filtrar: function(){
       var tipo = ($("ent-f-tipo") || {}).value || "";
       var q = (($("ent-q") || {}).value || "");
-      return EntConsulta.buscar(cache, q).filter(function(r){ return !tipo || r.tipo === tipo; });
+      return EntConsulta.buscar(regLimpio(cache), q).filter(function(r){ return !tipo || r.tipo === tipo; });
     },
     render: function(){
       // Resumen (pantalla de administración)

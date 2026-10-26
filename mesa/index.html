@@ -1227,7 +1227,7 @@ if(typeof module !== "undefined" && module.exports) module.exports = MesaCal;
         estado.mesa = "ok"; render(); window.mostrarObs();
       }, function(err){ console.warn("Mesa onSnapshot:", err); estado.mesa = "sin-acceso"; render(); });
       db.collection(COL_REG).onSnapshot(function(snap){
-        reg = snap.docs.map(function(d){ var x = d.data(); x._id = d.id; return x; }).filter(function(r){ return !r.descartado; });
+        reg = regLimpio(snap.docs.map(function(d){ var x = d.data(); x._id = d.id; return x; }).filter(function(r){ return !r.descartado; }));
         estado.reg = "ok"; render();
       }, function(err){ console.warn("Registro OC (mesa):", err); estado.reg = "sin-acceso"; render(); });
       db.collection(MesaDocs.COL_E).onSnapshot(function(snap){
@@ -1853,6 +1853,28 @@ if(typeof module !== "undefined" && module.exports) module.exports = MesaCal;
     var txt = "Hola " + m.paciente + ". Le informamos desde el PRIS (Programa Integrado de Salud) que su orden de compra de " +
       tipoTxt(m.tipo).toLowerCase() + (ocTxt ? " N° " + ocTxt : "") + " (Expte. " + m.nroExp + ") ya está lista para retirar en Mesa de Entradas. Presentarse con DNI. Muchas gracias.";
     return "https://wa.me/" + n + "?text=" + encodeURIComponent(txt);
+  }
+
+  /* Registro "limpio" para mostrar: un expediente tiene UNA sola OC, así que si ya hay un registro
+     con OC para ese N° de expediente, no se muestra otro "en trámite" del mismo expediente.
+     Tampoco se muestran como paciente las dependencias (ej. "GERENCIA ADMINISTRATIVA", que es el
+     causante del expediente y no el paciente), ni los avisos que las nombran. */
+  var RE_INSTITUCION = /\b(GERENCIA|DIRECCION|DEPARTAMENTO|DPTO|DIVISION|PROGRAMA|MINISTERIO|SIPROSA|SECRETARIA|SUBSECRETARIA|COORDINACION|JEFATURA|OFICINA|MESA DE ENTRADAS|HOSPITAL|PRIS)\b/;
+  function esInstitucion(s){ return RE_INSTITUCION.test(String(s || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase()); }
+  function regLimpio(arr){
+    var oc = function(r){ return !!((r.ocs && r.ocs.length) || r.oc); };
+    var k = function(r){ var n = String(r.num || "").replace(/^0+/, ""), c = String(r.cod || "").replace(/^0+/, ""); return n && c ? n + "/" + c : ""; };
+    var conOc = {};
+    arr.forEach(function(r){ if(oc(r) && k(r)) (conOc[k(r)] = conOc[k(r)] || []).push(String(r.anio || "")); });
+    return arr.filter(function(r){
+      if(oc(r) || r.entregado) return true;
+      if(esInstitucion(r.paciente)) return false;
+      var a = conOc[k(r)]; if(!a) return true;
+      return !a.some(function(x){ return !x || !r.anio || x === String(r.anio); });
+    }).map(function(r){
+      var al = (r.alertas || []).filter(function(t){ return !esInstitucion(t); });
+      return al.length === (r.alertas || []).length ? r : Object.assign({}, r, { alertas: al });
+    });
   }
 
   /* ---------- Listado ---------- */
