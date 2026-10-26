@@ -2926,8 +2926,14 @@ var EntCore = (function(){
 
   /* Une nombre de archivo + contenido. Manda el CONTENIDO (es lo que dice el documento);
      si el nombre del archivo dice otra cosa, queda una alerta. */
+  /* Un nombre de paciente "válido": no puede ser una frase del trámite ("SOLICITUD DE", "PEDIDO DE
+     AUDIFONOS PARA…") ni una dependencia (GERENCIA ADMINISTRATIVA…). Si no es válido, no se toma. */
+  var RE_NO_PACIENTE = /\b(SOLICITUD|SOLICITA|PEDIDO|NOTA|EXPEDIENTE|EXPTE|AUDIFONOS?|ANTEOJOS?|LENTES|PRESTACION|GERENCIA|DIRECCION|DEPARTAMENTO|DPTO|DIVISION|PROGRAMA|MINISTERIO|SIPROSA|SECRETARIA|SUBSECRETARIA|COORDINACION|JEFATURA|OFICINA|MESA DE ENTRADAS|HOSPITAL|PRIS)\b/;
+  function nombreValido(s){ var n = normNombre(s); return !!n && palabrasNombre(n).length >= 2 && !RE_NO_PACIENTE.test(n); }
   function combinar(nombreArchivo, texto){
     var a = leerNombreArchivo(nombreArchivo), c = leerContenido(texto), r = {}, alertas = [];
+    if(a.paciente && !nombreValido(a.paciente)) a.paciente = "";
+    if(c.paciente && !nombreValido(c.paciente)) c.paciente = "";
     r.rol = c.rol || a.rol || "otro";
     ["num","cod","letra","anio","oc","tipo","cantidad","paciente","fechaOC","proveedor"].forEach(function(k){
       var vc = c[k], va = a[k];
@@ -2937,7 +2943,7 @@ var EntCore = (function(){
         else if(k === "num" || k === "cod" || k === "oc" || k === "anio") alertas.push("El nombre del archivo dice "+etq(k)+" "+va+" y el documento "+vc+".");
       }
     });
-    if(a.extra) r.extra = a.extra;
+    if(a.extra && a.paciente) r.extra = a.extra;   // si el nombre del archivo no traía un paciente válido, lo de atrás tampoco sirve
     r.leidoDe = c.rol ? "contenido" : (a.rol ? "nombre" : "nada");
     r.alertas = alertas;
     return r;
@@ -3057,7 +3063,7 @@ var EntCore = (function(){
   }
   return { normNombre:normNombre, leerNombreArchivo:leerNombreArchivo, leerContenido:leerContenido, combinar:combinar,
            agrupar:agrupar, mismaPersona:mismaPersona, clave:clave, expedienteTexto:expedienteTexto,
-           partirExpediente:partirExpediente, tipoDe:tipoDe, soloNum:soloNum };
+           partirExpediente:partirExpediente, tipoDe:tipoDe, soloNum:soloNum, nombreValido:nombreValido };
 })();
 if(typeof module !== "undefined" && module.exports) module.exports = EntCore;
 
@@ -3196,7 +3202,7 @@ if(typeof module !== "undefined" && module.exports) module.exports = EntConsulta
   var db = null, cache = [], todos = [], estado = "conectando", escuchando = false, propuesta = [];
   // Expedientes en trámite (cuadro hecho / resolución en proceso) que todavía no tienen OC
   var ETAPA_RANK = { mesa: 0, cuadro: 1, proceso: 2, resolucion: 3 };
-  var tramite = { pend: null, borr: null, mesa: null }, _syncT = null;
+  var tramite = { pend: null, borr: null, mesa: null }, _syncT = null, _reparados = {};
   var mesaVivos = [];   // ingresos de Mesa de Entradas con su id (para el bloqueo de la documentación)
   // PDFs leídos que esperan ser guardados: se van SUMANDO en cada "Agregar PDFs" (carga por etapas).
   var enEspera = [], destildados = {};
@@ -3218,6 +3224,15 @@ if(typeof module !== "undefined" && module.exports) module.exports = EntConsulta
     var base = (d.num && d.cod) ? (C.soloNum(d.num)+"_"+C.soloNum(d.cod)+"_"+(d.anio || new Date().getFullYear())) : ("pac_" + C.normNombre(d.paciente).replace(/\s+/g,"_"));
     return "r_" + base.replace(/[\/#\?\[\]\*\.]+/g,"_");
   }
+  // Ingreso de Mesa de Entradas (sistema) del mismo expediente: el más antiguo, no anulado.
+  function ingresoMesa(num, cod, anio){
+    var k = C.clave(num, cod); if(!k) return null;
+    var c = mesaVivos.filter(function(o){ return C.clave(o.d.num, o.d.cod) === k && (!anio || !o.d.anio || String(o.d.anio) === String(anio)); });
+    c.sort(function(a, b){ return (a.d.ingresoMs || 0) - (b.d.ingresoMs || 0); });
+    return c[0] || null;
+  }
+  // Registro creado por el SISTEMA (mesa / generador / cuadro / en proceso) del mismo expediente.
+  function esDelSistema(r){ return !!r && (["mesa","generador","cuadro","en-proceso"].indexOf(r.origen) >= 0 || !!r.etapa || !!r.ocOrigen); }
   function unir(a, b){ var out = (a || []).slice(); (b || []).forEach(function(x){ if(x && out.indexOf(x) < 0) out.push(x); }); return out; }
 
   /* ---------- Lectura del texto del PDF (pdf.js, se carga solo al usarlo) ---------- */
@@ -3336,6 +3351,15 @@ if(typeof module !== "undefined" && module.exports) module.exports = EntConsulta
       var ok = await authReady; if(!ok || !db) throw new Error("Sin acceso a la base");
       var d = g.datos, rec = g.destino || null;
       if(d.oc && Store.anuladas()[C.soloNum(d.oc)]) return;   // OC anulada: nunca se guarda
+      // UN SOLO REGISTRO por expediente: si ya existe (aunque sea con otro nombre leído del PDF), se completa ese.
+      if(!rec && d.num && d.cod){
+        var mismoId = idRegistro({ num: d.num, cod: d.cod, anio: d.anio, paciente: d.paciente });
+        rec = todos.filter(function(r){ return r._id === mismoId && !r.descartado; })[0] ||
+              cache.filter(function(r){ return C.clave(r.num, r.cod) === C.clave(d.num, d.cod) && (!d.anio || !r.anio || String(r.anio) === String(d.anio)) && esDelSistema(r) && !((r.ocs && r.ocs.length) || r.oc); })[0] || null;
+      }
+      // Expediente que ya entró por el SISTEMA (Mesa de Entradas): manda lo del sistema (paciente y N°),
+      // y aunque esté tildado "expediente viejo", NO se marca como viejo (el sistema es posterior a los PDF viejos).
+      var ingSis = d.num && d.cod ? ingresoMesa(d.num, d.cod, d.anio) : null;
       var ocsRec = rec ? ((rec.ocs && rec.ocs.length) ? rec.ocs : (rec.oc ? [rec.oc] : [])) : [];
       if(rec && d.oc && ocsRec.length && ocsRec.indexOf(d.oc) < 0) rec = null;   // cada OC es única: va a su propio registro
       if(rec && rec.restaurar && d.num && d.cod){
@@ -3364,7 +3388,12 @@ if(typeof module !== "undefined" && module.exports) module.exports = EntConsulta
       if(d.cantidad && !(rec && rec.cantidad)) datos.cantidad = d.cantidad;
       if(!rec){ datos.creadoMs = Date.now(); datos.creadoTxt = hoyTxt(); datos.origen = "pdf"; }
       // Expediente VIEJO (anterior al sistema de Mesa de Entradas): queda marcado para que mesa no lo ingrese como nuevo.
-      if(UI.cargaPrevia() && !(rec && rec.previoMesa)){ datos.previoMesa = true; datos.previoTxt = hoyTxt(); datos.previoMs = Date.now(); }
+      if(ingSis){
+        if(!(rec && rec.paciente && C.nombreValido(rec.paciente))) { datos.paciente = ingSis.d.paciente; datos.pacienteNorm = C.normNombre(ingSis.d.paciente); }
+        if(!(rec && rec.nroExp)) datos.nroExp = ingSis.d.nroExp || datos.nroExp;
+        datos.alertas = (datos.alertas || []).filter(function(a){ return !/ya est\u00e1 en el registro para|nombre del archivo dice/.test(a); });
+      }
+      if(UI.cargaPrevia() && !ingSis && !(rec && rec.previoMesa) && !esDelSistema(rec)){ datos.previoMesa = true; datos.previoTxt = hoyTxt(); datos.previoMs = Date.now(); }
       await db.collection(COL).doc(rec ? rec._id : idRegistro({ oc: d.oc, num: datos.num, cod: datos.cod, anio: datos.anio, paciente: datos.paciente })).set(datos, { merge: true });
     },
     /* ---------- Expedientes en trámite (todavía sin OC) ----------
@@ -3437,6 +3466,43 @@ if(typeof module !== "undefined" && module.exports) module.exports = EntConsulta
         catch(e){ console.warn("Registro OC (trámite):", e); }
       }
       hechos += await Store.sincronizarOcMesa();
+      hechos += await Store.repararSistemaVsViejos();
+      return hechos;
+    },
+    /* ---------- Un solo registro por expediente: el del SISTEMA manda ----------
+       Si un expediente entró por Mesa de Entradas (sistema) ANTES de que se cargara su PDF como
+       "expediente viejo", no es viejo: se le saca la marca, se restituye el paciente y el N° que cargó
+       mesa, y se borran los avisos de "ya está en el registro para…". Si quedó un segundo registro del
+       mismo expediente armado solo desde el PDF (sin OC), se descarta para que haya UNO solo. */
+    repararSistemaVsViejos: async function(){
+      if(estado !== "ok" || !db || !mesaVivos.length) return 0;
+      var hechos = 0, vivos = todos.filter(function(r){ return !r.descartado; });
+      for(var i = 0; i < vivos.length; i++){
+        var r = vivos[i]; if(_reparados[r._id]) continue;
+        var o = ingresoMesa(r.num, r.cod, r.anio); if(!o) continue;
+        var m = o.d, tieneOc = (r.ocs && r.ocs.length) || r.oc;
+        var viejoMal = r.previoMesa && (m.ingresoMs || 0) < (r.previoMs || Infinity);
+        var nombreMal = !C.nombreValido(r.paciente) || (!C.mismaPersona(r.paciente, m.paciente) && /ya est\u00e1 en el registro para/.test((r.alertas || []).join(" ")));
+        if(!viejoMal && !nombreMal) continue;
+        // ¿Hay OTRO registro del mismo expediente que ya es el del sistema? → este (solo PDF, sin OC) sobra.
+        var otro = vivos.filter(function(x){ return x !== r && C.clave(x.num, x.cod) === C.clave(r.num, r.cod) && (!r.anio || !x.anio || String(x.anio) === String(r.anio)) && C.mismaPersona(x.paciente, m.paciente); })[0];
+        _reparados[r._id] = true;
+        try{
+          if(otro && !tieneOc && !r.entregado){
+            await db.collection(COL).doc(otro._id).set({ archivos: unir(otro.archivos, r.archivos), tieneExp: true, actualizadoMs: Date.now() }, { merge: true });
+            await db.collection(COL).doc(r._id).set({ descartado: true, descartadoMotivo: "Duplicado de un expediente cargado por el sistema", actualizadoMs: Date.now() }, { merge: true });
+          } else {
+            var fix = { actualizadoMs: Date.now(),
+              alertas: (r.alertas || []).filter(function(a){ return !/ya est\u00e1 en el registro para|nombre del archivo dice/.test(a); }) };
+            if(viejoMal){ fix.previoMesa = false; fix.previoTxt = ""; fix.previoMs = null; }
+            if(!C.nombreValido(r.paciente) || !C.mismaPersona(r.paciente, m.paciente)){ fix.paciente = m.paciente; fix.pacienteNorm = C.normNombre(m.paciente); fix.extra = ""; }
+            if(m.nroExp) fix.nroExp = m.nroExp;
+            if(!r.origen || r.origen === "pdf") fix.origen = "mesa";
+            await db.collection(COL).doc(r._id).set(fix, { merge: true });
+          }
+          hechos++;
+        }catch(e){ _reparados[r._id] = false; console.warn("Registro OC (reparar sistema/viejo):", e); }
+      }
       return hechos;
     },
     /* ---------- OC enviada a Mesa de Entradas por el sistema ----------
@@ -3848,6 +3914,7 @@ if(typeof module !== "undefined" && module.exports) module.exports = EntConsulta
     previoHtml: function(r){
       if(!r.previoMesa) return "";
       var o = UI.mesaDe(r);
+      if(o && !o.d.anulado && (o.d.ingresoMs || 0) < (r.previoMs || Infinity)) return "";   // entró por el sistema ANTES: no es viejo (se corrige solo)
       if(o && !o.d.anulado){
         var m = o.d;
         return '<div class="rg-previo mal">📁 <b>Expediente VIEJO</b>, trabajado antes del sistema de Mesa de Entradas (cargado desde PDF el ' + esc(r.previoTxt || "") + ").<br>⚠️ <b>Mesa lo ingresó como NUEVO</b> el " + esc(m.ingresoTxt || "") + (m.usuarioNombre ? " (" + esc(m.usuarioNombre) + ")" : "") + ": ese ingreso no corresponde. Anulalo desde 📥 Mesa de entradas (🗑️).</div>";
@@ -3945,6 +4012,10 @@ if(typeof module !== "undefined" && module.exports) module.exports = EntConsulta
       propuesta = C.agrupar(enEspera).map(function(g){
         var ex = Store.buscarExistente(g.datos);
         g.destino = ex ? ex.rec : null;
+        if(!g.destino && g.datos.num && g.datos.cod){
+          // El expediente ya está por el sistema (aunque el PDF traiga otro nombre): se completa ese registro.
+          g.destino = cache.filter(function(r){ return C.clave(r.num, r.cod) === C.clave(g.datos.num, g.datos.cod) && (!g.datos.anio || !r.anio || String(r.anio) === String(g.datos.anio)) && esDelSistema(r) && !(g.datos.oc && ((r.ocs && r.ocs.length) || r.oc)); })[0] || null;
+        }
         if(ex && ex.porNombre) g.alertas.push("Se une al registro existente de " + ex.rec.paciente + " por nombre (el N° de expediente no coincide).");
         // Para el registro alcanza con la OC (trae expediente, paciente y N°): no falta nada si no está la carátula.
         // "Falta la OC" no es un error cuando se carga por etapas: se muestra como estado, no como aviso.
@@ -3955,7 +4026,7 @@ if(typeof module !== "undefined" && module.exports) module.exports = EntConsulta
           g.alertas = g.alertas.filter(function(a){ return !/expediente|Se asociaron|Se une al registro|nombre del archivo dice/i.test(a); });
           refExp = { num: g.destino.num, cod: g.destino.cod, paciente: g.destino.paciente };
         }
-        Store.conflictos(refExp, g.destino).forEach(function(r){
+        Store.conflictos(refExp, g.destino).filter(function(r){ return !(esDelSistema(r) && !(g.datos.paciente && C.nombreValido(g.datos.paciente))); }).forEach(function(r){
           var a = "El expediente " + C.clave(g.datos.num, g.datos.cod) + " ya est\u00e1 en el registro para " + r.paciente + ((r.ocs && r.ocs.length) ? " (OC " + r.ocs.join("/") + ")" : "") + ". Cada OC es \u00fanica: revis\u00e1 con Compras cu\u00e1l es el correcto.";
           if(g.alertas.indexOf(a) < 0) g.alertas.push(a);
         });
