@@ -1689,11 +1689,44 @@ if(typeof module !== "undefined" && module.exports) module.exports = MesaCal;
       setTimeout(function(){ chk.focus(); }, 30);
     });
   }
+  /* Posibles errores de tipeo en el apellido/nombre (no bloquea: avisa en amarillo para que lo revisen
+     contra el DNI). Ej.: "RODDRIGUEZ" → ¿RODRIGUEZ? */
+  var APELLIDOS_COMUNES = ("RODRIGUEZ GONZALEZ FERNANDEZ LOPEZ DIAZ MARTINEZ PEREZ GARCIA SANCHEZ ROMERO SOSA ALVAREZ TORRES RUIZ RAMIREZ FLORES " +
+    "BENITEZ ACOSTA MEDINA HERRERA SUAREZ AGUIRRE GIMENEZ GUTIERREZ PEREYRA ROJAS MOLINA CASTRO ORTIZ SILVA NUNEZ LUNA JUAREZ CABRERA RIOS " +
+    "FERREYRA GODOY MORALES DOMINGUEZ MORENO PERALTA VEGA CARRIZO QUIROGA CASTILLO LEDESMA MUNOZ OJEDA PONCE VERA VAZQUEZ VILLALBA CARDOZO " +
+    "NAVARRO RAMOS ARIAS CORIA FIGUEROA CORREA CACERES VARGAS PAZ ALBORNOZ ROLDAN ALMADA PAEZ ROBLES MIRANDA AVILA CORDOBA TOLEDO MENDEZ " +
+    "GOMEZ HERNANDEZ JIMENEZ SAAVEDRA ARGANARAZ ARAOZ SORIA BUSTOS LEIVA ZELAYA SALAZAR CAMPOS VILLAGRA OLIVERA PALACIOS GUZMAN CHAVEZ " +
+    "GALVAN MANSILLA RIVERO VILLAFANE DELGADO SALVATIERRA AYBAR NIEVA TAPIA MALDONADO MAMANI CRUZ CHOQUE GUERRERO CORONEL MONTENEGRO " +
+    "NAVARRETE AREVALO BARRIONUEVO CENTURION VELARDE ALBARRACIN LAZARTE CEBALLOS VILLARREAL DAVILA SOTELO FRIAS AGUERO ORELLANA VALDEZ " +
+    "ROMANO PAREDES LUCERO OVIEDO ESCOBAR RIVAS ACUNA BRITO MAIDANA ZARATE MORALES ZAMORA GOROSITO GUAYMAS MOYA ZAPATA AGUILAR LEGUIZAMON").split(" ");
+  function dist1(a, b){   // ¿a y b difieren en exactamente 1 letra (agregada, quitada o cambiada)?
+    if(a === b || Math.abs(a.length - b.length) > 1) return false;
+    var i = 0, j = 0, dif = 0;
+    while(i < a.length && j < b.length){
+      if(a[i] === b[j]){ i++; j++; continue; }
+      if(++dif > 1) return false;
+      if(a.length > b.length) i++; else if(b.length > a.length) j++; else { i++; j++; }
+    }
+    return dif + (a.length - i) + (b.length - j) === 1;
+  }
+  function avisosTipeo(pac){
+    var out = [], txt = String(pac || ""), ape = txt.indexOf(",") >= 0 ? C.normNombre(txt.split(",")[0]).split(" ") : C.normNombre(txt).split(" ").slice(0, 1);
+    C.normNombre(pac).split(" ").filter(function(w){ return w.length >= 4; }).forEach(function(w){
+      // los apellidos (antes de la coma) se comparan con los apellidos más comunes; los nombres no
+      var sim = ape.indexOf(w) >= 0 ? APELLIDOS_COMUNES.filter(function(c){ return dist1(w, c); })[0] : null;
+      if(sim && APELLIDOS_COMUNES.indexOf(w) < 0) out.push("«" + w + "»: ¿no será <b>" + sim + "</b>?");
+      else { var dd = w.match(/([A-Z])\1/g); if(dd && dd.some(function(x){ return x !== "LL" && x !== "RR" && x !== "CC" && x !== "EE" && x !== "OO"; }))
+        out.push("«" + w + "» tiene una letra doble (" + dd.join(", ") + "): revisá que no sea un error de tipeo."); }
+      if(/([A-Z])\1\1/.test(w)) out.push("«" + w + "» tiene la misma letra 3 veces seguidas.");
+    });
+    return out;
+  }
   function ventanaDni(pac, expTxt, tipo){
     return new Promise(function(resolve){
       abrirVentana("azul", "🪪", "Verificá con el DNI del paciente", "El apellido y nombre tiene que ser EXACTAMENTE el del DNI.",
         '<div class="val-dato">Así va a quedar registrado:</div>' +
         '<div class="val-nom">' + esc(pac) + "</div>" +
+        (function(){ var av = avisosTipeo(pac); return av.length ? '<div style="margin-top:10px;padding:9px 12px;border-radius:10px;background:#fffbeb;border:1.5px solid #fcd34d;color:#78350f;font-size:14px">⚠️ <b>Ojo, posible error de tipeo:</b><br>' + av.join("<br>") + "<br>Si en el DNI está así, confirmalo igual; si no, tocá <b>✏️ Corregir</b>.</div>" : ""; })() +
         '<div class="val-dato">Expte. <b>' + esc(expTxt) + "</b> · " + tipoIco(tipo) + " " + esc(tipoTxt(tipo)) + "</div>" +
         '<div style="margin-top:12px;font-size:14px">Compará letra por letra con el DNI: <b>todos los apellidos y todos los nombres</b>, sin abreviar, sin sobrenombres y sin errores de tipeo.</div>' +
         '<label class="val-chk"><input type="checkbox" id="val-dni-chk"> Lo comparé con el DNI del paciente y está escrito exactamente igual.</label>',
