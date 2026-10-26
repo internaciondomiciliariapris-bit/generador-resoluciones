@@ -3407,6 +3407,65 @@ if(typeof module !== "undefined" && module.exports) module.exports = EntConsulta
         try{ await db.collection(COL).doc(rec ? rec._id : id).set(datos, { merge: true }); hechos++; }
         catch(e){ console.warn("Registro OC (trámite):", e); }
       }
+      hechos += await Store.sincronizarOcMesa();
+      return hechos;
+    },
+    /* ---------- OC enviada a Mesa de Entradas por el sistema ----------
+       Cuando Jorge manda la OC a mesa (estado "en_mesa", con su N°), el registro la toma solo:
+       el expediente pasa de "OC en trámite" a "Por entregar", sin tener que cargar el PDF a mano.
+       También corrige los que ya se habían mandado antes de este cambio (se revisa en cada carga).
+       Si después se quita el envío a mesa, la OC que había puesto mesa se saca (salvo que ya se entregó). */
+    sincronizarOcMesa: async function(){
+      if(estado !== "ok" || !db || !mesaVivos.length) return 0;
+      var n = C.soloNum, anul = Store.anuladas(), hechos = 0;
+      var ocsDe = function(r){ return (r.ocs && r.ocs.length) ? r.ocs : (r.oc ? [r.oc] : []); };
+      for(var i = 0; i < mesaVivos.length; i++){
+        var o = mesaVivos[i], m = o.d, nro = n(m.ocNro);
+        var enviada = !!nro && (m.estado === "en_mesa" || m.estado === "entregado");
+        // Registro que ya tiene esta OC
+        var conEsa = nro ? cache.filter(function(r){ return ocsDe(r).some(function(x){ return n(x) === nro; }); })[0] : null;
+        if(!enviada){
+          // Se quitó el envío a mesa: sacar la OC SOLO si la había puesto mesa y todavía no se entregó.
+          var puesta = cache.filter(function(r){ return r.ocOrigen === "mesa" && r.ocMesaId === o.id && !r.entregado; })[0];
+          if(puesta){
+            try{ await db.collection(COL).doc(puesta._id).set({ ocs: [], oc: "", ocOrigen: "", ocMesaId: "", ocMesaTxt: "", actualizadoMs: Date.now() }, { merge: true }); hechos++; }
+            catch(e){ console.warn("Registro OC (mesa, quitar OC):", e); }
+          }
+          continue;
+        }
+        if(conEsa || anul[nro]) continue;                                   // ya está, o es una OC anulada
+        var parts = C.partirExpediente(m.nroExp);
+        if(!parts || !(m.paciente || "").trim()) continue;
+        var d = { num: parts.num, cod: parts.cod, letra: parts.letra, anio: parts.anio, paciente: String(m.paciente).trim(), tipo: m.tipo || "", oc: nro };
+        var ex = Store.buscarExistente(d), rec = (ex && !ex.porNombre) ? ex.rec : null;
+        if(!rec){
+          // Mismo expediente (sin tener en cuenta lo descartado a mano)
+          var idExp = idRegistro({ num: d.num, cod: d.cod, anio: d.anio, paciente: d.paciente });
+          var crudo = todos.filter(function(r){ return r._id === idExp; })[0];
+          if(crudo && crudo.descartado) continue;                          // lo eliminaste a mano: no vuelve
+          if(crudo && !ocsDe(crudo).length) rec = crudo;
+        }
+        if(rec && ocsDe(rec).length) continue;                             // cada expediente tiene UNA sola OC
+        var datos = { ocs: [nro], oc: nro, ocOrigen: "mesa", ocMesaId: o.id, ocMesaTxt: m.enMesaTxt || "", tieneExp: true, actualizadoMs: Date.now() };
+        if(m.estado === "entregado" && !(rec && rec.entregado)){
+          var em = m.entregadoMs ? new Date(m.entregadoMs) : null, dd = function(x){ return String(x).padStart(2, "0"); };
+          datos.entregado = true; datos.entregadoMs = m.entregadoMs || Date.now();
+          datos.entregadoFecha = em ? dd(em.getDate()) + "/" + dd(em.getMonth() + 1) + "/" + em.getFullYear() : String(m.entregadoTxt || "").slice(0, 10);
+          datos.entregadoHora = em ? dd(em.getHours()) + ":" + dd(em.getMinutes()) : "";
+        }
+        if(!rec){
+          Object.assign(datos, {
+            tipo: d.tipo, nroExp: String(m.nroExp).trim(), num: d.num, cod: d.cod, letra: d.letra, anio: d.anio,
+            paciente: d.paciente, pacienteNorm: C.normNombre(d.paciente), claves: [C.clave(d.num, d.cod)].filter(Boolean),
+            etapa: "mesa", etapaFecha: hoyTxt(), creadoMs: Date.now(), creadoTxt: hoyTxt(), origen: "mesa"
+          });
+        }
+        try{
+          await db.collection(COL).doc(rec ? rec._id : idRegistro({ oc: nro })).set(datos, { merge: true }); hechos++;
+          if(rec) rec.ocs = [nro];                                         // evita duplicar en esta misma pasada
+          else cache.push(Object.assign({ _id: idRegistro({ oc: nro }) }, datos));
+        }catch(e){ console.warn("Registro OC (OC enviada a mesa):", e); }
+      }
       return hechos;
     },
     eliminar: function(rec){
@@ -3721,7 +3780,7 @@ if(typeof module !== "undefined" && module.exports) module.exports = EntConsulta
       var ocGrande = ocs.length
         ? '<div class="rg-oc"><span>Orden de compra N°</span><b>' + ocs.map(esc).join(" / ") + "</b></div>"
         : '<div class="rg-oc vacia"><span>Orden de compra</span><b>' + (enTramite ? "🟡 en trámite" : "sin cargar") + "</b></div>";
-      var datos = [r.fechaOC ? "Fecha OC " + esc(r.fechaOC) : "", (r.anuladas && r.anuladas.length) ? '<span style="color:#b91c1c">OC anulada: ' + r.anuladas.map(esc).join(", ") + "</span>" : ""].filter(Boolean).join('<span class="rg-sep">·</span>');
+      var datos = [r.fechaOC ? "Fecha OC " + esc(r.fechaOC) : "", r.ocOrigen === "mesa" ? "📦 Enviada a Mesa de Entradas" + (r.ocMesaTxt ? " el " + esc(r.ocMesaTxt) + " hs" : "") : "", (r.anuladas && r.anuladas.length) ? '<span style="color:#b91c1c">OC anulada: ' + r.anuladas.map(esc).join(", ") + "</span>" : ""].filter(Boolean).join('<span class="rg-sep">·</span>');
       var alertas = (r.alertas || []).map(function(a){ return '<div class="rg-warn">⚠️ ' + esc(a) + "</div>"; }).join("");
       var entrega;
       if(r.entregado){
@@ -3737,7 +3796,7 @@ if(typeof module !== "undefined" && module.exports) module.exports = EntConsulta
                : r.previoMesa ? "Expediente anterior al sistema de Mesa de Entradas"
                : r.etapa === "mesa" ? "Ingresado por Mesa de Entradas" + (r.etapaFecha ? " el " + esc(r.etapaFecha) : "")
                : "Expediente cargado";
-        entrega = '<div class="rg-tramite">🟡 <b>Orden de compra en trámite</b> — ' + et + ".<br>Todavía no se puede entregar: cuando se cargue el PDF de la OC pasa a “Por entregar”.</div>";
+        entrega = '<div class="rg-tramite">🟡 <b>Orden de compra en trámite</b> — ' + et + ".<br>Todavía no se puede entregar: cuando la OC se envíe a Mesa de Entradas (o se cargue su PDF) pasa sola a “Por entregar”.</div>";
       }
       return '<div class="rg-card' + (r.entregado ? " ok" : (enTramite ? " tr" : "")) + '">' +
         '<div class="rg-ico">' + icono + "</div>" +
