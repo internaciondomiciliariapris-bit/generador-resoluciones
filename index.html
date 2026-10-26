@@ -6074,9 +6074,24 @@ var MesaJ = (function(){
           await db.collection(COL).doc(m._id).update(upd);
         }
       }
+      // Correcciones puntuales de nombre mal tipeado (en el ingreso de mesa Y en el registro de órdenes)
+      for(var c = 0; c < CORRECCIONES_NOMBRE.length; c++){
+        var CN = CORRECCIONES_NOMBRE[c], cambia = function(t){ return String(t || "").replace(new RegExp("\\b" + CN.de + "\\b", "g"), CN.a); };
+        var ms = Object.keys(mesaTodos).map(function(k){ return mesaTodos[k]; }).filter(function(m){ return claveDe(m) === CN.clave && String(m.paciente || "").indexOf(CN.de) >= 0; });
+        for(var a = 0; a < ms.length; a++){
+          await db.collection(COL).doc(ms[a]._id).set({ paciente: cambia(ms[a].paciente),
+            historial: firebase.firestore.FieldValue.arrayUnion(ahora().txt + " · Apellido corregido: " + CN.de + " → " + CN.a + " (Jorge)") }, { merge: true });
+        }
+        var rs = reg.filter(function(r){ return claveDe(r) === CN.clave && String(r.paciente || "").indexOf(CN.de) >= 0; });
+        for(var b = 0; b < rs.length; b++){
+          var np = cambia(rs[b].paciente);
+          await db.collection(COL_REG).doc(rs[b]._id).set({ paciente: np, pacienteNorm: C.normNombre(np), actualizadoMs: Date.now() }, { merge: true });
+        }
+      }
     }catch(e){ console.warn("Limpieza de pruebas:", e); }
     _purgando = false;
   }
+  var CORRECCIONES_NOMBRE = [ { clave: "11052/410", de: "RODDRIGUEZ", a: "RODRIGUEZ" } ];
   async function limpiarDocs(){
     if(limpiando || estado !== "ok" || !docsListo || !db) return;
     limpiando = true;
