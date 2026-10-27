@@ -946,19 +946,30 @@
     return new File([bytes], nom, { type: tipo });
   }
 
-  // Presupuestos en Word (ej. IAR): se lee el texto con mammoth y se usa el lector local de montos
-  var _mammothPromise = null;
-  function cargarMammoth() {
-    if (window.mammoth) return Promise.resolve(window.mammoth);
-    if (_mammothPromise) return _mammothPromise;
-    _mammothPromise = new Promise(function (res, rej) {
+  // Presupuestos en Word (ej. IAR): se abre el .docx (es un zip) con JSZip, se saca el texto
+  // de word/document.xml y se usa el lector local de montos.
+  var _jszipPromise = null;
+  function cargarJSZipBandeja() {
+    if (window.JSZip) return Promise.resolve(window.JSZip);
+    if (_jszipPromise) return _jszipPromise;
+    _jszipPromise = new Promise(function (res, rej) {
       var sc = document.createElement("script");
-      sc.src = "https://cdn.jsdelivr.net/npm/mammoth@1.6.0/mammoth.browser.min.js";
-      sc.onload = function () { window.mammoth ? res(window.mammoth) : rej(new Error("mammoth")); };
-      sc.onerror = function () { _mammothPromise = null; rej(new Error("lector de Word no disponible")); };
+      sc.src = "https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js";
+      sc.onload = function () { window.JSZip ? res(window.JSZip) : rej(new Error("JSZip")); };
+      sc.onerror = function () { _jszipPromise = null; rej(new Error("lector de Word no disponible")); };
       document.head.appendChild(sc);
     });
-    return _mammothPromise;
+    return _jszipPromise;
+  }
+
+  function textoDeDocx(xml) {
+    var parrafos = String(xml).split(/<\/w:p>/);
+    return parrafos.map(function (p) {
+      var partes = p.match(/<w:t(?:\s[^>]*)?>[^<]*<\/w:t>/g) || [];
+      return partes.map(function (t) { return t.replace(/<[^>]+>/g, ""); }).join("");
+    }).filter(Boolean).join("\n")
+      .replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">")
+      .replace(/&quot;/g, '"').replace(/&apos;/g, "'");
   }
 
   function leerWord(k, file) {
@@ -966,10 +977,14 @@
     var sug = $("c-sug" + k);
     sug.innerHTML = "";
     info.textContent = " 📎 " + file.name + " — leyendo Word…";
-    cargarMammoth().then(function (mm) {
-      return file.arrayBuffer().then(function (buf) { return mm.extractRawText({ arrayBuffer: buf }); });
-    }).then(function (r) {
-      procesarTexto(k, file, info, sug, String((r && r.value) || ""), false, "");
+    cargarJSZipBandeja().then(function (JSZip) {
+      return file.arrayBuffer().then(function (buf) { return JSZip.loadAsync(buf); });
+    }).then(function (zip) {
+      var doc = zip.file("word/document.xml");
+      if (!doc) throw new Error("no es un .docx (puede ser un .doc viejo)");
+      return doc.async("string");
+    }).then(function (xml) {
+      procesarTexto(k, file, info, sug, textoDeDocx(xml), false, "");
       info.textContent = info.textContent.replace("(lector local)", "(Word)");
     }).catch(function (ex) {
       info.textContent = " 📎 " + file.name + " — no pude leer el Word (" + ex.message + "), cargá el precio a mano";
