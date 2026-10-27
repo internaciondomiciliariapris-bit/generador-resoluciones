@@ -5360,9 +5360,14 @@ var MesaJ = (function(){
       setTimeout(function(){ try{ ac.close(); }catch(_){ } }, 900);
     }catch(_){}
   }
-  function sinVer(){ return mesa.filter(function(m){ return !m.vistoJorge && efectivo(m, regDe(m)) === "ingresado"; }).sort(function(a, b){ return (b.ingresoMs || 0) - (a.ingresoMs || 0); }); }
+  // Vistos en ESTA compu: si la marca "visto" no se pudo guardar en la base, igual deja de contar acá
+  var vistosLocal = {};
+  try{ vistosLocal = JSON.parse(localStorage.getItem("mj_vistos_jorge") || "{}") || {}; }catch(_){ vistosLocal = {}; }
+  function marcarVistoLocal(ids){ ids.forEach(function(k){ vistosLocal[k] = Date.now(); }); try{ localStorage.setItem("mj_vistos_jorge", JSON.stringify(vistosLocal)); }catch(_){ } }
+  function vistoAca(m){ var t = vistosLocal["m_" + m._id]; return !!t && (!m.reenviadoMs || t >= m.reenviadoMs); }
+  function sinVer(){ return mesa.filter(function(m){ return !m.vistoJorge && !vistoAca(m) && efectivo(m, regDe(m)) === "ingresado"; }).sort(function(a, b){ return (b.ingresoMs || 0) - (a.ingresoMs || 0); }); }
   function expPend(){ return Object.keys(expMeta).map(function(k){ return expMeta[k]; }).filter(function(e){ var m = mesaTodos[e.mesaId]; return m && !m.anulado; }); }
-  function expSinVer(){ return expPend().filter(function(e){ return !e.vistoJorge; }); }
+  function expSinVer(){ return expPend().filter(function(e){ return !e.vistoJorge && !vistosLocal["e_" + e._id]; }); }
   function mb(b){ return b ? (b / 1048576 < 0.1 ? Math.max(1, Math.round(b / 1024)) + " KB" : (b / 1048576).toFixed(1) + " MB") : ""; }
   function sinTomar(){ return mesa.filter(function(m){ return efectivo(m, regDe(m)) === "ingresado"; }); }
 
@@ -5373,7 +5378,7 @@ var MesaJ = (function(){
     b.style.display = ver ? "flex" : "none";
     var nv = sinVer().length + expSinVer().length, st = sinTomar().length;
     n.textContent = nv || st; n.classList.toggle("nuevo", nv > 0);
-    b.title = nv ? nv + " ingreso(s) nuevo(s) de Mesa de Entradas" : st + " ingreso(s) sin tomar";
+    b.title = nv ? "Nuevo(s) de Mesa de Entradas: " + sinVer().map(function(m){ return m.nroExp + " " + m.paciente; }).concat(expSinVer().map(function(e){ var m = mesaTodos[e.mesaId]; return "📄 expediente de " + (m ? m.paciente : "?"); })).join(" · ") : st + " ingreso(s) sin tomar";
     document.title = (nv ? "(" + nv + ") 📥 " : "") + tituloBase;
   }
   function alerta(){
@@ -5419,9 +5424,10 @@ var MesaJ = (function(){
     vistaAct = hay("nuevo") ? "nuevo" : hay("proc") ? "proc" : hay("oc") ? "oc" : "nuevo";
     render();
     // Al abrir el panel, los ingresos nuevos quedan vistos (siguen en "Nuevos sin tomar" hasta que los tomes).
-    var nv = sinVer();
+    var nv = sinVer(), evAntes = expSinVer();
+    marcarVistoLocal(nv.map(function(x){ return "m_" + x._id; }).concat(evAntes.map(function(x){ return "e_" + x._id; })));
     if(nv.length && db){ var b = db.batch(); nv.forEach(function(x){ b.set(db.collection(COL).doc(x._id), { vistoJorge: true }, { merge: true }); }); b.commit().catch(function(e){ console.warn("Mesa J visto:", e); }); }
-    var ev = expSinVer();
+    var ev = evAntes;
     if(ev.length && db){ var b2 = db.batch(); ev.forEach(function(x){ b2.set(db.collection(MesaDocs.COL_E).doc(x._id), { vistoJorge: true }, { merge: true }); }); b2.commit().catch(function(e){ console.warn("Mesa J exp visto:", e); }); }
     setTimeout(function(){ var q = $("mj-q"); if(q) q.focus(); }, 30);
   }
