@@ -931,15 +931,55 @@
     });
   }
 
-  function base64AFile(b64, nombre) {
+  function esWord(nombre, mime) {
+    return /word|officedocument|msword/i.test(String(mime || "")) || /\.docx?$/i.test(String(nombre || ""));
+  }
+
+  function base64AFile(b64, nombre, mime) {
     var bin = atob(b64);
     var bytes = new Uint8Array(bin.length);
     for (var j = 0; j < bin.length; j++) bytes[j] = bin.charCodeAt(j);
-    return new File([bytes], nombre || "presupuesto.pdf", { type: "application/pdf" });
+    var word = esWord(nombre, mime);
+    var tipo = word ? "application/vnd.openxmlformats-officedocument.wordprocessingml.document" : "application/pdf";
+    var nom = nombre || "presupuesto";
+    if (!/\.\w{2,4}$/.test(nom)) nom += word ? ".docx" : ".pdf";
+    return new File([bytes], nom, { type: tipo });
+  }
+
+  // Presupuestos en Word (ej. IAR): se lee el texto con mammoth y se usa el lector local de montos
+  var _mammothPromise = null;
+  function cargarMammoth() {
+    if (window.mammoth) return Promise.resolve(window.mammoth);
+    if (_mammothPromise) return _mammothPromise;
+    _mammothPromise = new Promise(function (res, rej) {
+      var sc = document.createElement("script");
+      sc.src = "https://cdn.jsdelivr.net/npm/mammoth@1.6.0/mammoth.browser.min.js";
+      sc.onload = function () { window.mammoth ? res(window.mammoth) : rej(new Error("mammoth")); };
+      sc.onerror = function () { _mammothPromise = null; rej(new Error("lector de Word no disponible")); };
+      document.head.appendChild(sc);
+    });
+    return _mammothPromise;
+  }
+
+  function leerWord(k, file) {
+    var info = $("c-pdfinfo" + k);
+    var sug = $("c-sug" + k);
+    sug.innerHTML = "";
+    info.textContent = " 📎 " + file.name + " — leyendo Word…";
+    cargarMammoth().then(function (mm) {
+      return file.arrayBuffer().then(function (buf) { return mm.extractRawText({ arrayBuffer: buf }); });
+    }).then(function (r) {
+      procesarTexto(k, file, info, sug, String((r && r.value) || ""), false, "");
+      info.textContent = info.textContent.replace("(lector local)", "(Word)");
+    }).catch(function (ex) {
+      info.textContent = " 📎 " + file.name + " — no pude leer el Word (" + ex.message + "), cargá el precio a mano";
+      sug.appendChild(crearBtnNegativa(k));
+    });
   }
 
   // Pone el PDF en el input de la fila y dispara la lectura de siempre (Gemini → respaldo local)
   function inyectarPdf(k, file) {
+    if (esWord(file.name, file.type)) { leerWord(k, file); return; }
     var input = $("c-file" + k);
     if (!input) return;
     var dt = new DataTransfer();
@@ -1002,7 +1042,7 @@
       cadena = cadena.then(function () {
         $("c-pdfinfo" + k).textContent = " 📎 " + x.archivo + " — bajando del mail…";
         return llamarBandeja({ accion: "pdf", msg: x.msg, i: x.i }).then(function (out) {
-          inyectarPdf(k, base64AFile(out.base64, out.nombre || x.archivo));
+          inyectarPdf(k, base64AFile(out.base64, out.nombre || x.archivo, out.mime));
         }).catch(function (ex) {
           $("c-pdfinfo" + k).textContent = " 📎 " + x.archivo + " — no se pudo bajar (" + ex.message + "), subilo a mano";
         });
