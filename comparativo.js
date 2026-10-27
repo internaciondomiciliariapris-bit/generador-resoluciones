@@ -73,6 +73,9 @@
     ".bdj-cargar{background:#166534;color:#fff;border:none;border-radius:7px;padding:7px 12px;font-size:12.5px;font-weight:700;cursor:pointer;white-space:nowrap}",
     ".bdj-cargar:hover{background:#14532d}",
     ".bdj-cargar:disabled{background:#cbd5e1;cursor:default}",
+    ".bdj-hecho{background:#f1f5f9;color:#475569;border:1px solid #cbd5e1;border-radius:7px;padding:6px 10px;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;margin-left:6px}",
+    ".bdj-hecho:hover{background:#e2e8f0;color:#1e293b}",
+    ".bdj-todos{background:rgba(255,255,255,.18);color:#fff;border:none;border-radius:8px;padding:6px 12px;font-size:14px;cursor:pointer}",
     ".bdj-estado{padding:30px 20px;text-align:center;color:#475569;font-size:14px}"
   ].join("\n");
 
@@ -709,6 +712,10 @@
       return bajarUno(payload, "pdf", base + ".pdf");
     }).then(function () {
       guardarPendiente(payload);
+      if (_cargadoDesdeMail && normPac(_cargadoDesdeMail.paciente) === normPac(payload.paciente)) {
+        marcarTrabajados([_cargadoDesdeMail]);
+        _cargadoDesdeMail = null;
+      }
       avisar("✅ Listo: se descargaron el Excel y el PDF. El expediente quedó pendiente de resolución.", false);
     }).catch(function (ex) {
       avisar("Error: " + ex.message, true);
@@ -769,6 +776,11 @@
   function agruparSolicitudes(lista) {
     var porPac = {};
     var orden = [];
+    var hilosPorPac = {};
+    (lista || []).forEach(function (s) {
+      var cl = normPac(s.paciente);
+      if (cl && s.hilo) (hilosPorPac[cl] = hilosPorPac[cl] || []).push(s.hilo);
+    });
     (lista || []).forEach(function (s) {
       if (/^(automatic reply|respuesta autom|auto[- ]?reply|fuera de la oficina)/i.test(String(s.asunto || ""))) return;
       var clave = normPac(s.paciente);
@@ -786,6 +798,7 @@
     });
     return orden.map(function (k) {
       var g = porPac[k];
+      g.hilos = hilosPorPac[k] || [];
       // una sola fila por firma: si mandó varios PDF, se queda el más reciente
       var porFirma = {};
       g.presupuestos.forEach(function (p) {
@@ -832,7 +845,8 @@
         "<td>" + (vacio ? "Todavía nadie respondió"
           : g.firmas.map(function (x) { return '<span class="bdj-prov">' + esc(x.firma) + "</span>"; }).join("")) + "</td>" +
         '<td><button type="button" class="bdj-cargar" data-i="' + idx + '"' + (vacio ? " disabled" : "") +
-        ">Cargar en el cuadro</button></td></tr>";
+        ">Cargar en el cuadro</button>" +
+        '<button type="button" class="bdj-hecho" data-i="' + idx + '" title="Ya lo trabajé: sacarlo de la bandeja">✔ Trabajado</button></td></tr>';
     });
     html += "</tbody></table>";
     cont.innerHTML = html;
@@ -843,6 +857,48 @@
         cargarEnCuadro(g);
       });
     });
+    [].slice.call(cont.querySelectorAll(".bdj-hecho")).forEach(function (b) {
+      b.addEventListener("click", function () {
+        var g = _bandejaDatos[Number(b.getAttribute("data-i"))];
+        if (!confirm("¿Sacar de la bandeja el pedido de " + g.paciente + "?\n\nNo se borra nada del mail: queda en Gmail con la etiqueta \"Trabajado\".")) return;
+        marcarTrabajados([g]);
+      });
+    });
+  }
+
+  // Pone la etiqueta "Trabajado" en Gmail y los saca de la bandeja (no borra nada)
+  function marcarTrabajados(grupos) {
+    var ids = [];
+    grupos.forEach(function (g) { (g.hilos || []).forEach(function (h) { ids.push(h); }); });
+    if (!ids.length) return Promise.resolve(0);
+    var lotes = [];
+    for (var j = 0; j < ids.length; j += 40) lotes.push(ids.slice(j, j + 40));
+    var cadena = Promise.resolve();
+    lotes.forEach(function (l) {
+      cadena = cadena.then(function () { return llamarBandeja({ accion: "trabajado", hilos: l.join(",") }); });
+    });
+    return cadena.then(function () {
+      _bandejaDatos = _bandejaDatos.filter(function (g) { return grupos.indexOf(g) < 0; });
+      pintarBandeja($("bdj-buscar") ? $("bdj-buscar").value : "");
+      return grupos.length;
+    }).catch(function (ex) {
+      alert("No pude marcarlo como trabajado: " + ex.message +
+        (/desconocida/i.test(ex.message) ? "\n\nFalta actualizar el script del Gmail de audífonos a la versión nueva." : ""));
+    });
+  }
+
+  function marcarTodosVisibles() {
+    var f = normPac($("bdj-buscar") ? $("bdj-buscar").value : "");
+    var visibles = _bandejaDatos.filter(function (g) {
+      return !f || normPac(g.paciente + " " + g.expediente).indexOf(f) >= 0;
+    });
+    if (!visibles.length) return;
+    if (!confirm("¿Sacar de la bandeja los " + visibles.length + " pedidos que se ven en la lista?\n\nNo se borra nada del mail: quedan en Gmail con la etiqueta \"Trabajado\".")) return;
+    var b = $("bdj-todos");
+    if (b) { b.disabled = true; b.textContent = "Marcando…"; }
+    marcarTrabajados(visibles).then(function () {
+      if (b) { b.disabled = false; b.textContent = "✔ Todos trabajados"; }
+    });
   }
 
   function abrirBandeja() {
@@ -852,7 +908,8 @@
     fondo.className = "bdj-fondo";
     fondo.innerHTML = '<div class="bdj-caja">' +
       '<div class="bdj-cab"><h3>📥 Presupuestos recibidos — Gmail audífonos</h3>' +
-      '<div><button type="button" id="bdj-actualizar">↻ Actualizar</button> ' +
+      '<div><button type="button" class="bdj-todos" id="bdj-todos" title="Marcar como trabajados todos los pedidos de la lista">✔ Todos trabajados</button> ' +
+      '<button type="button" id="bdj-actualizar">↻ Actualizar</button> ' +
       '<button type="button" id="bdj-cerrar">✕ Cerrar</button></div></div>' +
       '<div class="bdj-filtro"><input type="text" id="bdj-buscar" placeholder="Buscar por paciente o Nº de expediente"></div>' +
       '<div class="bdj-lista" id="bdj-lista"><div class="bdj-estado">Leyendo el Gmail de audífonos…</div></div>' +
@@ -861,6 +918,7 @@
     fondo.addEventListener("click", function (ev) { if (ev.target === fondo) cerrarBandeja(); });
     $("bdj-cerrar").addEventListener("click", cerrarBandeja);
     $("bdj-actualizar").addEventListener("click", abrirBandeja);
+    $("bdj-todos").addEventListener("click", marcarTodosVisibles);
     $("bdj-buscar").addEventListener("input", function () { pintarBandeja(this.value); });
 
     llamarBandeja({ accion: "listar" }).then(function (out) {
@@ -916,8 +974,11 @@
     }, 1000);
   }
 
+  var _cargadoDesdeMail = null;
+
   function cargarEnCuadro(g) {
     if (!g || !g.firmas.length) return;
+    _cargadoDesdeMail = g;
     if (typeof window.cambiarTab === "function") window.cambiarTab("comparativo");
 
     $("c-paciente").value = g.paciente;
