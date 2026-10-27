@@ -50,11 +50,38 @@
     ".cot-total b{color:#166534}",
     ".cot-total .neg{color:#b45309;font-weight:600}",
     ".cot-sug .neg-btn{border-color:#fecaca;background:#fef2f2;color:#b91c1c}",
-    ".cot-sug .neg-btn:hover{background:#fee2e2}"
+    ".cot-sug .neg-btn:hover{background:#fee2e2}",
+    ".bdj-bar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:18px;padding:12px 14px;background:#eff6ff;border:1.5px solid #bfdbfe;border-radius:10px}",
+    ".bdj-btn{background:#1a56a0;color:#fff;border:none;border-radius:8px;padding:10px 16px;font-size:14px;font-weight:700;cursor:pointer}",
+    ".bdj-btn:hover{background:#15467f}",
+    ".bdj-hint{font-size:12px;color:#475569}",
+    ".bdj-fondo{position:fixed;inset:0;background:rgba(15,23,42,.55);z-index:9999;display:flex;align-items:flex-start;justify-content:center;padding:40px 16px;overflow:auto}",
+    ".bdj-caja{background:#fff;border-radius:14px;width:100%;max-width:980px;box-shadow:0 20px 50px rgba(0,0,0,.3);overflow:hidden}",
+    ".bdj-cab{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:16px 20px;background:#1a56a0;color:#fff}",
+    ".bdj-cab h3{margin:0;font-size:18px}",
+    ".bdj-cab button{background:rgba(255,255,255,.18);color:#fff;border:none;border-radius:8px;padding:6px 12px;font-size:14px;cursor:pointer}",
+    ".bdj-filtro{padding:12px 20px;border-bottom:1px solid #e2e8f0}",
+    ".bdj-filtro input{width:100%;padding:9px 12px;border:1.5px solid #cbd5e1;border-radius:8px;font-size:14px;box-sizing:border-box}",
+    ".bdj-lista{max-height:62vh;overflow:auto}",
+    ".bdj-tabla{width:100%;border-collapse:collapse;font-size:13px}",
+    ".bdj-tabla th{position:sticky;top:0;background:#f1f5f9;color:#334155;text-align:left;padding:8px 10px;font-size:12px;border-bottom:1px solid #e2e8f0}",
+    ".bdj-tabla td{padding:8px 10px;border-bottom:1px solid #f1f5f9;vertical-align:middle}",
+    ".bdj-tabla tr:hover td{background:#f8fafc}",
+    ".bdj-tabla tr.bdj-vacio td{color:#94a3b8}",
+    ".bdj-pac{font-weight:700;color:#1a2b4a}",
+    ".bdj-prov{display:inline-block;background:#dcfce7;color:#166534;border-radius:5px;padding:2px 7px;margin:2px 4px 2px 0;font-size:11.5px;font-weight:600}",
+    ".bdj-cargar{background:#166534;color:#fff;border:none;border-radius:7px;padding:7px 12px;font-size:12.5px;font-weight:700;cursor:pointer;white-space:nowrap}",
+    ".bdj-cargar:hover{background:#14532d}",
+    ".bdj-cargar:disabled{background:#cbd5e1;cursor:default}",
+    ".bdj-estado{padding:30px 20px;text-align:center;color:#475569;font-size:14px}"
   ].join("\n");
 
   /* ---------- 2. Panel base ---------- */
   var PANEL_HTML = '' +
+    '<div class="bdj-bar">' +
+      '<button type="button" class="bdj-btn" id="c-bandeja-btn">📥 Presupuestos recibidos por mail</button>' +
+      '<span class="bdj-hint">Trae los presupuestos del Gmail de audífonos y arma el cuadro solo</span>' +
+    '</div>' +
     '<div class="stitle">Datos del expediente</div>' +
     '<div class="field"><label>Nº Expediente <span>*</span></label>' +
       '<input type="text" id="c-nroExp" placeholder="5658/410/J/2026" maxlength="20">' +
@@ -691,6 +718,246 @@
     });
   }
 
+  /* ---------- 5b. Bandeja de presupuestos recibidos por mail (Gmail audífonos) ---------- */
+  // Script de Apps Script en la cuenta audifonosgerenciapris@gmail.com (solo lectura de Gmail).
+  var BANDEJA_URL = "https://script.google.com/macros/s/AKfycbyALaTWSvvA7Lh-TnjufWDJFmsXd_ITDWZlzG09HWGR88lP_kIprwqoMAUHTXEwsmj8/exec";
+  var BANDEJA_CLAVE = "AUD-7Qm4-PRIS-26";
+
+  // Remitente → nombre de firma como figura en los cuadros
+  function nombreFirma(p) {
+    var e = String(p.email || "").toLowerCase();
+    if (e.indexOf("iarargentina") >= 0) return "IAR Argentina";
+    if (e.indexOf("vistalli") >= 0) return "OPTICA GIORLENT (GRUPO VISTALLI S.R.L)";
+    if (e.indexOf("amplifon") >= 0 || e.indexOf("gaes") >= 0) return "GAES. S.A";
+    return String(p.proveedor || p.email || "").replace(/\s*\|.*$/, "").trim().toUpperCase();
+  }
+
+  function normPac(t) {
+    return String(t || "").toUpperCase()
+      .normalize("NFD").replace(/[̀-ͯ]/g, "")
+      .replace(/[^A-Z0-9 ]/g, " ").replace(/\s+/g, " ").trim();
+  }
+
+  function fechaCorta(iso) {
+    if (!iso) return "";
+    var d = new Date(iso);
+    if (isNaN(d)) return "";
+    return String(d.getDate()).padStart(2, "0") + "/" + String(d.getMonth() + 1).padStart(2, "0");
+  }
+
+  function esc(t) {
+    return String(t == null ? "" : t).replace(/[&<>"]/g, function (c) {
+      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c];
+    });
+  }
+
+  function llamarBandeja(params) {
+    var q = "clave=" + encodeURIComponent(BANDEJA_CLAVE);
+    Object.keys(params).forEach(function (k) {
+      q += "&" + k + "=" + encodeURIComponent(params[k]);
+    });
+    return fetch(BANDEJA_URL + "?" + q).then(function (r) {
+      if (!r.ok) throw new Error("HTTP " + r.status);
+      return r.json();
+    }).then(function (out) {
+      if (!out || !out.ok) throw new Error((out && out.error) || "sin respuesta");
+      return out;
+    });
+  }
+
+  // Une los hilos del mismo paciente, descarta respuestas automáticas y repite firmas
+  function agruparSolicitudes(lista) {
+    var porPac = {};
+    var orden = [];
+    (lista || []).forEach(function (s) {
+      if (/^(automatic reply|respuesta autom|auto[- ]?reply|fuera de la oficina)/i.test(String(s.asunto || ""))) return;
+      var clave = normPac(s.paciente);
+      if (!clave) return;
+      var g = porPac[clave];
+      if (!g) {
+        g = porPac[clave] = { paciente: String(s.paciente || "").trim().toUpperCase(), cantidad: null,
+          expediente: "", enviado: s.enviado || "", presupuestos: [] };
+        orden.push(clave);
+      }
+      if (s.cantidad && !g.cantidad) g.cantidad = s.cantidad;
+      if (s.expediente && String(s.expediente).length > String(g.expediente).length) g.expediente = s.expediente;
+      if (s.enviado && (!g.enviado || s.enviado > g.enviado)) g.enviado = s.enviado;
+      (s.presupuestos || []).forEach(function (p) { g.presupuestos.push(p); });
+    });
+    return orden.map(function (k) {
+      var g = porPac[k];
+      // una sola fila por firma: si mandó varios PDF, se queda el más reciente
+      var porFirma = {};
+      g.presupuestos.forEach(function (p) {
+        var f = nombreFirma(p);
+        if (!porFirma[f] || String(p.fecha) > String(porFirma[f].fecha)) porFirma[f] = p;
+      });
+      g.firmas = Object.keys(porFirma).map(function (f) {
+        var p = porFirma[f];
+        return { firma: f, msg: p.msg, i: p.i, archivo: p.archivo, fecha: p.fecha };
+      });
+      return g;
+    }).sort(function (a, b) { return String(b.enviado).localeCompare(String(a.enviado)); });
+  }
+
+  var _bandejaDatos = [];
+
+  function cerrarBandeja() {
+    var f = $("bdj-fondo");
+    if (f) f.parentNode.removeChild(f);
+  }
+
+  function pintarBandeja(filtro) {
+    var cont = $("bdj-lista");
+    if (!cont) return;
+    var f = normPac(filtro);
+    var datos = _bandejaDatos.filter(function (g) {
+      return !f || normPac(g.paciente + " " + g.expediente).indexOf(f) >= 0;
+    });
+    if (!datos.length) {
+      cont.innerHTML = '<div class="bdj-estado">' + (_bandejaDatos.length ? "No hay coincidencias." : "No hay pedidos de cotización en los últimos 90 días.") + "</div>";
+      return;
+    }
+    var html = '<table class="bdj-tabla"><thead><tr>' +
+      "<th>Pedido</th><th>Paciente</th><th>Expte.</th><th>Cant.</th><th>Presupuestos recibidos</th><th></th>" +
+      "</tr></thead><tbody>";
+    datos.forEach(function (g) {
+      var idx = _bandejaDatos.indexOf(g);
+      var vacio = !g.firmas.length;
+      html += '<tr class="' + (vacio ? "bdj-vacio" : "") + '">' +
+        "<td>" + esc(fechaCorta(g.enviado)) + "</td>" +
+        '<td class="bdj-pac">' + esc(g.paciente) + "</td>" +
+        "<td>" + esc(g.expediente || "—") + "</td>" +
+        "<td>" + esc(g.cantidad || "—") + "</td>" +
+        "<td>" + (vacio ? "Todavía nadie respondió"
+          : g.firmas.map(function (x) { return '<span class="bdj-prov">' + esc(x.firma) + "</span>"; }).join("")) + "</td>" +
+        '<td><button type="button" class="bdj-cargar" data-i="' + idx + '"' + (vacio ? " disabled" : "") +
+        ">Cargar en el cuadro</button></td></tr>";
+    });
+    html += "</tbody></table>";
+    cont.innerHTML = html;
+    [].slice.call(cont.querySelectorAll(".bdj-cargar")).forEach(function (b) {
+      b.addEventListener("click", function () {
+        var g = _bandejaDatos[Number(b.getAttribute("data-i"))];
+        cerrarBandeja();
+        cargarEnCuadro(g);
+      });
+    });
+  }
+
+  function abrirBandeja() {
+    cerrarBandeja();
+    var fondo = document.createElement("div");
+    fondo.id = "bdj-fondo";
+    fondo.className = "bdj-fondo";
+    fondo.innerHTML = '<div class="bdj-caja">' +
+      '<div class="bdj-cab"><h3>📥 Presupuestos recibidos — Gmail audífonos</h3>' +
+      '<div><button type="button" id="bdj-actualizar">↻ Actualizar</button> ' +
+      '<button type="button" id="bdj-cerrar">✕ Cerrar</button></div></div>' +
+      '<div class="bdj-filtro"><input type="text" id="bdj-buscar" placeholder="Buscar por paciente o Nº de expediente"></div>' +
+      '<div class="bdj-lista" id="bdj-lista"><div class="bdj-estado">Leyendo el Gmail de audífonos…</div></div>' +
+      "</div>";
+    document.body.appendChild(fondo);
+    fondo.addEventListener("click", function (ev) { if (ev.target === fondo) cerrarBandeja(); });
+    $("bdj-cerrar").addEventListener("click", cerrarBandeja);
+    $("bdj-actualizar").addEventListener("click", abrirBandeja);
+    $("bdj-buscar").addEventListener("input", function () { pintarBandeja(this.value); });
+
+    llamarBandeja({ accion: "listar" }).then(function (out) {
+      _bandejaDatos = agruparSolicitudes(out.solicitudes);
+      pintarBandeja($("bdj-buscar") ? $("bdj-buscar").value : "");
+    }).catch(function (ex) {
+      var c = $("bdj-lista");
+      if (c) c.innerHTML = '<div class="bdj-estado">No pude leer el Gmail de audífonos (' + esc(ex.message) +
+        "). Probá de nuevo con ↻ Actualizar.</div>";
+    });
+  }
+
+  function base64AFile(b64, nombre) {
+    var bin = atob(b64);
+    var bytes = new Uint8Array(bin.length);
+    for (var j = 0; j < bin.length; j++) bytes[j] = bin.charCodeAt(j);
+    return new File([bytes], nombre || "presupuesto.pdf", { type: "application/pdf" });
+  }
+
+  // Pone el PDF en el input de la fila y dispara la lectura de siempre (Gemini → respaldo local)
+  function inyectarPdf(k, file) {
+    var input = $("c-file" + k);
+    if (!input) return;
+    var dt = new DataTransfer();
+    dt.items.add(file);
+    input.files = dt.files;
+    input.dispatchEvent(new Event("change"));
+  }
+
+  // Cuando todas las filas tienen precio, sugiere ganadora a la de menor precio unitario
+  function sugerirGanadoraCuandoTermine() {
+    var intentos = 0;
+    var timer = setInterval(function () {
+      intentos++;
+      var filas = [].slice.call($("c-filas").children);
+      var listos = filas.every(function (f) { return String(f.querySelector(".c-precio").value || "").trim(); });
+      if (!listos && intentos < 90) return;
+      clearInterval(timer);
+      var mejor = null, mejorPrecio = Infinity;
+      filas.forEach(function (f) {
+        var raw = String(f.querySelector(".c-precio").value || "").trim();
+        if (!raw || raw.toUpperCase() === "NEGATIVA") return;
+        var n = soloNumeros(raw);
+        if (n && n < mejorPrecio) { mejorPrecio = n; mejor = f; }
+      });
+      if (mejor) {
+        mejor.querySelector(".c-gan").checked = true;
+        avisar("✅ Presupuestos cargados desde el mail. Ganadora sugerida: " +
+          mejor.querySelector(".c-prov").value + " (menor precio). Revisá precios y expediente antes de generar.", false);
+      } else if (!listos) {
+        avisar("Cargué los presupuestos, pero en alguno no encontré el precio: completalo a mano y elegí la ganadora.", true);
+      }
+    }, 1000);
+  }
+
+  function cargarEnCuadro(g) {
+    if (!g || !g.firmas.length) return;
+    if (typeof window.cambiarTab === "function") window.cambiarTab("comparativo");
+
+    $("c-paciente").value = g.paciente;
+    if (g.cantidad) { $("c-cantidad").value = g.cantidad; }
+    var exp = $("c-nroExp");
+    exp.value = g.expediente || "";
+
+    // Reemplazar las filas por una por cada firma que respondió
+    var cont = $("c-filas");
+    cont.innerHTML = "";
+    $("c-firmas").removeAttribute("data-tocado");
+    g.firmas.forEach(function (x) { agregarFila(x.firma, false); });
+
+    var filas = [].slice.call(cont.children);
+    avisar("Descargando " + g.firmas.length + " presupuesto(s) del mail…", false);
+
+    // De a uno, para no saturar la lectura
+    var cadena = Promise.resolve();
+    g.firmas.forEach(function (x, n) {
+      var k = filas[n].querySelector(".c-precio").id.replace("c-precio", "");
+      cadena = cadena.then(function () {
+        $("c-pdfinfo" + k).textContent = " 📎 " + x.archivo + " — bajando del mail…";
+        return llamarBandeja({ accion: "pdf", msg: x.msg, i: x.i }).then(function (out) {
+          inyectarPdf(k, base64AFile(out.base64, out.nombre || x.archivo));
+        }).catch(function (ex) {
+          $("c-pdfinfo" + k).textContent = " 📎 " + x.archivo + " — no se pudo bajar (" + ex.message + "), subilo a mano";
+        });
+      });
+    });
+    cadena.then(function () {
+      avisar("Leyendo los presupuestos… cuando terminen te marco la ganadora.", false);
+      sugerirGanadoraCuandoTermine();
+    });
+
+    // El Nº de expediente del mail viene incompleto: dejarlo listo para completar con Tab
+    exp.focus();
+    try { exp.setSelectionRange(exp.value.length, exp.value.length); } catch (e) {}
+    if (exp.scrollIntoView) exp.scrollIntoView({ behavior: "smooth", block: "center" });
+  }
+
   /* ---------- 6. Inyección ---------- */
   function init() {
     var tabs = document.querySelector(".tabs");
@@ -748,6 +1015,7 @@
     });
 
     $("c-add").addEventListener("click", function () { agregarFila("", false); });
+    $("c-bandeja-btn").addEventListener("click", abrirBandeja);
     $("c-btn").addEventListener("click", generar);
 
     // Al cambiar la cantidad de audífonos, recalcular el total de cada fila
