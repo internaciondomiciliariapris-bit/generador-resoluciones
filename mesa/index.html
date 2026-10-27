@@ -229,6 +229,10 @@ button,input,select{font-family:inherit}
 .val-head.naranja{background:linear-gradient(120deg,#c2410c,#ea580c)}
 .imp-big{font-size:24px;font-weight:900;line-height:1.25;text-align:center;color:#9a3412;margin:4px 0 10px}
 .imp-pac{text-align:center;font-size:17px;font-weight:800;color:#1a2b4a;margin-bottom:12px}
+.ye-est{border-radius:12px;padding:14px 16px;border:2px solid;font-size:15px;line-height:1.6}
+.ye-est.ok{background:#f0fdf4;border-color:#86efac;color:#14532d}.ye-est.azul{background:#eff6ff;border-color:#93c5fd;color:#1e3a8a}.ye-est.ambar{background:#fffbeb;border-color:#fcd34d;color:#78350f}
+.ye-big{font-size:17px;font-weight:900;margin-bottom:6px}.ye-oc{font-size:24px;font-weight:900;letter-spacing:.5px;margin:4px 0}
+.ye-nota{margin-top:8px;font-size:13.5px;opacity:.9}.ye-orig{margin-top:12px;font-size:13.5px;color:#475569}
 .imp-reglas{list-style:none;margin:0;padding:0}
 .imp-reglas li{display:flex;gap:10px;align-items:flex-start;font-size:16px;font-weight:700;line-height:1.4;padding:10px 12px;border-radius:10px;margin-top:8px;background:#fff7ed;border:1.5px solid #fed7aa;color:#1a2b4a}
 .imp-reglas li span{font-size:22px;line-height:1}
@@ -1630,6 +1634,48 @@ if(typeof module !== "undefined" && module.exports) module.exports = MesaCal;
     $("val-ov").style.display = "flex";
   }
   function cerrarVentana(){ $("val-ov").style.display = "none"; }
+  /* Expediente que ya existe: en una sola ventana se informa si ya está trabajado, con qué N° de
+     orden de compra y si ya se le entregó al paciente (sin tener que ir a buscarlo a la lista). */
+  function ventanaYaExiste(o){
+    var m = o.m || null, r = o.r || null, nro = o.nro || "", ocs = ocsDe(r), oc = ocs.join(" / ") || (m && m.ocNro ? String(m.ocNro) : "");
+    var pac = (m && m.paciente) || (r && r.paciente) || "", tipo = (m && m.tipo) || (r && r.tipo) || "";
+    var entregado = (r && r.entregado) || (m && m.estado === "entregado");
+    var est, cls;
+    if(entregado){
+      cls = "ok";
+      var fe = (r && r.entregadoFecha) || (m && (m.entregadoTxt || m.entregadoFecha)) || "", ho = (r && r.entregadoHora) || "";
+      est = '<div class="ye-big">✅ YA SE ENTREGÓ la orden de compra</div>' +
+        (oc ? '<div class="ye-oc">OC N° ' + esc(oc) + "</div>" : "") +
+        "<div>Entregada al paciente" + (fe ? " el <b>" + esc(fe) + "</b>" : "") + (ho ? " a las <b>" + esc(ho) + " hs</b>" : "") + ".</div>" +
+        '<div class="ye-nota">El trámite está terminado. No hay que cargar nada.</div>';
+    } else if(oc){
+      cls = "azul";
+      est = '<div class="ye-big">🧾 YA ESTÁ TRABAJADO · tiene orden de compra</div>' +
+        '<div class="ye-oc">OC N° ' + esc(oc) + "</div>" +
+        (r && (r.fechaOC || r.proveedor) ? "<div>Emitida" + (r.fechaOC ? " el <b>" + esc(r.fechaOC) + "</b>" : "") + (r.proveedor ? " · " + esc(r.proveedor) : "") + ".</div>" : "") +
+        (m && m.estado === "en_mesa" ? "<div>📄 El papel está <b>en Mesa de Entradas</b>" + (m.enMesaTxt ? " desde el " + esc(m.enMesaTxt) : "") + ".</div>" : "") +
+        "<div><b>Todavía NO se entregó al paciente.</b></div>" +
+        '<div class="ye-nota">Si el paciente viene a retirarla, tocá <b>«🔎 Ver el expediente»</b> y registrá la entrega ahí.</div>';
+    } else {
+      cls = "ambar";
+      var et = !r ? "" : r.etapa === "resolucion" ? "resolución generada" : r.etapa === "proceso" ? "resolución en proceso" : r.etapa === "cuadro" ? "cuadro comparativo hecho" : "";
+      est = '<div class="ye-big">🟡 EN TRÁMITE · todavía sin orden de compra</div>' +
+        (et ? "<div>Etapa: <b>" + esc(et) + "</b>.</div>" : "") +
+        (m && m.estado === "devuelto" ? "<div>⚠️ <b>Devuelto por Jorge</b>" + (m.devueltoTxt ? " el " + esc(m.devueltoTxt) : "") + (m.devueltoMotivo ? ": " + esc(m.devueltoMotivo) : "") + ".</div>" : "") +
+        '<div class="ye-nota">Todavía no hay nada para entregar al paciente.</div>';
+    }
+    var orig = m ? "📥 Ingresado por Mesa de Entradas" + (m.ingresoTxt ? " el " + esc(m.ingresoTxt) : "") + ((m.usuarioNombre || m.usuario) ? " por " + esc(m.usuarioNombre || m.usuario) : "") + "."
+      : (r && r.previoMesa) ? "📁 Expediente <b>VIEJO</b>: se trabajó antes del sistema de Mesa de Entradas."
+      : "📁 Cargado en el sistema por Jorge (no ingresó por Mesa de Entradas).";
+    abrirVentana("rojo", "⛔", "Este expediente YA EXISTE", "No se puede cargar de nuevo. Mirá cómo está:",
+      '<div class="imp-pac">' + tipoIco(tipo) + " " + esc(pac || "(sin nombre)") + " · Expte. " + esc(nro) + "</div>" +
+      '<div class="ye-est ' + cls + '">' + est + "</div>" +
+      '<div class="ye-orig">' + orig + "</div>",
+      '<button type="button" class="val-no" id="ye-ver">🔎 Ver el expediente</button><button type="button" class="val-ok" id="ye-ok">Entendido</button>');
+    $("ye-ok").onclick = cerrarVentana;
+    $("ye-ver").onclick = function(){ cerrarVentana(); $("ls-q").value = nro; $("ls-f").value = "todos"; cambiarTab("lista"); };
+    setTimeout(function(){ $("ye-ok").focus(); }, 30);
+  }
   /* Antes de imprimir la OC y la receta: ventana grande y clara. Solo se imprime con el paciente
      presente, una sola vez; después se bloquea y desaparece de Mesa de Entradas (la Gerencia la
      conserva en el generador y es la única que puede habilitarla de nuevo). */
@@ -1771,8 +1817,8 @@ if(typeof module !== "undefined" && module.exports) module.exports = MesaCal;
     var k = C.clave(p.num, p.cod);
     var dup = mesa.filter(function(m){ return claveDe(m) === k && (!p.anio || !m.anio || String(m.anio) === p.anio); })[0];
     if(dup){
-      msg("er", "⛔ <b>Este N° de expediente ya fue ingresado</b> el " + esc(dup.ingresoTxt) + " por " + esc(dup.usuarioNombre || dup.usuario) + " (" + esc(dup.paciente) + "). Lo dejé abierto en <b>Expedientes</b>.");
-      $("ls-q").value = dup.nroExp || k; $("ls-f").value = "todos"; cambiarTab("lista"); return;
+      msg("er", "⛔ <b>Este N° de expediente ya fue ingresado</b>: " + esc(dup.nroExp || expTxt) + " — " + esc(dup.paciente || "") + ".");
+      ventanaYaExiste({ m: dup, r: regDe(dup), nro: dup.nroExp || expTxt }); return;
     }
     // ---- Mismo PACIENTE con un ingreso abierto del mismo tipo (aunque el N° de expediente sea distinto) ----
     var mismos = mesa.filter(function(m){ return m.estado !== "entregado" && m.tipo === tipo && mismoPaciente(pac, m.paciente); });
@@ -1790,19 +1836,9 @@ if(typeof module !== "undefined" && module.exports) module.exports = MesaCal;
     }
     // ¿Ya existe en el sistema? (registro de órdenes: cuadro, resolución, OC o entregada)
     var r = regDe(Object.assign({}, p, { anio: p.anio || String(new Date().getFullYear()) }));
-    if(r && r.previoMesa){
-      msg("er", "⛔ <b>Este expediente es VIEJO</b>: " + esc(r.nroExp || expTxt) + " — " + esc(r.paciente || "") + " ya fue trabajado <b>antes del sistema de Mesa de Entradas</b>" + (ocsDe(r).length ? " (OC N° " + esc(ocsDe(r).join(" / ")) + ")" : "") + ".<br>No se puede ingresar como nuevo. Si el paciente viene a retirar algo, consultá con Jorge.");
-      ventanaFaltan([{ campo: "in-exp", txt: "<b>Expediente VIEJO</b>: el " + esc(r.nroExp || expTxt) + " (" + esc(r.paciente || "") + ") ya fue trabajado antes del sistema de Mesa de Entradas. <b>No se puede ingresar como nuevo.</b> Consultá con Jorge." }]);
-      $("val-tit").textContent = "No se puede ingresar"; $("val-sub").textContent = "Este expediente ya existía antes del sistema.";
-      return;
-    }
-    if(r && !(r.etapa === "mesa" && r.origen === "mesa" && !ocsDe(r).length && !r.entregado)){
-      var oc = ocsDe(r).join(" / ");
-      var est = r.entregado ? "la orden de compra" + (oc ? " N° " + oc : "") + " <b>ya fue ENTREGADA</b> al paciente" + (r.entregadoFecha ? " el " + esc(r.entregadoFecha) : "")
-        : oc ? "<b>ya tiene orden de compra N° " + esc(oc) + "</b>" + (r.fechaOC ? " (" + esc(r.fechaOC) + ")" : "")
-        : "<b>ya se está gestionando</b> (" + (r.etapa === "resolucion" ? "resolución generada" : r.etapa === "proceso" ? "resolución en proceso" : r.etapa === "cuadro" ? "cuadro comparativo hecho" : "cargado en el sistema") + ")";
-      msg("er", "⛔ <b>Este N° de expediente ya existe en el sistema</b>: " + esc(r.nroExp || expTxt) + " — " + esc(r.paciente || "") + ", " + est + ".<br>No se puede ingresar de nuevo. Lo dejé abierto en <b>Expedientes</b>. Si creés que es un error, avisale a Jorge.");
-      $("ls-q").value = r.nroExp || expTxt; $("ls-f").value = "todos"; cambiarTab("lista"); return;
+    if(r && (r.previoMesa || !(r.etapa === "mesa" && r.origen === "mesa" && !ocsDe(r).length && !r.entregado))){
+      msg("er", "⛔ <b>Este N° de expediente ya existe en el sistema</b>: " + esc(r.nroExp || expTxt) + " — " + esc(r.paciente || "") + ".");
+      ventanaYaExiste({ r: r, nro: r.nroExp || expTxt }); return;
     }
     // ---- Apellido y nombre como en el DNI: se confirma en una ventana antes de guardar (recién cuando se sabe que el expediente se puede ingresar) ----
     var okDni = await ventanaDni(pac, expTxt, tipo);
