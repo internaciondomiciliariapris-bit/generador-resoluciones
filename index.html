@@ -4478,7 +4478,7 @@ tr.fila:hover .mj-lapiz{opacity:1}
 .mj-tbl th{padding:6px 8px;font-size:10.5px;letter-spacing:.3px}
 .mj-tbl td{padding:4px 8px;line-height:1.25;white-space:nowrap}
 .mj-tbl td.wr{white-space:normal;min-width:90px;max-width:300px}
-.mj-tbl td.av{min-width:150px}
+.mj-tbl td.av{min-width:0}
 .mj-tbl td.av .mj-bdg{white-space:nowrap;display:inline-block;margin:1px 4px 1px 0}
 #mj-lista{overflow:auto}
 .mj-tbl tr.fila td.r{position:sticky;right:0;background:inherit;box-shadow:-6px 0 6px -6px rgba(0,0,0,.15)}
@@ -5572,13 +5572,15 @@ var MesaJ = (function(){
     vistaAct = el.getAttribute("data-mjv"); $("mj-q").value = ""; render();
   });
   var BASE = [["n", "#"], ["exp", "N° expediente"], ["pac", "Paciente"], ["ing", "Ingresó"], ["cargo", "Cargó"]];
+  // Avisos al lado del paciente: si la tabla no entra en pantalla, la columna fija de botones ya no los tapa.
+  var BASE_AV = BASE.slice(0, 3).concat([["avisos", "Avisos"]], BASE.slice(3));
   var COLS = {
-    nuevo: BASE.concat([["plazo", "Plazo"], ["vence", "Vence"], ["tel", "Teléfono"], ["avisos", "Avisos"], ["acc", ""]]),
-    proc: BASE.concat([["desde", "En proceso desde"], ["plazo", "Plazo"], ["vence", "Vence"], ["tel", "Teléfono"], ["avisos", "Avisos"], ["acc", ""]]),
-    oc: BASE.concat([["oc", "N° OC"], ["fechaoc", "Fecha OC"], ["enmesa", "Enviada a mesa"], ["docs", "Documentación"], ["tel", "Teléfono"], ["avisos", "Avisos"], ["acc", ""]]),
-    dev: BASE.concat([["motivo", "Qué tienen que corregir"], ["devfecha", "Devuelto el"], ["pausa", "Días en mesa"], ["avisos", "Avisos"], ["acc", ""]]),
+    nuevo: BASE_AV.concat([["plazo", "Plazo"], ["vence", "Vence"], ["tel", "Teléfono"], ["acc", ""]]),
+    proc: BASE_AV.concat([["desde", "En proceso desde"], ["plazo", "Plazo"], ["vence", "Vence"], ["tel", "Teléfono"], ["acc", ""]]),
+    oc: BASE_AV.concat([["oc", "N° OC"], ["fechaoc", "Fecha OC"], ["enmesa", "Enviada a mesa"], ["docs", "Documentación"], ["tel", "Teléfono"], ["acc", ""]]),
+    dev: BASE_AV.concat([["motivo", "Qué tienen que corregir"], ["devfecha", "Devuelto el"], ["pausa", "Días en mesa"], ["acc", ""]]),
     ent: BASE.concat([["oc", "N° OC"], ["enmesa", "Enviada a mesa"], ["entfecha", "Entregada al paciente"], ["entpor", "Entregó"], ["acc", ""]]),
-    buscar: BASE.concat([["donde", "Dónde está"], ["oc", "N° OC"], ["plazo", "Plazo"], ["avisos", "Avisos"], ["acc", ""]])
+    buscar: BASE_AV.concat([["donde", "Dónde está"], ["oc", "N° OC"], ["plazo", "Plazo"], ["acc", ""]])
   };
   function tablaVista(k, lista){
     var cols = COLS[k];
