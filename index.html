@@ -4478,6 +4478,8 @@ tr.fila:hover .mj-lapiz{opacity:1}
 .mj-tbl th{padding:6px 8px;font-size:10.5px;letter-spacing:.3px}
 .mj-tbl td{padding:4px 8px;line-height:1.25;white-space:nowrap}
 .mj-tbl td.wr{white-space:normal;min-width:90px;max-width:300px}
+.mj-tbl td.av{min-width:150px}
+.mj-tbl td.av .mj-bdg{white-space:nowrap;display:inline-block;margin:1px 4px 1px 0}
 #mj-lista{overflow:auto}
 .mj-tbl tr.fila td.r{position:sticky;right:0;background:inherit;box-shadow:-6px 0 6px -6px rgba(0,0,0,.15)}
 .mj-tbl tr.fila td.r{background:#fff}.mj-tbl tr.fila:nth-child(even) td.r{background:#fafbfc}
@@ -5651,7 +5653,7 @@ var MesaJ = (function(){
     };
     var WR = { motivo: 1, avisos: 1 };
     var fila = '<tr class="fila ' + sem.cls + (nuevo ? " nuevo" : "") + (abierto ? " abierta" : "") + '" data-mjdet="' + esc(m._id) + '" title="Tocá para ver el detalle">' +
-      cols.map(function(c){ return "<td" + (c[0] === "acc" ? ' class="r"' : c[0] === "n" ? ' class="n"' : WR[c[0]] ? ' class="wr"' : "") + ">" + celda[c[0]] + "</td>"; }).join("") + "</tr>";
+      cols.map(function(c){ return "<td" + (c[0] === "acc" ? ' class="r"' : c[0] === "n" ? ' class="n"' : WR[c[0]] ? ' class="wr' + (c[0] === "avisos" ? " av" : "") + '"' : "") + ">" + celda[c[0]] + "</td>"; }).join("") + "</tr>";
     if(!abierto) return fila;
     var dato = function(k, v){ return v ? '<div class="dt"><span>' + k + "</span>" + v + "</div>" : ""; };
     var info = dato("Dónde está", donde) +
