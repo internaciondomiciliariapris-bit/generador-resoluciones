@@ -5243,7 +5243,7 @@ var MesaJ = (function(){
   var expMeta = {}, expListo = false, expConocidos = null, bajando = {};
   var C = EntCore, K = MesaCal;
   var db = null, mesa = [], usuarios = [], reg = [], feriados = null, estado = "conectando", primeraCarga = true;
-  var conocidos = {}, ocultaHasta = 0, tituloBase = document.title;
+  var conocidos = {}, ocultaHasta = 0, tituloBase = String(document.title || "").replace(/^(\(\d+\)\s*📥\s*)+/, "");
   var authReady = new Promise(function(resolve){
     try{
       if(!firebase.apps.length) firebase.initializeApp(firebaseConfig);
@@ -5378,10 +5378,15 @@ var MesaJ = (function(){
     var b = $("mesa-chip"), n = $("mesa-chip-n"); if(!b) return;
     var ver = desbloqueado() && estado === "ok";
     b.style.display = ver ? "flex" : "none";
-    var nv = sinVer().length + expSinVer().length, st = sinTomar().length;
+    // El (N) de la pestaña sale del MISMO número que el botón: nunca puede quedar uno distinto del otro.
+    var nv = 0, st = 0;
+    try{ nv = sinVer().length + expSinVer().length; st = sinTomar().length; }catch(e){ console.warn("Mesa J contador:", e); }
+    var tit = (nv ? "(" + nv + ") 📥 " : "") + tituloBase;
+    if(document.title !== tit) document.title = tit;
     n.textContent = nv || st; n.classList.toggle("nuevo", nv > 0);
-    b.title = nv ? "Nuevo(s) de Mesa de Entradas: " + sinVer().map(function(m){ return m.nroExp + " " + m.paciente; }).concat(expSinVer().map(function(e){ var m = mesaTodos[e.mesaId]; return "📄 expediente de " + (m ? m.paciente : "?"); })).join(" · ") : st + " ingreso(s) sin tomar";
-    document.title = (nv ? "(" + nv + ") 📥 " : "") + tituloBase;
+    try{
+      b.title = nv ? "Nuevo(s) de Mesa de Entradas: " + sinVer().map(function(m){ return m.nroExp + " " + m.paciente; }).concat(expSinVer().map(function(e){ var m = mesaTodos[e.mesaId]; return "📄 expediente de " + (m ? m.paciente : "?"); })).join(" · ") : st + " ingreso(s) sin tomar";
+    }catch(_){ b.title = "Ingresos de Mesa de Entradas"; }
   }
   function alerta(){
     chip();
@@ -5412,6 +5417,8 @@ var MesaJ = (function(){
     box.style.display = "";
   }
   setInterval(function(){ chip(); if(desbloqueado()) alerta(); }, 1500);
+  document.addEventListener("visibilitychange", function(){ if(!document.hidden) chip(); });
+  window.addEventListener("focus", function(){ chip(); });
   setInterval(function(){ render(); }, 5 * 60 * 1000);
 
   /* ---------- Panel ---------- */
