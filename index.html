@@ -5609,7 +5609,8 @@ var MesaJ = (function(){
       (expMeta[m._id] ? '<span class="mj-bdg" style="background:#dbeafe;color:#1e40af" title="Mesa adjuntó el expediente">📄</span>' : "") +
       (m.reenviadoTxt && ef !== "devuelto" && ef !== "entregado" ? '<span class="mj-bdg ok" title="Corregido y reenviado por ' + esc(m.reenviadoPor || "mesa") + '">✅ Corregido</span>' : "") +
       (sl ? '<span class="mj-bdg am" title="Observaciones que mesa todavía no leyó">📨 ' + sl + " sin leer</span>" : "") +
-      (m.hipoacusia === "sin_intervencion" ? '<span class="mj-bdg rj" title="Sin intervención de la Lic. Graciela Isla">🎧 Sin Hipoacusia</span>' : "") +
+      (m.hipoacusia === "sin_intervencion" ? (m.hipoVolvioMs ? '<span class="mj-bdg ok" title="' + esc("Mesa registró que volvió con la intervención de la Lic. Graciela Isla: " + (m.hipoVolvioPor || "") + " el " + (m.hipoVolvioTxt || "")) + '">🎧 Volvió de Hipoacusia</span>' : '<span class="mj-bdg rj" title="Sin intervención de la Lic. Graciela Isla">🎧 Sin Hipoacusia</span>') : "") +
+      (ef === "devuelto" && m.devueltoOrigenMs ? '<span class="mj-bdg am" title="' + esc((m.devueltoOrigenPor || "Mesa") + " el " + (m.devueltoOrigenTxt || "")) + '">📤 Mesa devolvió el expte. (no correspondía)</span>' : "") +
       (x._r && x._r.previoMesa && ef !== "entregado" ? '<span class="mj-bdg rj" title="Anterior al sistema: este ingreso no corresponde">📁 Viejo</span>' : "") +
       (m.docsReclamo ? '<span class="mj-bdg rj" title="' + esc((m.docsReclamoPor || "Mesa") + ": " + m.docsReclamo) + '">⚠️ Docs mal</span>' : "") +
       (ef !== "entregado" && repetidosDe(m).length ? '<span class="mj-bdg rj" title="Mismo paciente con otro ingreso abierto: ' + esc(repetidosDe(m).map(function(o){ return o.nroExp; }).join(", ")) + '. Revisá en SIGEDIG cuál es el correcto y anulá el otro.">⚠️ Repetido</span>' : "");
@@ -5660,7 +5661,8 @@ var MesaJ = (function(){
       dato("Devolución", ef === "devuelto" ? esc(m.devueltoTxt || "") + " — <b>" + esc(m.devueltoMotivo || "") + "</b>" : "") +
       dato("Corrección", m.reenviadoTxt && ef !== "devuelto" ? "Reenviado por " + esc(m.reenviadoPor || "mesa") + " el " + esc(m.reenviadoTxt) + (m.reenviadoNota ? " — " + esc(m.reenviadoNota) : "") : "") +
       dato("Orden de compra", ocTxt ? "N° <b>" + esc(ocTxt) + "</b>" + (m.enMesaTxt ? " · en mesa desde el " + esc(m.enMesaTxt) : "") : "") +
-      dato("Hipoacusia", m.hipoacusia === "sin_intervencion" ? "SIN intervención de la Lic. Graciela Isla · " + (m.plazo || 15) + " días hábiles" : m.hipoacusia === "intervenido" ? "Con intervención" : "") +
+      dato("Hipoacusia", m.hipoacusia === "sin_intervencion" ? "SIN intervención de la Lic. Graciela Isla · " + (m.plazo || 15) + " días hábiles" + (m.hipoVolvioMs ? " · ✅ <b>Volvió con la intervención</b> (registró " + esc(m.hipoVolvioPor || "mesa") + " el " + esc(m.hipoVolvioTxt || "") + ")" : m.hipoRevisadoUltTxt ? " · última revisión de mesa: " + esc(m.hipoRevisadoUltTxt) + " (" + esc(m.hipoRevisadoUltPor || "") + "), todavía no había vuelto" : "") : m.hipoacusia === "intervenido" ? "Con intervención" : "") +
+      dato("Mesa devolvió el expediente", ef === "devuelto" && m.devueltoOrigenMs ? "<b>Lo pedido no correspondía</b> — " + esc(m.devueltoOrigenPor || "") + " el " + esc(m.devueltoOrigenTxt || "") : "") +
       dato("Teléfono", m.telefono ? esc(m.telefono) : "") +
       dato("⚠️ Mesa avisa que la documentación está mal", m.docsReclamo ? "<b>" + esc(m.docsReclamo) + "</b> — " + esc(m.docsReclamoPor || "") + " el " + esc(m.docsReclamoTxt || "") + ". Corregila con 📎 Reenviar docs." : "") +
       dato("⚠️ Posible repetido", repetidosDe(m).length ? "Mismo paciente en: <b>" + esc(repetidosDe(m).map(function(o){ return o.nroExp + " (" + o.paciente + ")"; }).join(" · ")) + "</b>. Revisá en SIGEDIG cuál N° es el correcto y anulá el otro con 🗑️." : "");
@@ -5809,7 +5811,7 @@ var MesaJ = (function(){
     var t = ahora();
     try{
       await db.collection(COL).doc(m._id).set({ estado: "devuelto", estadoPrevio: m.estado || "ingresado", devueltoMs: t.ms, devueltoTxt: t.txt, devueltoMotivo: motivo,
-        devoluciones: (Number(m.devoluciones) || 0) + 1, vistoJorge: true, reenviadoMs: null, reenviadoTxt: "", reenviadoPor: "", reenviadoNota: "",
+        devoluciones: (Number(m.devoluciones) || 0) + 1, vistoJorge: true, devueltoOrigenMs: null, devueltoOrigenTxt: "", devueltoOrigenPor: "", reenviadoMs: null, reenviadoTxt: "", reenviadoPor: "", reenviadoNota: "",
         historial: historial(t, "Devuelto a Mesa de Entradas para corregir: " + motivo) }, { merge: true });
       var id = "o_" + t.ms + "_" + Math.random().toString(36).slice(2, 7);
       await db.collection(COL_OBS).doc(id).set({ mesaId: m._id, nroExp: m.nroExp, paciente: m.paciente, tipo: m.tipo,

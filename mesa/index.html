@@ -171,6 +171,16 @@ button,input,select{font-family:inherit}
 .obs-chk input{width:20px;height:20px;accent-color:#16a34a}
 .obs-ok{margin-top:10px;width:100%;padding:12px;border:none;border-radius:10px;background:#16a34a;color:#fff;font-size:15px;font-weight:800;cursor:pointer}
 .obs-ok:disabled{background:#cbd5e1;cursor:default}
+#rec-ov{position:fixed;inset:0;z-index:9990;background:rgba(15,23,42,.62);display:flex;align-items:flex-start;justify-content:center;padding:5vh 14px 14px;overflow:auto}
+.rec-head{display:flex;align-items:center;gap:12px;padding:16px 20px;background:linear-gradient(120deg,#c2410c,#b91c1c);color:#fff}
+.rec-head b{font-size:19px;display:block}.rec-head span{font-size:13px;opacity:.92}
+.rec-tag{display:inline-block;font-size:12px;font-weight:800;border-radius:6px;padding:2px 8px;margin-bottom:6px}
+.rec-tag.dev{background:#ffedd5;color:#9a3412}.rec-tag.hipo{background:#fee2e2;color:#991b1b}
+.rec-dias{font-size:13px;font-weight:800;color:#b91c1c;margin-top:4px}
+.rec-btns{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.rec-btns button{flex:1 1 200px;padding:10px;border:none;border-radius:9px;font-size:14px;font-weight:800;cursor:pointer;color:#fff}
+.rec-b-verde{background:#16a34a}.rec-b-azul{background:#1a56a0}.rec-b-gris{background:#64748b}
+.rec-pie{padding:14px 20px 18px}
 .it-obs{margin-top:10px;border-top:1px dashed #e2e8f0;padding-top:8px}
 .it-obs-r{font-size:13px;line-height:1.45;padding:7px 10px;border-radius:9px;margin-top:6px;background:#fffbeb;border:1px solid #fde68a}
 .it-obs-r.leida{background:#f8fafc;border-color:#e2e8f0}
@@ -375,6 +385,15 @@ button,input,select{font-family:inherit}
   <div class="obs-box">
     <div class="obs-head"><div style="font-size:30px">📨</div><div><b id="obs-tit">Observación de Jorge</b><span>Leela y confirmá la lectura: queda registrado con tu nombre, fecha y hora.</span></div></div>
     <div id="obs-lista"></div>
+  </div>
+</div>
+
+<!-- Recordatorios: expedientes devueltos por Jorge sin resolver y audífonos girados al Programa de Hipoacusia -->
+<div id="rec-ov" style="display:none" role="alertdialog" aria-label="Recordatorios de expedientes pendientes">
+  <div class="obs-box">
+    <div class="rec-head"><div style="font-size:30px">⏰</div><div><b id="rec-tit">Expedientes que siguen esperando</b><span>Leé cada uno y tildá. Esta ventana vuelve a aparecer hasta que los resuelvas.</span></div></div>
+    <div id="rec-lista"></div>
+    <div class="rec-pie"><button type="button" class="obs-ok" id="rec-ok" data-acc="rec-ok" disabled>✅ Leí todo — recordámelo más tarde</button></div>
   </div>
 </div>
 
@@ -1193,7 +1212,7 @@ if(typeof module !== "undefined" && module.exports) module.exports = MesaCal;
   };
   window.cerrarSesion = function(){
     try{ localStorage.removeItem(SES_KEY); }catch(_){}
-    usuario = null; window.mostrarObs();
+    usuario = null; window.mostrarObs(); window.mostrarRec(true);
     $("app").style.display = "none"; $("login").style.display = "";
     $("lg-user").value = ""; $("lg-pass").value = ""; $("lg-err").textContent = "";
     ["lg-user", "lg-pass"].forEach(function(id){ $(id).removeAttribute("data-tocado"); });
@@ -1204,7 +1223,8 @@ if(typeof module !== "undefined" && module.exports) module.exports = MesaCal;
     $("hdr-nombre").textContent = usuario.n;
     $("tab-mis-sub").textContent = "Expedientes de " + usuario.n;
     detAbierto = {}; consultados = {};
-    escuchar(); cambiarTab("nuevo"); render(); window.mostrarObs();
+    recUltimoMs = 0; recAbierta = false;
+    escuchar(); cambiarTab("nuevo"); render(); window.mostrarObs(); window.mostrarRec(true);
     setTimeout(function(){ $("in-exp").focus(); }, 50);
   }
   async function sesionGuardada(){
@@ -1228,7 +1248,7 @@ if(typeof module !== "undefined" && module.exports) module.exports = MesaCal;
       db.collection(COL).onSnapshot(function(snap){
         mesaTodos = snap.docs.map(function(d){ var x = d.data(); x._id = d.id; return x; });
         mesa = mesaTodos.filter(function(m){ return !m.anulado; });
-        estado.mesa = "ok"; render(); window.mostrarObs();
+        estado.mesa = "ok"; render(); window.mostrarObs(); window.mostrarRec(false);
       }, function(err){ console.warn("Mesa onSnapshot:", err); estado.mesa = "sin-acceso"; render(); });
       db.collection(COL_REG).onSnapshot(function(snap){
         reg = regLimpio(snap.docs.map(function(d){ var x = d.data(); x._id = d.id; return x; }).filter(function(r){ return !r.descartado; }));
@@ -1248,7 +1268,7 @@ if(typeof module !== "undefined" && module.exports) module.exports = MesaCal;
         var nuevas = obs.filter(function(o){ return !o.leido && obsConocidas && !obsConocidas[o._id]; });
         if(nuevas.some(obsEsParaMi)) sonar();
         obsConocidas = obsConocidas || {}; obs.forEach(function(o){ obsConocidas[o._id] = true; });
-        mostrarObs(false); render();
+        mostrarObs(false); render(); window.mostrarRec(false);
       }, function(err){ console.warn("Observaciones (mesa):", err); });
       db.collection(COL_CFG).doc("feriados").onSnapshot(function(d){
         var x = d.exists ? d.data() : null;
@@ -1341,6 +1361,100 @@ if(typeof module !== "undefined" && module.exports) module.exports = MesaCal;
         "<i>" + (o.leido ? "✅ Leída por " + esc(o.leidoPor || "") + " el " + esc(o.leidoTxt || "") + " hs" + (o.respuesta ? " · Respuesta: " + esc(o.respuesta) : "") : "⏳ Sin leer") + "</i></div>";
     }).join("") + "</div>";
   }
+
+  /* ---------- Recordatorios para el usuario de mesa ----------
+     1) Expedientes que Jorge le DEVOLVIÓ y siguen sin resolver: muestra el motivo (corregir, o devolver
+        el expediente porque lo pedido no correspondía) y cuántos días hábiles lleva parado.
+     2) Audífonos SIN intervención de la Lic. Graciela Isla (Programa de Hipoacusia): revisar en SIGEDIG
+        si el expediente ya volvió con la intervención.
+     Sale al entrar y cada 2 horas mientras el panel está abierto, hasta que se resuelva cada caso.
+     Cada lectura queda registrada en el historial del expediente con nombre, fecha y hora. */
+  var REC_CADA_MS = 2 * 60 * 60 * 1000, recUltimoMs = 0, recAbierta = false;
+  function recordatorios(){
+    if(!usuario || estado.mesa !== "ok") return [];
+    var hoy = Date.now(), out = [];
+    mesa.forEach(function(m){
+      if(!esMio(m)) return;
+      if(m.estado === "devuelto" && !m.devueltoOrigenMs){
+        out.push({ m: m, tipo: "dev", dias: K.habilesEntre(m.devueltoMs || hoy, hoy, feriados) });
+      } else if(m.tipo === "audio" && m.hipoacusia === "sin_intervencion" && !m.hipoVolvioMs &&
+                m.estado !== "devuelto" && m.estado !== "en_mesa" && m.estado !== "entregado"){
+        out.push({ m: m, tipo: "hipo", dias: K.habilesEntre(m.ingresoMs || hoy, hoy, feriados) });
+      }
+    });
+    out.sort(function(a, b){ return b.dias - a.dias; });
+    return out;
+  }
+  function recItemHtml(x, prev){
+    var m = x.m, cab = '<div><span class="obs-exp">' + tipoIco(m.tipo) + " " + esc(m.nroExp || "") + '</span><span class="obs-pac">' + esc(m.paciente || "") + "</span></div>";
+    var chk = '<label class="obs-chk"><input type="checkbox" data-acc="rec-chk"' + (prev ? " checked" : "") + "> Lo leí</label>";
+    if(x.tipo === "dev"){
+      return '<div class="obs-it" data-rec="' + esc(m._id) + '"><span class="rec-tag dev">↩️ DEVUELTO POR JORGE — SIGUE SIN RESOLVER</span>' + cab +
+        '<div class="obs-cuando">Devuelto el ' + esc(m.devueltoTxt || "") + " hs</div>" +
+        '<div class="rec-dias">⏸ Lleva ' + esc(K.dh(x.dias)) + " parado en mesa</div>" +
+        '<div class="obs-txt">Leé bien qué pidió Jorge:\n' + esc(m.devueltoMotivo || "") + "</div>" +
+        '<div style="font-size:13px;color:#475569;margin-top:8px">• Si es para <b>corregir</b> un dato: abrí el expediente y tocá <b>«✅ Corregido, reenviar a Jorge»</b>.<br>• Si lo pedido <b>no correspondía</b> y el expediente se devuelve: devolvelo y registralo con el botón de abajo.</div>' +
+        '<div class="rec-btns"><button type="button" class="rec-b-verde" data-acc="rec-corregir" data-id="' + esc(m._id) + '">✏️ Corregirlo ahora</button>' +
+        '<button type="button" class="rec-b-azul" data-acc="rec-origen" data-id="' + esc(m._id) + '">📤 No correspondía: ya devolví el expediente</button></div>' + chk + "</div>";
+    }
+    return '<div class="obs-it" data-rec="' + esc(m._id) + '"><span class="rec-tag hipo">🎧 AUDÍFONOS — PROGRAMA DE HIPOACUSIA</span>' + cab +
+      '<div class="obs-cuando">Ingresado el ' + esc(m.ingresoTxt || "") + " hs, sin la intervención de la Lic. Graciela Isla</div>" +
+      '<div class="rec-dias">⏳ ' + esc(K.dh(x.dias)) + " desde el ingreso</div>" +
+      '<div class="obs-txt">Revisá en SIGEDIG si el expediente ya VOLVIÓ del Programa de Hipoacusia con la intervención de la Directora del programa, Lic. Graciela Isla.</div>' +
+      (m.hipoRevisadoUltTxt ? '<div class="obs-cuando">Última revisión: ' + esc(m.hipoRevisadoUltTxt) + " hs por " + esc(m.hipoRevisadoUltPor || "") + " — todavía no había vuelto</div>" : "") +
+      '<div class="rec-btns"><button type="button" class="rec-b-verde" data-acc="rec-hipo-si" data-id="' + esc(m._id) + '">✅ Ya volvió con la intervención</button>' +
+      '<button type="button" class="rec-b-gris" data-acc="rec-hipo-no" data-id="' + esc(m._id) + '">⏳ Revisé: todavía no volvió</button></div>' + chk + "</div>";
+  }
+  function recActualizarOk(){
+    var l = $("rec-lista"), cs = l.querySelectorAll("[data-acc=rec-chk]");
+    $("rec-ok").disabled = !cs.length || Array.prototype.some.call(cs, function(c){ return !c.checked; });
+  }
+  window.mostrarRec = function(forzar){
+    var ov = $("rec-ov"); if(!ov) return;
+    var lista = recordatorios();
+    if(!lista.length){ ov.style.display = "none"; recAbierta = false; return; }
+    var ocupado = $("obs-ov").style.display !== "none" || $("val-ov").style.display !== "none" || $("dlg-ov").style.display !== "none";
+    if(!recAbierta){
+      if(ocupado || (!forzar && Date.now() - recUltimoMs < REC_CADA_MS)) return;
+      recAbierta = true; sonar();
+    }
+    var l = $("rec-lista"), prev = {};
+    Array.prototype.forEach.call(l.querySelectorAll("[data-rec]"), function(el){ prev[el.getAttribute("data-rec")] = el.querySelector("[data-acc=rec-chk]").checked; });
+    var nDev = lista.filter(function(x){ return x.tipo === "dev"; }).length, nHipo = lista.length - nDev;
+    $("rec-tit").textContent = [nDev ? nDev + " devuelto(s) sin resolver" : "", nHipo ? nHipo + " de Hipoacusia por revisar" : ""].filter(Boolean).join(" · ");
+    l.innerHTML = lista.map(function(x){ return recItemHtml(x, prev[x.m._id]); }).join("");
+    ov.style.display = "flex"; recActualizarOk();
+  };
+  function recCerrar(){ $("rec-ov").style.display = "none"; recAbierta = false; recUltimoMs = Date.now(); }
+  async function recLeido(){
+    var lista = recordatorios(), t = ahora();
+    $("rec-ok").disabled = true;
+    try{
+      await Promise.all(lista.map(function(x){
+        return db.collection(COL).doc(x.m._id).set({ historial: firebase.firestore.FieldValue.arrayUnion(t.txt + " · Recordatorio (" + (x.tipo === "dev" ? "devuelto sin resolver" : "Hipoacusia") + ") leído por " + usuario.n) }, { merge: true });
+      }));
+    }catch(e){ console.warn("Recordatorio:", e); }
+    recCerrar();
+  }
+  async function recAccion(acc, id){
+    var m = porId(id); if(!m) return;
+    var t = ahora();
+    if(acc === "rec-corregir"){ recCerrar(); $("ls-q").value = ""; $("ls-f").value = "devueltos"; window.render(); abrirReenvio(id); return; }
+    var txt = acc === "rec-origen" ? "¿Confirmás que lo pedido NO correspondía y que ya devolviste el expediente " + m.nroExp + " de " + m.paciente + "?\n\nQueda registrado con tu nombre, fecha y hora, y Jorge lo ve en su panel."
+      : acc === "rec-hipo-si" ? "¿Confirmás que el expediente " + m.nroExp + " de " + m.paciente + " ya VOLVIÓ del Programa de Hipoacusia con la intervención de la Lic. Graciela Isla?"
+      : "¿Revisaste en SIGEDIG y el expediente " + m.nroExp + " todavía NO volvió del Programa de Hipoacusia?";
+    $("rec-ov").style.display = "none";
+    var ok = await pregunta(txt);
+    if(!ok){ $("rec-ov").style.display = "flex"; return; }
+    var cambios;
+    if(acc === "rec-origen") cambios = { devueltoOrigenMs: t.ms, devueltoOrigenTxt: t.txt, devueltoOrigenPor: usuario.n, historial: firebase.firestore.FieldValue.arrayUnion(t.txt + " · " + usuario.n + " registró que lo pedido no correspondía y devolvió el expediente") };
+    else if(acc === "rec-hipo-si") cambios = { hipoVolvioMs: t.ms, hipoVolvioTxt: t.txt, hipoVolvioPor: usuario.n, historial: firebase.firestore.FieldValue.arrayUnion(t.txt + " · " + usuario.n + " registró que volvió del Programa de Hipoacusia con la intervención de la Lic. Graciela Isla") };
+    else cambios = { hipoRevisadoUltTxt: t.txt, hipoRevisadoUltPor: usuario.n, historial: firebase.firestore.FieldValue.arrayUnion(t.txt + " · " + usuario.n + " revisó SIGEDIG: todavía no volvió del Programa de Hipoacusia") };
+    try{ await db.collection(COL).doc(id).set(cambios, { merge: true }); }
+    catch(e){ await aviso("No se pudo guardar: " + (e && e.message || e)); }
+    $("rec-ov").style.display = "flex"; window.mostrarRec(true);
+  }
+  setInterval(function(){ window.mostrarRec(false); }, 5 * 60 * 1000);
 
   /* ---------- Expediente escaneado para Jorge ---------- */
   function mb(b){ return b ? (b / 1048576 < 0.1 ? Math.max(1, Math.round(b / 1024)) + " KB" : (b / 1048576).toFixed(1) + " MB") : ""; }
@@ -2159,6 +2273,7 @@ if(typeof module !== "undefined" && module.exports) module.exports = MesaCal;
     var acc = el.getAttribute("data-acc");
     if(acc === "entregar") entregar(el.getAttribute("data-id"), el);
     else if(acc === "obs-chk"){ var c = el.closest("[data-obs]"), b = c && c.querySelector(".obs-ok"); if(b) b.disabled = !el.checked; }
+    else if(acc === "rec-chk") recActualizarOk();
     else if(acc === "entregar-reg") entregarReg(el.getAttribute("data-id"), el);
   });
   document.addEventListener("click", function(e){
@@ -2166,6 +2281,8 @@ if(typeof module !== "undefined" && module.exports) module.exports = MesaCal;
     if(el.hasAttribute("data-f")){ $("ls-q").value = ""; $("ls-f").value = el.getAttribute("data-f"); window.render(); return; }
     if(el.getAttribute("data-acc") === "imprimir"){ imprimirDocs(el.getAttribute("data-id"), el); return; }
     if(el.getAttribute("data-acc") === "obs-ok"){ confirmarObs(el.getAttribute("data-id"), el); return; }
+    if(el.getAttribute("data-acc") === "rec-ok"){ recLeido(); return; }
+    if(/^rec-(corregir|origen|hipo-si|hipo-no)$/.test(el.getAttribute("data-acc") || "")){ recAccion(el.getAttribute("data-acc"), el.getAttribute("data-id")); return; }
     if(el.getAttribute("data-acc") === "tirilla"){ var m = porId(el.getAttribute("data-id")); if(m){ registrarAcceso(m, "Reimprimió la tirilla"); imprimirTirilla(m); } return; }
     if(el.getAttribute("data-acc") === "wa"){ var mw = porId(el.getAttribute("data-id")); if(mw) registrarAcceso(mw, "Avisó al paciente por WhatsApp"); return; }
     if(el.getAttribute("data-acc") === "tomar"){ tomarExp(el.getAttribute("data-id")); return; }
