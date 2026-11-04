@@ -3536,6 +3536,11 @@ if(typeof module !== "undefined" && module.exports) module.exports = EntConsulta
           }
           continue;
         }
+        // La fecha de la OC (leída del PDF al mandarla a mesa) se completa si el registro no la tiene.
+        if(conEsa && m.ocFecha && !conEsa.fechaOC){
+          try{ await db.collection(COL).doc(conEsa._id).set({ fechaOC: m.ocFecha, actualizadoMs: Date.now() }, { merge: true }); conEsa.fechaOC = m.ocFecha; hechos++; }
+          catch(e){ console.warn("Registro OC (fecha OC de mesa):", e); }
+        }
         if(conEsa || anul[nro]) continue;                                   // ya está, o es una OC anulada
         var parts = C.partirExpediente(m.nroExp);
         if(!parts || !(m.paciente || "").trim()) continue;
@@ -3550,6 +3555,7 @@ if(typeof module !== "undefined" && module.exports) module.exports = EntConsulta
         }
         if(rec && ocsDe(rec).length) continue;                             // cada expediente tiene UNA sola OC
         var datos = { ocs: [nro], oc: nro, ocOrigen: "mesa", ocMesaId: o.id, ocMesaTxt: m.enMesaTxt || "", tieneExp: true, actualizadoMs: Date.now() };
+        if(m.ocFecha && !(rec && rec.fechaOC)) datos.fechaOC = m.ocFecha;
         if(m.estado === "entregado" && !(rec && rec.entregado)){
           var em = m.entregadoMs ? new Date(m.entregadoMs) : null, dd = function(x){ return String(x).padStart(2, "0"); };
           datos.entregado = true; datos.entregadoMs = m.entregadoMs || Date.now();
@@ -4745,7 +4751,7 @@ var MesaDocs = (function(){
   async function procesarOC(file){
     var lib = await pdfjs();
     var doc = await lib.getDocument({ data: await leer(file) }).promise;
-    var out = { paginas: [], tapados: 0, sello: false, texto: "", ocNro: "", expte: null };
+    var out = { paginas: [], tapados: 0, sello: false, texto: "", ocNro: "", expte: null, fechaOC: "" };
     var sello = window.MESA_SELLO ? await cargarImg(window.MESA_SELLO) : null;
     for(var n = 1; n <= doc.numPages; n++){
       var page = await doc.getPage(n), ESC = 2.2, vp = page.getViewport({ scale: ESC });
@@ -4754,6 +4760,12 @@ var MesaDocs = (function(){
       await page.render({ canvasContext: ctx, viewport: vp }).promise;
       var items = (await page.getTextContent()).items.filter(function(i){ return i.str && i.str.trim(); });
       out.texto += items.map(function(i){ return i.str; }).join(" ") + "\n";
+      // Fecha de la OC: "SAN MIGUEL DE TUCUMAN, 13 de Octubre de 2026"
+      if(!out.fechaOC){
+        var fm = out.texto.match(/SAN\s+MIGUEL\s+DE\s+TUCUM[AÁ]N\s*,\s*(\d{1,2})\s+DE\s+([A-ZÁÉÍÓÚa-záéíóú]+)\s+DE\s+(20\d{2})/i);
+        var MS = ["enero","febrero","marzo","abril","mayo","junio","julio","agosto","septiembre","octubre","noviembre","diciembre"];
+        if(fm){ var mi = MS.indexOf(fm[2].toLowerCase().replace("setiembre", "septiembre")); if(mi >= 0) out.fechaOC = String(fm[1]).padStart(2, "0") + "/" + String(mi + 1).padStart(2, "0") + "/" + fm[3]; }
+      }
       var fsDe = function(it){ var t = it.transform; return Math.hypot(t[2], t[3]) || Math.abs(t[3]) || 8; };
       var tapar = function(it, i0, i1, padR){
         var t = it.transform, fs = fsDe(it), L = it.str.length || 1;
@@ -5696,7 +5708,7 @@ var MesaJ = (function(){
       tel: m.telefono ? esc(m.telefono) : nada,
       avisos: bdg || nada,
       oc: ocTxt ? '<span class="grande">' + esc(ocTxt) + "</span>" : nada,
-      fechaoc: x._r && x._r.fechaOC ? esc(x._r.fechaOC) : nada,
+      fechaoc: x._r && x._r.fechaOC ? esc(x._r.fechaOC) : m.ocFecha ? esc(m.ocFecha) : nada,
       enmesa: ef === "en_mesa" || m.enMesaTxt ? fc(m.enMesaTxt) : '<span class="chip ambar">Falta enviar</span>',
       docs: docsMeta[m._id] ? (m.docsImpresoTxt ? "🔒 Impresa" : "📎 Enviada") : nada,
       motivo: '<span class="motivo">' + esc(m.devueltoMotivo || "") + "</span>",
@@ -6020,6 +6032,7 @@ var MesaJ = (function(){
         if(res){ d.docsImpresoTxt = ""; d.docsImpresoPor = ""; }
       }
       if(nro) d.ocNro = nro;
+      if(res && res.oc && res.oc.fechaOC) d.ocFecha = res.oc.fechaOC;
       if(res){ d.docsReclamo = ""; d.docsReclamoTxt = ""; d.docsReclamoPor = ""; }
       await db.collection(COL).doc(m._id).set(d, { merge: true });
       ocCerrar();
