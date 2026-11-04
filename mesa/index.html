@@ -1569,6 +1569,15 @@ if(typeof module !== "undefined" && module.exports) module.exports = MesaCal;
     }
     try{
       await MesaDocs.abrir(MesaDocs.bajar(db, id));
+      // Se imprime solo con el paciente presente para retirarla: la entrega queda registrada en el acto.
+      try{
+        var mx = porId(id) || m, rx = regDe(mx);
+        if(mx.estado !== "entregado"){
+          await ref.set({ estado: "entregado", entregadoMs: t.ms, entregadoTxt: t.txt, entregadoPor: usuario.n, entregadoAuto: "impresión con el paciente presente",
+            historial: firebase.firestore.FieldValue.arrayUnion(t.txt + " · OC entregada al paciente al imprimir la documentación (" + usuario.n + ")") }, { merge: true });
+          if(rx && !rx.entregado) await db.collection(COL_REG).doc(rx._id).set(entregaReg(true, t), { merge: true });
+        }
+      }catch(e2){ aviso("Se imprimió, pero no se pudo registrar la entrega: tildá «Entregar» a mano. (" + (e2 && e2.message || e2) + ")"); }
     }catch(e){
       // No se pudo abrir: se devuelve el estado anterior para que se pueda intentar de nuevo.
       try{

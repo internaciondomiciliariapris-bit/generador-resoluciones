@@ -5323,6 +5323,7 @@ var MesaJ = (function(){
       renderUsuarios(); render();
     }, function(err){ console.warn("Mesa J usuarios:", err); var l = $("mj-u-lista"); if(l) l.innerHTML = '<div class="rg-vacio">Sin acceso: falta la regla de Firestore de <b>genres_mesa_usuarios</b>.</div>'; });
     db.collection(COL_REG).onSnapshot(function(snap){
+      regListo = true;
       reg = snap.docs.map(function(d){ var x = d.data(); x._id = d.id; return x; }).filter(function(r){ return !r.descartado; });
       render();
     }, function(err){ console.warn("Mesa J registro:", err); });
@@ -5357,7 +5358,27 @@ var MesaJ = (function(){
   /* ---------- Automático: si el expediente ya se empezó en el generador, pasa a "En trabajo" ----------
      (cuadro comparativo hecho, resolución en proceso o generada, u OC cargada en el registro) */
   var autoHecho = {};
+  /* La documentación (OC + recetas) se imprime SOLO con el paciente presente para retirarla:
+     si mesa la imprimió y se olvidó de tildar "Entregar", queda entregada con la fecha y hora de la impresión. */
+  var autoEntHecho = {}, regListo = false;
+  function autoEntrega(){
+    if(estado !== "ok" || !db || !regListo) return;
+    mesa.forEach(function(m){
+      if(!m.docsImpresoTxt || !m.docsImpresoMs || autoEntHecho[m._id]) return;
+      if(m.estado === "devuelto" || m.docsPacientePresente === false) return;
+      var r = regDe(m);
+      if(efectivo(m, r) === "entregado") return;
+      autoEntHecho[m._id] = true;
+      var d = new Date(m.docsImpresoMs), fecha = K.fmt(d), hora = K.hora(d), t = ahora();
+      var v = { estado: "entregado", entregadoMs: m.docsImpresoMs, entregadoTxt: m.docsImpresoTxt, entregadoPor: m.docsImpresoPor || "", entregadoAuto: "impresión con el paciente presente",
+        historial: firebase.firestore.FieldValue.arrayUnion(t.txt + " · Pasa a Entregada: la documentación se imprimió con el paciente presente el " + m.docsImpresoTxt + " (" + (m.docsImpresoPor || "mesa") + ") y no se había tildado la entrega") };
+      db.collection(COL).doc(m._id).set(v, { merge: true })
+        .then(function(){ if(r && !r.entregado) return db.collection(COL_REG).doc(r._id).set({ entregado: true, entregadoMs: m.docsImpresoMs, entregadoFecha: fecha, entregadoHora: hora }, { merge: true }); })
+        .catch(function(e){ autoEntHecho[m._id] = false; console.warn("Mesa J auto-entrega:", e); });
+    });
+  }
   function autoTrabajo(){
+    autoEntrega();
     if(estado !== "ok" || !db) return;
     mesa.forEach(function(m){
       if(m.estado !== "ingresado" || autoHecho[m._id]) return;
