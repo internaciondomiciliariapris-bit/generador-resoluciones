@@ -181,6 +181,7 @@ button,input,select{font-family:inherit}
 .rec-btns button{flex:1 1 200px;padding:10px;border:none;border-radius:9px;font-size:14px;font-weight:800;cursor:pointer;color:#fff}
 .rec-b-verde{background:#16a34a}.rec-b-azul{background:#1a56a0}.rec-b-gris{background:#64748b}
 .rec-pie{padding:14px 20px 18px}
+.salir-otro{display:block;width:100%;margin-top:10px;background:none;border:none;color:#475569;font-size:13px;text-decoration:underline;cursor:pointer}
 .it-obs{margin-top:10px;border-top:1px dashed #e2e8f0;padding-top:8px}
 .it-obs-r{font-size:13px;line-height:1.45;padding:7px 10px;border-radius:9px;margin-top:6px;background:#fffbeb;border:1px solid #fde68a}
 .it-obs-r.leida{background:#f8fafc;border-color:#e2e8f0}
@@ -385,6 +386,7 @@ button,input,select{font-family:inherit}
   <div class="obs-box">
     <div class="obs-head"><div style="font-size:30px">📨</div><div><b id="obs-tit">Observación de Jorge</b><span>Leela y confirmá la lectura: queda registrado con tu nombre, fecha y hora.</span></div></div>
     <div id="obs-lista"></div>
+    <div style="padding:0 20px 16px"><button type="button" class="salir-otro" onclick="cerrarSesion()">🚪 No soy <span class="salir-nom"></span> — cerrar sesión e ingresar con mi usuario</button></div>
   </div>
 </div>
 
@@ -393,7 +395,8 @@ button,input,select{font-family:inherit}
   <div class="obs-box">
     <div class="rec-head"><div style="font-size:30px">⏰</div><div><b id="rec-tit">Expedientes que siguen esperando</b><span>Leé cada uno y tildá. Esta ventana vuelve a aparecer hasta que los resuelvas.</span></div></div>
     <div id="rec-lista"></div>
-    <div class="rec-pie"><button type="button" class="obs-ok" id="rec-ok" data-acc="rec-ok" disabled>✅ Leí todo — recordámelo más tarde</button></div>
+    <div class="rec-pie"><button type="button" class="obs-ok" id="rec-ok" data-acc="rec-ok" disabled>✅ Leí todo — recordámelo más tarde</button>
+    <button type="button" class="salir-otro" onclick="cerrarSesion()">🚪 No soy <span class="salir-nom"></span> — cerrar sesión e ingresar con mi usuario</button></div>
   </div>
 </div>
 
@@ -1221,6 +1224,7 @@ if(typeof module !== "undefined" && module.exports) module.exports = MesaCal;
   function entrar(){
     $("login").style.display = "none"; $("app").style.display = "";
     $("hdr-nombre").textContent = usuario.n;
+    Array.prototype.forEach.call(document.querySelectorAll(".salir-nom"), function(el){ el.textContent = usuario.n; });
     $("tab-mis-sub").textContent = "Expedientes de " + usuario.n;
     detAbierto = {}; consultados = {};
     recUltimoMs = 0; recAbierta = false;
