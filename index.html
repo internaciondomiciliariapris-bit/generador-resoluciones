@@ -282,6 +282,11 @@ hr{border:none;border-top:1.5px solid #e2e8f0;margin:16px 0 14px}
 .ent-carga label{display:flex;gap:9px;align-items:flex-start;font-size:14px;cursor:pointer;line-height:1.4;padding:8px 10px;border-radius:9px;background:#fff;border:1.5px solid #e2e8f0}
 .ent-carga label.on{border-color:#1a56a0;background:#eff6ff}
 .ent-carga input{width:18px;height:18px;margin-top:1px;flex-shrink:0}
+.ent-carga label.viejo{background:#f8fafc;color:#475569}
+.ent-auto{margin:12px 0 4px;padding:12px 14px;border:2px solid #86efac;border-radius:12px;background:#f0fdf4;font-size:13.5px;line-height:1.5;color:#14532d}
+.ent-auto-t{font-size:15px;font-weight:800;margin-bottom:4px}
+.ent-sinf{margin-top:8px;padding:8px 10px;border-radius:9px;background:#fff;border:1.5px dashed #fbbf24;color:#78350f}
+.ent-sinf ul{margin:4px 0 0 18px;max-height:150px;overflow:auto}
 .mj-viejo{display:inline-block;margin-top:4px;background:#7f1d1d;color:#fff;font-size:11px;font-weight:800;border-radius:6px;padding:2px 7px}
 .rg-fila{display:flex;gap:12px;align-items:flex-start;flex-wrap:wrap}
 .rg-fila .rg-oc{flex-shrink:0}
@@ -635,13 +640,19 @@ hr{border:none;border-top:1.5px solid #e2e8f0;margin:16px 0 14px}
       <button type="button" class="ent-btn ent-btn-azul" onclick="abrirBuscadorRegistro()">🔎 Buscar en el registro</button>
     </div>
 
-    <div class="stitle" style="margin-top:14px">1 · Cargar PDFs (por etapas)</div>
-    <div class="hint" style="margin-bottom:10px">Podés ir agregando de a partes: elegí unos PDF, después <b>➕ Agregar más</b> (de la misma u otra carpeta), y guardá cuando quieras. También podés guardar y seguir otro día: lo guardado <b>nunca se pierde</b> y lo nuevo se suma y se cruza con lo anterior. Los PDF <b>no</b> se guardan: solo los datos.</div>
+    <div class="ent-auto">
+      <div class="ent-auto-t">✅ Lo que mandás a mesa por el sistema <u>ya queda registrado solo</u></div>
+      <div>Cuando tocás <b>📦 A mesa</b> y subís la <b>OC + DNI + receta</b>, el buscador guarda automáticamente el <b>paciente, el N° de expediente, el N° de OC, la fecha de la OC</b> y después la <b>entrega</b>. <b>No tenés que cargar nada acá.</b></div>
+      <div id="ent-sist"></div>
+    </div>
+
+    <div class="stitle" style="margin-top:14px">1 · Cargar PDFs a mano (solo si hace falta)</div>
+    <div class="hint" style="margin-bottom:10px">Podés ir agregando de a partes y guardar cuando quieras: lo guardado <b>nunca se pierde</b> y lo nuevo se suma y se cruza con lo anterior (no se duplica). Los PDF <b>no</b> se guardan: solo los datos.</div>
     <input id="ent-files" type="file" accept="application/pdf,.pdf" multiple style="display:none" onchange="EntUI.analizar(this.files); this.value='';">
     <div class="ent-carga" id="ent-carga">
       <b>¿Qué vas a cargar? (obligatorio, antes de elegir los PDF)</b>
-      <label><input type="radio" name="ent-tipo-carga" value="previo" onchange="EntUI.tipoCarga()"><span>📁 <b>Expedientes VIEJOS, ya trabajados ANTES del sistema de Mesa de Entradas.</b><br><span style="font-size:12.5px;color:#475569">Quedan marcados como anteriores al sistema: Mesa de Entradas <b>no los puede ingresar como nuevos</b>.</span></span></label>
-      <label><input type="radio" name="ent-tipo-carga" value="nuevo" onchange="EntUI.tipoCarga()"><span>🧾 <b>Órdenes de compra / expedientes del trámite actual</b> (los que entraron por Mesa de Entradas o se están trabajando ahora).</span></label>
+      <label><input type="radio" name="ent-tipo-carga" value="nuevo" onchange="EntUI.tipoCarga()"><span style="color:#1e293b">🧾 <b>OC del trámite actual</b> — para <b>completar la fecha</b> de las OC que mandaste a mesa antes del 04/11/2026, o cargar una OC que <b>no pasó por Mesa de Entradas</b>.<br><span style="font-size:12.5px;color:#475569">Se une sola a su expediente por el N° de OC y el N° de expediente.</span></span></label>
+      <label class="viejo"><input type="radio" name="ent-tipo-carga" value="previo" onchange="EntUI.tipoCarga()"><span>📁 <b>Expedientes VIEJOS, en papel, de ANTES del sistema de Mesa de Entradas</b> (casi nunca).<br><span style="font-size:12.5px;color:#475569">Quedan marcados como anteriores: Mesa de Entradas <b>no los puede ingresar como nuevos</b>. <b>No uses esta opción</b> para las OC de ahora.</span></span></label>
     </div>
     <button type="button" class="ent-btn ent-btn-azul" onclick="EntUI.elegir()">📂 Elegir PDFs…</button>
     <div id="ent-prop"></div>
@@ -3854,6 +3865,20 @@ if(typeof module !== "undefined" && module.exports) module.exports = EntConsulta
         if(estado === "sin-acceso") rsBox.innerHTML = '<div class="ent-alerta">Sin acceso a la base. Revisá la regla de Firestore para <b>genres_registro_oc</b> (y que el login anónimo esté habilitado).</div>';
         else if(estado === "conectando") rsBox.textContent = "Conectando…";
         else { var rs0 = Store.resumen(); rsBox.textContent = cache.length + " paciente(s) en el registro · " + rs0.comp + " con expediente y OC · " + rs0.sinOc.length + " sin OC todavía (" + rs0.enTramite + " en trámite) · " + rs0.sinExp.length + " solo con OC · " + rs0.entregados + " entregada(s) al paciente"; }
+      }
+      // OC mandadas a mesa por el sistema a las que les falta la fecha (se mandaron antes de que se leyera del PDF)
+      var sist = $("ent-sist");
+      if(sist && estado === "ok"){
+        var n0 = C.soloNum, sinF = [], total = 0;
+        mesaVivos.forEach(function(o){
+          var m = o.d, nro = n0(m.ocNro); if(!nro || (m.estado !== "en_mesa" && m.estado !== "entregado")) return;
+          total++;
+          var r = cache.filter(function(x){ return ((x.ocs && x.ocs.length) ? x.ocs : (x.oc ? [x.oc] : [])).some(function(y){ return n0(y) === nro; }); })[0];
+          if(!(r && r.fechaOC) && !m.ocFecha) sinF.push(m);
+        });
+        sist.innerHTML = '<div style="margin-top:6px">📦 <b>' + total + "</b> OC mandadas a mesa por el sistema" + (sinF.length ? "" : " — todas con su fecha.") + "</div>" +
+          (sinF.length ? '<div class="ent-sinf">⚠️ <b>' + sinF.length + " sin la fecha de la OC</b> (se mandaron antes de que el sistema la leyera). Si querés completarla, cargá sus PDF de OC abajo con la opción <b>🧾 OC del trámite actual</b>:" +
+            "<ul>" + sinF.map(function(m){ return "<li>OC <b>" + esc(m.ocNro) + "</b> · " + esc(m.nroExp || "") + " · " + esc(m.paciente || "") + "</li>"; }).join("") + "</ul></div>" : "");
       }
       // Cartel de búsqueda
       var cont = $("ent-lista"), sub = $("rg-sub");
