@@ -15,9 +15,13 @@
   if (typeof window === "undefined" || window.__actualizadorHtmlPRIS) return;
   window.__actualizadorHtmlPRIS = true;
 
-  var CADA_MS = 5 * 60 * 1000;
-  var INACTIVO_MS = 20 * 60 * 1000;
-  var OCULTO_MS = 10 * 60 * 1000;
+  // Cada página puede ajustar los tiempos con window.ACTUALIZADOR_PRIS = { cadaMs, inactivoMs, ocultoMs, ocupado: fn }
+  // (ocupado() devuelve true mientras no conviene recargar: una ventana abierta, un formulario a medio cargar…).
+  var CFG = window.ACTUALIZADOR_PRIS || {};
+  var CADA_MS = CFG.cadaMs || 5 * 60 * 1000;
+  var INACTIVO_MS = CFG.inactivoMs || 20 * 60 * 1000;
+  var OCULTO_MS = CFG.ocultoMs || 10 * 60 * 1000;
+  function ocupado() { try { return typeof CFG.ocupado === "function" && !!CFG.ocupado(); } catch (e) { return false; } }
 
   function hash(t) {
     var h = 5381;
@@ -79,7 +83,7 @@
     if (!hayNueva) return;
     var inactivo = Date.now() - ultimaActividad >= INACTIVO_MS;
     var estuvoOculto = ocultoDesde !== null && Date.now() - ocultoDesde >= OCULTO_MS;
-    if (inactivo || estuvoOculto) { window.location.reload(); return; }
+    if ((inactivo || estuvoOculto) && !ocupado()) { window.location.reload(); return; }
     mostrarBarra();
   }
 
@@ -89,6 +93,8 @@
       if (actual !== foto) { hayNueva = true; decidir(); }
     }).catch(function () { /* sin red o deploy en curso: se reintenta en la próxima vuelta */ });
   }
+  // Si ya hay versión nueva, se vuelve a intentar la recarga apenas la persona deja de usar la página.
+  setInterval(function () { if (hayNueva) decidir(); }, 30 * 1000);
 
   ["mousemove", "keydown", "click", "scroll", "touchstart"].forEach(function (ev) {
     window.addEventListener(ev, function () { ultimaActividad = Date.now(); }, { passive: true });
@@ -103,7 +109,7 @@
       if (foto === null) { foto = actual; return; }
       if (actual !== foto) {
         hayNueva = true;
-        if (oculto !== null && Date.now() - oculto >= OCULTO_MS) { window.location.reload(); return; }
+        if (oculto !== null && Date.now() - oculto >= OCULTO_MS && !ocupado()) { window.location.reload(); return; }
         mostrarBarra();
       }
     }).catch(function () {}).then(function () { ocultoDesde = null; });

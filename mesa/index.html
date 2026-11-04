@@ -2336,5 +2336,24 @@ if(typeof module !== "undefined" && module.exports) module.exports = MesaCal;
 })();
 
 </script>
+<script>
+/* Versión nueva publicada: la página de mesa se actualiza sola (sin F5) apenas la persona deja de usarla
+   1 minuto, o al volver a la pestaña. Nunca recarga con una ventana abierta o un ingreso a medio cargar. */
+window.ACTUALIZADOR_PRIS = {
+  cadaMs: 2 * 60 * 1000, inactivoMs: 60 * 1000, ocultoMs: 30 * 1000,
+  ocupado: function(){
+    var vis = function(id){ var e = document.getElementById(id); return !!e && e.style.display !== "none"; };
+    if(vis("val-ov") || vis("dlg-ov") || vis("vis-ov")) return true;
+    var app = document.getElementById("app");
+    if(app && app.style.display !== "none"){
+      var campos = ["in-exp", "in-exp2", "in-pac", "in-tel"].map(function(id){ return document.getElementById(id); });
+      if(campos.some(function(c){ return c && String(c.value || "").trim(); })) return true;
+    }
+    var a = document.activeElement;
+    return !!a && (a.tagName === "TEXTAREA" || (a.tagName === "INPUT" && a.type !== "checkbox" && String(a.value || "").trim() !== ""));
+  }
+};
+</script>
+<script src="/actualizador-html.js"></script>
 </body>
 </html>
