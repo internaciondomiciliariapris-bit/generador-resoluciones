@@ -1808,17 +1808,18 @@ if(typeof module !== "undefined" && module.exports) module.exports = MesaCal;
      conserva en el generador y es la única que puede habilitarla de nuevo). */
   function ventanaImprimir(m){
     return new Promise(function(resolve){
-      abrirVentana("naranja", "🖨️", "Antes de imprimir", "Leé esto: se imprime una sola vez.",
-        '<div class="imp-big">¿El paciente está AHORA en mesa?</div>' +
+      abrirVentana("naranja", "🖨️", "¿Estás por entregar la orden al paciente?", "Primero confirmá la entrega: recién ahí se habilita la impresión.",
+        '<div class="imp-big">¿Estás por ENTREGAR la orden de compra al paciente?</div>' +
         '<div class="imp-pac">' + tipoIco(m.tipo) + " " + esc(m.paciente) + " · Expte. " + esc(m.nroExp) + "</div>" +
         '<ul class="imp-reglas">' +
           "<li><span>🧑</span><div>Imprimí la orden de compra y la receta <u>solo cuando el paciente está presente</u> para retirarlas.</div></li>" +
           "<li><span>1️⃣</span><div>Se imprime <u>UNA SOLA VEZ</u>.</div></li>" +
           "<li><span>🔒</span><div>Después se <u>BLOQUEA y se BORRA de Mesa de Entradas</u>. No se puede volver a imprimir.</div></li>" +
           "<li><span>📞</span><div>Para reimprimir hay que pedírselo a la <u>Gerencia</u>.</div></li>" +
+          "<li><span>✅</span><div>Al imprimir, la orden queda <u>ENTREGADA al paciente</u> con tu nombre, fecha y hora.</div></li>" +
         "</ul>" +
-        '<label class="val-chk"><input type="checkbox" id="imp-chk"> El paciente está presente y le entrego ahora la documentación.</label>',
-        '<button type="button" class="val-no" id="imp-no">✖ No, todavía no</button><button type="button" class="val-ok" id="imp-si" disabled>🖨️ Imprimir ahora</button>');
+        '<label class="val-chk"><input type="checkbox" id="imp-chk"> <span><b>Sí, estoy por entregar la orden de compra al paciente</b>, que está presente en mesa.</span></label>',
+        '<button type="button" class="val-no" id="imp-no">✖ No, todavía no</button><button type="button" class="val-ok" id="imp-si" disabled>🖨️ Imprimir y registrar la entrega</button>');
       var chk = $("imp-chk"), si = $("imp-si"), no = $("imp-no");
       chk.onchange = function(){ si.disabled = !chk.checked; };
       si.onclick = function(){ if(!chk.checked) return; cerrarVentana(); resolve(true); };
