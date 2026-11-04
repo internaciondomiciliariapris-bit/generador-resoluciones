@@ -3207,6 +3207,7 @@ if(typeof module !== "undefined" && module.exports) module.exports = EntConsulta
   var ETAPA_RANK = { mesa: 0, cuadro: 1, proceso: 2, resolucion: 3 };
   var tramite = { pend: null, borr: null, mesa: null }, _syncT = null, _reparados = {};
   var mesaVivos = [];   // ingresos de Mesa de Entradas con su id (para el bloqueo de la documentación)
+  var obsMesa = [];     // observaciones enviadas a mesa (para mostrar en el buscador si un devuelto ya se leyó)
   // PDFs leídos que esperan ser guardados: se van SUMANDO en cada "Agregar PDFs" (carga por etapas).
   var enEspera = [], destildados = {};
   var authReady = new Promise(function(resolve){
@@ -3418,6 +3419,10 @@ if(typeof module !== "undefined" && module.exports) module.exports = EntConsulta
           mesaVivos = snap.docs.map(function(d){ var x = d.data(); return { id: d.id, d: x }; }).filter(function(o){ return !o.d.anulado; });
           Store.programarSync(); try{ UI.render(); }catch(_){ }
         }, function(err){ console.warn("Registro OC (mesa de entradas):", err); });
+        db.collection("genres_mesa_obs").onSnapshot(function(snap){
+          obsMesa = snap.docs.map(function(d){ var x = d.data(); x._id = d.id; return x; }).filter(function(o){ return !o.anulada; });
+          try{ UI.render(); }catch(_){ }
+        }, function(err){ console.warn("Registro OC (observaciones de mesa):", err); });
       });
     },
     programarSync: function(){
@@ -3906,12 +3911,33 @@ if(typeof module !== "undefined" && module.exports) module.exports = EntConsulta
           // (bloqueo / desbloqueo): todo entra en pantalla sin tener que bajar.
           '<div class="rg-fila">' + ocGrande +
             '<div class="rg-lado">' + (datos ? '<div class="rg-datos">' + datos + "</div>" : "") + UI.docsMesa(r) + "</div>" +
-          "</div>" + alertas + UI.previoHtml(r) + entrega +
+          "</div>" + alertas + UI.devueltoHtml(r) + UI.previoHtml(r) + entrega +
         "</div>" +
         '<div class="rg-acc"><button type="button" class="ent-mini" title="Copiar paciente, expediente y OC" onclick="EntUI.copiar(\'' + r._id + '\', this)">📋</button>' +
         '<button type="button" class="ent-mini" title="Imprimir tirilla" onclick="EntUI.tirilla(\'' + r._id + '\')">🖨️</button>' +
         '<button type="button" class="ent-mini rojo" title="Eliminar del registro" onclick="EntUI.eliminar(\'' + r._id + '\')">🗑️</button></div>' +
       "</div>";
+    },
+    // Devuelto a Mesa de Entradas: cuándo y quién lo devolvió, el motivo, si el usuario de mesa ya leyó la
+    // observación y si todavía no lo reenvió (o si registró que lo pedido no correspondía).
+    devueltoHtml: function(r){
+      var o = UI.mesaDe(r); if(!o || o.d.estado !== "devuelto") return "";
+      var m = o.d;
+      var ob = obsMesa.filter(function(x){ return x.mesaId === o.id && x.devolucion && (!m.devueltoMs || (x.creadoMs || 0) >= m.devueltoMs - 60000); })
+        .sort(function(a, b){ return (b.creadoMs || 0) - (a.creadoMs || 0); })[0];
+      var duenio = m.tomadoN || m.usuarioNombre || m.usuario || "el usuario de mesa";
+      var dias = 0;
+      try{ dias = MesaCal.habilesEntre(m.devueltoMs || Date.now(), Date.now(), null); }catch(_){ }
+      var lectura = !ob ? "⚠️ No encontré la observación de la devolución."
+        : ob.leido ? "✅ <b>Leído</b> por <b>" + esc(ob.leidoPor || ob.leidoUsuario || "") + "</b> el " + esc(ob.leidoTxt || "") + " hs" + (ob.respuesta ? " — respondió: «" + esc(ob.respuesta) + "»" : "")
+        : "⏳ <b>Todavía NO lo leyó</b> " + esc(duenio) + ".";
+      var situ = m.devueltoOrigenMs
+        ? "📤 <b>" + esc(m.devueltoOrigenPor || "Mesa") + "</b> registró el " + esc(m.devueltoOrigenTxt || "") + " hs que lo pedido no correspondía y devolvió el expediente. Podés anularlo."
+        : "❌ <b>Todavía no te lo reenvió corregido.</b>" + (dias ? " Lleva " + dias + (dias === 1 ? " día hábil" : " días hábiles") + " en mesa." : "");
+      return '<div class="rg-previo mal">↩️ <b>DEVUELTO A MESA DE ENTRADAS</b> el <b>' + esc(m.devueltoTxt || "") + " hs</b> por <b>" + esc((ob && ob.autor) || "Jorge") + "</b>" +
+        " · Usuario de mesa: <b>" + esc(duenio) + "</b>" +
+        (m.devueltoMotivo ? "<br>Motivo: <b>" + esc(m.devueltoMotivo) + "</b>" : "") +
+        "<br>" + lectura + "<br>" + situ + "</div>";
     },
     // Expediente viejo (anterior al sistema de mesa). Si además mesa lo ingresó como nuevo, se avisa en rojo.
     previoHtml: function(r){
