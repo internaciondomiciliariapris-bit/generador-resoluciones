@@ -941,18 +941,22 @@
     var n = String(p.archivo || "");
     if (/\.pdf$/i.test(n) || p.tipo === "pdf") return 3;
     if (/\.docx?$/i.test(n)) return 2;
-    if (/\.(xlsx?|csv)$/i.test(n)) return 0;
-    return 1;
+    if (/\.xlsx$/i.test(n)) return 1;   // Excel: se lee, pero si el mismo proveedor mandó PDF o Word, gana ese
+    return 0;
+  }
+  function esExcel(nombre, mime) {
+    return /\.xlsx$/i.test(String(nombre || "")) || /spreadsheetml/i.test(String(mime || ""));
   }
 
   function base64AFile(b64, nombre, mime) {
     var bin = atob(b64);
     var bytes = new Uint8Array(bin.length);
     for (var j = 0; j < bin.length; j++) bytes[j] = bin.charCodeAt(j);
-    var word = esWord(nombre, mime);
-    var tipo = word ? "application/vnd.openxmlformats-officedocument.wordprocessingml.document" : "application/pdf";
+    var word = esWord(nombre, mime), excel = esExcel(nombre, mime);
+    var tipo = excel ? "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+      : word ? "application/vnd.openxmlformats-officedocument.wordprocessingml.document" : "application/pdf";
     var nom = nombre || "presupuesto";
-    if (!/\.\w{2,4}$/.test(nom)) nom += word ? ".docx" : ".pdf";
+    if (!/\.\w{2,4}$/.test(nom)) nom += excel ? ".xlsx" : word ? ".docx" : ".pdf";
     return new File([bytes], nom, { type: tipo });
   }
 
@@ -1002,8 +1006,58 @@
     });
   }
 
+  // Presupuestos en Excel (ej. Vistalli): el .xlsx también es un zip; se arma el texto fila por fila
+  // (textos compartidos + valores de las celdas) y se usa el mismo lector local de montos.
+  function textoDeXlsx(zip) {
+    var ss = zip.file("xl/sharedStrings.xml");
+    return (ss ? ss.async("string") : Promise.resolve("")).then(function (ssXml) {
+      var dec = function (t) { return String(t).replace(/&#(\d+);/g, function (_, n) { return String.fromCharCode(Number(n)); }).replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"').replace(/&apos;/g, "'"); };
+      var compartidos = (ssXml.match(/<si>[\s\S]*?<\/si>/g) || []).map(function (si) {
+        return dec((si.match(/<t(?:\s[^>]*)?>[^<]*<\/t>/g) || []).map(function (t) { return t.replace(/<[^>]+>/g, ""); }).join(""));
+      });
+      var hojas = Object.keys(zip.files).filter(function (n) { return /^xl\/worksheets\/sheet\d+\.xml$/.test(n); }).sort();
+      return Promise.all(hojas.map(function (n) { return zip.file(n).async("string"); })).then(function (xmls) {
+        return xmls.map(function (xml) {
+          return (xml.match(/<row[\s\S]*?<\/row>/g) || []).map(function (row) {
+            return (row.match(/<c\b[\s\S]*?(?:\/>|<\/c>)/g) || []).map(function (c) {
+              var tipo = (c.match(/\bt="([^"]+)"/) || [])[1] || "";
+              var v = (c.match(/<v>([^<]*)<\/v>/) || [])[1];
+              if (tipo === "inlineStr") return dec((c.match(/<t[^>]*>([^<]*)<\/t>/) || [])[1] || "");
+              if (v == null) return "";
+              if (tipo === "s") return compartidos[Number(v)] || "";
+              if (tipo === "str" || tipo === "b") return dec(v);
+              var num = Number(v);
+              if (isNaN(num)) return dec(v);
+              // importes con formato argentino y $: así el lector los reconoce como precio
+              return num >= 10000 ? "$ " + num.toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : String(Math.round(num * 100) / 100);
+            }).filter(Boolean).join("   ");
+          }).filter(Boolean).join("\n");
+        }).join("\n");
+      });
+    });
+  }
+  function leerExcel(k, file) {
+    var info = $("c-pdfinfo" + k);
+    var sug = $("c-sug" + k);
+    sug.innerHTML = "";
+    info.textContent = " 📎 " + file.name + " — leyendo Excel…";
+    cargarJSZipBandeja().then(function (JSZip) {
+      return file.arrayBuffer().then(function (buf) { return JSZip.loadAsync(buf); });
+    }).then(function (zip) {
+      if (!zip.file("xl/workbook.xml")) throw new Error("no es un .xlsx (puede ser un .xls viejo)");
+      return textoDeXlsx(zip);
+    }).then(function (texto) {
+      procesarTexto(k, file, info, sug, texto, false, "");
+      info.textContent = info.textContent.replace("(lector local)", "(Excel)");
+    }).catch(function (ex) {
+      info.textContent = " 📎 " + file.name + " — no pude leer el Excel (" + ex.message + "), cargá el precio a mano";
+      sug.appendChild(crearBtnNegativa(k));
+    });
+  }
+
   // Pone el PDF en el input de la fila y dispara la lectura de siempre (Gemini → respaldo local)
   function inyectarPdf(k, file) {
+    if (esExcel(file.name, file.type)) { leerExcel(k, file); return; }
     if (esWord(file.name, file.type)) { leerWord(k, file); return; }
     var input = $("c-file" + k);
     if (!input) return;
