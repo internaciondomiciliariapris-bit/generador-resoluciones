@@ -1009,8 +1009,20 @@
   // Presupuestos en Excel (ej. Vistalli): el .xlsx también es un zip; se arma el texto fila por fila
   // (textos compartidos + valores de las celdas) y se usa el mismo lector local de montos.
   function textoDeXlsx(zip) {
-    var ss = zip.file("xl/sharedStrings.xml");
-    return (ss ? ss.async("string") : Promise.resolve("")).then(function (ssXml) {
+    var ss = zip.file("xl/sharedStrings.xml"), st = zip.file("xl/styles.xml");
+    var estilosFecha = {};   // índices de estilo de celda que son FECHAS (Excel guarda la fecha como número: 46331 = 05/11/2026)
+    return (st ? st.async("string") : Promise.resolve("")).then(function (stXml) {
+      var fmtFecha = {};
+      [14, 15, 16, 17, 18, 19, 20, 21, 22, 27, 30, 36, 45, 46, 47, 50, 57].forEach(function (n) { fmtFecha[n] = true; });
+      (stXml.match(/<numFmt\b[^>]*>/g) || []).forEach(function (f) {
+        var id = Number((f.match(/numFmtId="(\d+)"/) || [])[1]);
+        var code = ((f.match(/formatCode="([^"]*)"/) || [])[1] || "").replace(/"[^"]*"|\[[^\]]*\]/g, "");
+        if (/[dy]/i.test(code) || /m{1,4}[^a-z]*[dy]|[dy][^a-z]*m/i.test(code)) fmtFecha[id] = true;
+      });
+      var xfs = ((stXml.match(/<cellXfs[\s\S]*?<\/cellXfs>/) || [])[0] || "").match(/<xf\b[^>]*>/g) || [];
+      xfs.forEach(function (xf, i) { if (fmtFecha[Number((xf.match(/numFmtId="(\d+)"/) || [])[1])]) estilosFecha[i] = true; });
+      return ss ? ss.async("string") : "";
+    }).then(function (ssXml) {
       var dec = function (t) { return String(t).replace(/&#(\d+);/g, function (_, n) { return String.fromCharCode(Number(n)); }).replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"').replace(/&apos;/g, "'"); };
       var compartidos = (ssXml.match(/<si>[\s\S]*?<\/si>/g) || []).map(function (si) {
         return dec((si.match(/<t(?:\s[^>]*)?>[^<]*<\/t>/g) || []).map(function (t) { return t.replace(/<[^>]+>/g, ""); }).join(""));
@@ -1028,6 +1040,11 @@
               if (tipo === "str" || tipo === "b") return dec(v);
               var num = Number(v);
               if (isNaN(num)) return dec(v);
+              var est = (c.match(/\bs="(\d+)"/) || [])[1];
+              if (est != null && estilosFecha[Number(est)] && num > 20000 && num < 80000) {
+                var d = new Date(Math.round((num - 25569) * 86400000));   // fecha de Excel → dd/mm/aaaa (nunca se toma como precio)
+                return String(d.getUTCDate()).padStart(2, "0") + "/" + String(d.getUTCMonth() + 1).padStart(2, "0") + "/" + d.getUTCFullYear();
+              }
               // importes con formato argentino y $: así el lector los reconoce como precio
               return num >= 10000 ? "$ " + num.toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : String(Math.round(num * 100) / 100);
             }).filter(Boolean).join("   ");
