@@ -799,11 +799,11 @@
     return orden.map(function (k) {
       var g = porPac[k];
       g.hilos = hilosPorPac[k] || [];
-      // una sola fila por firma: si mandó varios PDF, se queda el más reciente
+      // una sola fila por firma: primero el PDF (si mandó PDF y Excel, se toma el PDF); entre iguales, el más reciente
       var porFirma = {};
       g.presupuestos.forEach(function (p) {
-        var f = nombreFirma(p);
-        if (!porFirma[f] || String(p.fecha) > String(porFirma[f].fecha)) porFirma[f] = p;
+        var f = nombreFirma(p), a = porFirma[f];
+        if (!a || rangoAdjunto(p) > rangoAdjunto(a) || (rangoAdjunto(p) === rangoAdjunto(a) && String(p.fecha) > String(a.fecha))) porFirma[f] = p;
       });
       g.firmas = Object.keys(porFirma).map(function (f) {
         var p = porFirma[f];
@@ -932,7 +932,17 @@
   }
 
   function esWord(nombre, mime) {
-    return /word|officedocument|msword/i.test(String(mime || "")) || /\.docx?$/i.test(String(nombre || ""));
+    var n = String(nombre || ""), m = String(mime || "");
+    if (/\.(xlsx?|csv|pptx?)$/i.test(n) || /sheet|excel|presentation/i.test(m)) return false; // planillas: no son Word
+    return /wordprocessingml|msword/i.test(m) || /\.docx?$/i.test(n);
+  }
+  // Prioridad del adjunto de un mismo proveedor: PDF > Word > lo demás (ej. una planilla Excel no se lee)
+  function rangoAdjunto(p) {
+    var n = String(p.archivo || "");
+    if (/\.pdf$/i.test(n) || p.tipo === "pdf") return 3;
+    if (/\.docx?$/i.test(n)) return 2;
+    if (/\.(xlsx?|csv)$/i.test(n)) return 0;
+    return 1;
   }
 
   function base64AFile(b64, nombre, mime) {
