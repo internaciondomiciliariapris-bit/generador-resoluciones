@@ -1540,7 +1540,48 @@ async function revisarDuplicados(){
   }
 }
 
+// ── Nº de Orden desde el Registro de OC (lo cargado por el sistema / Mesa de Entradas) ──
+// Completa SOLO las filas del Listado que no tienen Nº de orden, si el registro tiene
+// UNA sola OC para ese mismo expediente (número + código + año) y el mismo paciente.
+// Nunca pisa un Nº ya cargado ni repite una OC que ya está en otra fila.
+function _ordenesDesdeRegistro(){
+  try{
+    if(!window.RegistroOCStore || !window.RegistroOCStore.lista || typeof EntCore === "undefined") return 0;
+    const reg = window.RegistroOCStore.lista();
+    if(!reg.length) return 0;
+    const arr = listadoLeer();
+    const usadas = {};
+    arr.forEach(function(r){ const o = EntCore.soloNum(r.orden); if(o) usadas[o] = true; });
+    let n = 0;
+    arr.forEach(function(r){
+      if(String(r.orden||"").trim()) return;
+      const p = EntCore.partirExpediente(r.nroExp);
+      if(!p) return;
+      const k = EntCore.clave(p.num, p.cod);
+      if(!k) return;
+      const cand = reg.filter(function(x){
+        const ocs = (x.ocs && x.ocs.length) ? x.ocs : (x.oc ? [x.oc] : []);
+        if(ocs.length !== 1) return false;
+        if(EntCore.clave(x.num, x.cod) !== k) return false;
+        if(p.anio && x.anio && String(p.anio) !== String(x.anio)) return false;
+        if(r.paciente && x.paciente && !EntCore.mismaPersona(r.paciente, x.paciente)) return false;
+        return true;
+      });
+      if(cand.length !== 1) return;
+      const x = cand[0];
+      const oc = EntCore.soloNum((x.ocs && x.ocs[0]) || x.oc);
+      if(!oc || usadas[oc]) return;
+      r.orden = oc;
+      if(!r.ordenFecha && x.fechaOC) r.ordenFecha = x.fechaOC;
+      usadas[oc] = true; n++;
+    });
+    if(n) listadoGuardar(arr);
+    return n;
+  }catch(e){ console.warn("Listado ← Registro OC:", e); return 0; }
+}
+
 function renderListado(){
+  _ordenesDesdeRegistro();
   const buscador = document.getElementById("lst-buscar");
   const q = (buscador ? buscador.value : "").trim().toLowerCase();
   const todos = listadoLeer();
@@ -3306,6 +3347,7 @@ if(typeof module !== "undefined" && module.exports) module.exports = EntConsulta
           cache = todos.filter(function(r){ return !r.descartado; });
           cache.sort(function(a,b){ return (b.creadoMs||0) - (a.creadoMs||0); });
           estado = "ok"; UI.render(); Store.programarSync();
+          try{ if(typeof renderListado === "function") renderListado(); }catch(_){ }
         }, function(err){ console.warn("Registro OC onSnapshot:", err); estado = "sin-acceso"; UI.render(); });
       });
     },
