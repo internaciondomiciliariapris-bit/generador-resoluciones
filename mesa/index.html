@@ -757,6 +757,21 @@ var EntConsulta = (function(){
 if(typeof module !== "undefined" && module.exports) module.exports = EntConsulta;
 </script>
 <script>
+/* ===== Anulación de ingresos: motivo y fecha (también para los viejos, anulados sin motivo) ===== */
+window.AnulInfo = {
+  motivo: function(m){
+    if(m && m.anuladoMotivo) return m.anuladoMotivo;
+    if(m && m.devueltoMotivo) return "Devuelto a mesa: " + m.devueltoMotivo;
+    return "Sin motivo registrado — consultá con Jorge";
+  },
+  fecha: function(m){
+    if(m && m.anuladoTxt) return m.anuladoTxt;
+    var h = ((m && m.historial) || []).filter(function(x){ return /Ingreso anulado/.test(String(x)); });
+    return h.length ? String(h[h.length - 1]).split(" · ")[0] : "";
+  }
+};
+</script>
+<script>
 /* ===== Documentación para Mesa de Entradas =====
    Arma en el navegador UN solo PDF para imprimir: OC sin precios y con sello (2 copias) + copia del DNI + receta.
    Los precios se detectan por su formato (38.000,0000) y por la fila "Son pesos"; el sello va arriba de la línea "Autorizó".
@@ -1067,6 +1082,7 @@ var MesaCal = (function(){
     if(efectivo === "entregado") return { cls: "gris", txt: "Entregada al paciente" };
     if(efectivo === "en_mesa") return { cls: "azul", txt: "OC lista en Mesa de Entradas" };
     if(efectivo === "devuelto") return { cls: "devuelto", txt: "Devuelto a mesa · plazo detenido" };
+    if(efectivo === "anulado") return { cls: "gris", txt: "Ingreso anulado" };
     if(sit.restantes < 0) return { cls: "rojo", txt: "Vencido hace " + dh(-sit.restantes) };
     if(sit.restantes === 0) return { cls: "rojo", txt: "Hoy se cumplen los " + sit.plazo + " días hábiles" };
     if(sit.restantes <= 2) return { cls: "ambar", txt: "Faltan " + dh(sit.restantes) };
@@ -2084,10 +2100,22 @@ if(typeof module !== "undefined" && module.exports) module.exports = MesaCal;
                paciente: m.paciente, pacienteNorm: C.normNombre(m.paciente), tipo: m.tipo, creadoMs: m.ingresoMs,
                _m: m, _r: r, _ef: efectivo(m, r), _sit: K.situacion(m, feriados) };
     });
+    // Ingresos ANULADOS / rechazados (sin otro ingreso vivo del mismo expediente): se muestran al buscar,
+    // con el motivo, en lugar de «OC en trámite».
+    var vivos = {}; mesa.forEach(function(m){ var k = claveDe(m); if(k) vivos[k + "|" + (m.anio || "")] = true; });
+    var anul = mesaTodos.filter(function(m){ return m.anulado; }).filter(function(m){
+      var k = claveDe(m); return !(k && (vivos[k + "|" + (m.anio || "")] || vivos[k + "|"]));
+    }).map(function(m){
+      var r = regDe(m), conOc = r && (ocsDe(r).length || r.entregado);
+      if(r && !conOc) usados[r._id] = true;          // su registro sin OC no se muestra como «en trámite»
+      return { num: m.num, cod: m.cod, letra: m.letra, anio: m.anio, claves: r ? r.claves : null, ocs: [],
+               paciente: m.paciente, pacienteNorm: C.normNombre(m.paciente), tipo: m.tipo, creadoMs: m.anuladoMs || m.ingresoMs,
+               _m: m, _r: r, _ef: "anulado", _anul: true };
+    });
     var solos = reg.filter(function(r){ return !usados[r._id]; }).map(function(r){
       return Object.assign({}, r, { _r: r, _m: null, _ef: r.entregado ? "entregado" : (ocsDe(r).length ? "oc" : "tramite") });
     });
-    return { mesa: lista, solos: solos };
+    return { mesa: lista, solos: solos, anul: anul };
   }
   function orden(a, b){
     var pr = function(x){ return x._ef === "devuelto" ? -1 : x._ef === "en_mesa" ? 0 : x._ef === "entregado" ? 3 : 1; };
@@ -2116,7 +2144,7 @@ if(typeof module !== "undefined" && module.exports) module.exports = MesaCal;
     if(selU.getAttribute("data-opts") !== opts){ selU.innerHTML = opts; selU.setAttribute("data-opts", opts); selU.value = usuariosVistos[prevU] ? prevU : ""; }
     var base = vista === "mis" ? misMesa
       : (selU.value ? todosMesa.filter(function(x){ return x._m.usuario === selU.value || x._m.tomadoU === selU.value; }) : todosMesa);
-    it = { mesa: base, solos: it.solos };
+    it = { mesa: base, solos: it.solos, anul: it.anul };
     var act = base.filter(function(x){ return x._ef !== "entregado"; });
     var n = { verde: 0, ambar: 0, rojo: 0, azul: 0, devuelto: 0 };
     act.forEach(function(x){ var s = K.semaforo(x._sit, x._ef).cls; if(n[s] != null) n[s]++; });
@@ -2127,11 +2155,11 @@ if(typeof module !== "undefined" && module.exports) module.exports = MesaCal;
       '<span class="chip rojo" data-f="vencidos">🔴 ' + n.rojo + " vencidos / hoy</span>";
     var html = "", lista;
     if(q){
-      lista = EntConsulta.buscar(it.mesa.concat(it.solos), q);
+      lista = EntConsulta.buscar(it.mesa.concat(it.solos, it.anul || []), q);
       var enOtros = vista === "mis" ? EntConsulta.buscar(todosMesa, q).filter(function(x){ return !esMio(x._m); }).length : 0;
       $("ls-aviso").innerHTML = enOtros ? '<div class="aviso-otros" data-acc="ver-todos">👥 Hay <b>' + enOtros + "</b> resultado(s) más en expedientes de otros usuarios. <u>Ver en Todos los usuarios</u></div>" : "";
       if(!lista.length) html = '<div class="vacio">No se encontró nada con “' + esc(q) + '”.<br><span style="font-size:12px">Probá con el apellido, el N° de expediente (8871/410) o el N° de OC (OC20552).</span></div>';
-      else html = lista.map(function(x){ return x._m ? tarjeta(x) : tarjetaReg(x); }).join("");
+      else html = lista.map(function(x){ return x._anul ? tarjetaAnul(x) : x._m ? tarjeta(x) : tarjetaReg(x); }).join("");
     } else {
       $("ls-aviso").innerHTML = "";
       lista = it.mesa.filter(function(x){
@@ -2225,6 +2253,18 @@ if(typeof module !== "undefined" && module.exports) module.exports = MesaCal;
         '<button type="button" class="mini" data-acc="tirilla" data-id="' + esc(m._id) + '" title="Volver a imprimir la tirilla">🖨️ Tirilla</button>' +
         '<button type="button" class="mini" data-acc="detalle" data-id="' + esc(m._id) + '" title="Ver el historial del expediente">' + (detAbierto[m._id] ? "📂 Ocultar" : "📂 Consultar") + "</button>" +
         (!esMio(m) && ef !== "entregado" ? '<button type="button" class="mini" data-acc="tomar" data-id="' + esc(m._id) + '" title="Tomar este expediente para seguir el trámite" style="border-color:#fed7aa;color:#9a3412">✋ Tomar</button>' : "") +
+      "</div></div>";
+  }
+  function tarjetaAnul(x){
+    var m = x._m, f = AnulInfo.fecha(m);
+    return '<div class="it rojo">' +
+      '<div class="it-ico">' + tipoIco(m.tipo) + "</div>" +
+      '<div class="it-main">' +
+        '<div class="it-kick">' + esc(tipoTxt(m.tipo)) + "</div>" +
+        '<div class="it-tit"><span class="it-exp">' + esc(m.nroExp) + '</span><span class="it-pac">' + esc(m.paciente) + "</span></div>" +
+        '<div class="it-estado" style="background:#fef2f2;border-color:#fca5a5;color:#7f1d1d">❌ <b>INGRESO ANULADO / RECHAZADO</b>' + (f ? " el " + esc(f) + " hs" : "") + (m.anuladoPor ? " por " + esc(m.anuladoPor) : "") +
+          '<br>Motivo: <b>' + esc(AnulInfo.motivo(m)) + "</b><br>No hay orden de compra en trámite para este ingreso.</div>" +
+        '<div class="it-dato">Había ingresado el ' + esc(m.ingresoTxt || "") + " hs · cargado por " + esc(m.usuarioNombre || m.usuario || "") + "</div>" +
       "</div></div>";
   }
   function tarjetaReg(x){
