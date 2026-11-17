@@ -5637,7 +5637,8 @@ var MesaJ = (function(){
     var q = $("mj-q").value.trim(), grupos = { nuevo: [], proc: [], oc: [], dev: [], ent: [], anu: [] };
     items.forEach(function(x){ grupos[vistaDe(x)].push(x); });
     // Anulados / rechazados: se conservan con su motivo y se pueden recuperar
-    var itemsAnu = anulados.map(function(m){
+    // Solo los que tienen observación (motivo de la anulación o de la devolución a mesa)
+    var itemsAnu = anulados.filter(function(m){ return !!(m.anuladoMotivo || m.devueltoMotivo); }).map(function(m){
       var r = regDe(m), ocs = ocsDe(r).slice(); if(m.ocNro && ocs.indexOf(String(m.ocNro)) < 0) ocs.unshift(String(m.ocNro));
       return { num: m.num, cod: m.cod, letra: m.letra, anio: m.anio, claves: r ? r.claves : null, ocs: ocs, paciente: m.paciente,
                pacienteNorm: C.normNombre(m.paciente), tipo: m.tipo, creadoMs: m.ingresoMs, _m: m, _r: r, _ef: "anulado", _sit: K.situacion(m, feriados) };
@@ -5725,7 +5726,7 @@ var MesaJ = (function(){
     { k: "oc", i: "🧾", t: "Con orden de compra", d: "Por enviar · en mesa", c: "#6d28d9", vacio: "No hay expedientes con orden de compra pendientes de entregar." },
     { k: "dev", i: "↩️", t: "Devueltos a mesa", d: "Los están corrigiendo", c: "#c2410c", vacio: "No hay expedientes devueltos." },
     { k: "ent", i: "✅", t: "Entregados", d: "El paciente ya retiró", c: "#475569", vacio: "Todavía no hay entregas." },
-    { k: "anu", i: "🗑️", t: "Anulados", d: "Rechazados, con su motivo", c: "#991b1b", vacio: "No hay ingresos anulados." }
+    { k: "anu", i: "🗑️", t: "Anulados", d: "Devueltos con observación", c: "#991b1b", vacio: "No hay ingresos anulados." }
   ];
   function vistaDe(x){
     if(x._ef === "anulado") return "anu";
@@ -5824,7 +5825,7 @@ var MesaJ = (function(){
       enmesa: ef === "en_mesa" || m.enMesaTxt ? fc(m.enMesaTxt) : '<span class="chip ambar">Falta enviar</span>',
       docs: docsMeta[m._id] ? (m.docsImpresoTxt ? "🔒 Impresa" : "📎 Enviada") : nada,
       motivo: '<span class="motivo">' + esc(m.devueltoMotivo || "") + "</span>",
-      motivoanu: '<span class="motivo">' + esc(AnulInfo.motivo(m)) + "</span>" + (m.anuladoMotivo ? "" : '<span class="sub" style="color:#b45309">sin motivo cargado al anular</span>'),
+      motivoanu: '<span class="motivo">' + esc(AnulInfo.motivo(m)) + "</span>",
       anufecha: fc(AnulInfo.fecha(m)),
       devfecha: fc(m.devueltoTxt),
       pausa: sit.pausa ? esc(K.dh(sit.pausa)) : "0",
