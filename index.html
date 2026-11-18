@@ -380,6 +380,7 @@ hr{border:none;border-top:1.5px solid #e2e8f0;margin:16px 0 14px}
       <div class="hint">Precio por unidad — se multiplica por la cantidad</div></div>
     <div class="field"><label>Importe en letras (automático)</label>
       <input type="text" id="a-letras" class="ro" readonly></div>
+    <div id="a-instr"></div>
     <div style="display:flex;gap:10px;flex-wrap:wrap">
       <button class="btn-preview" style="flex:2;min-width:200px" onclick="mostrarPrevia('anteojos')">👁️ Ver Resolución</button>
       <button class="btn-proceso" style="flex:1;min-width:170px" onclick="guardarEnProceso('anteojos')">💾 Guardar en proceso</button>
@@ -477,6 +478,7 @@ hr{border:none;border-top:1.5px solid #e2e8f0;margin:16px 0 14px}
       <input type="text" id="b-precioTotal" class="ro" readonly></div>
     <div class="field"><label>Importe en letras (automático)</label>
       <input type="text" id="b-letras" class="ro" readonly></div>
+    <div id="b-instr"></div>
     <div style="display:flex;gap:10px;flex-wrap:wrap">
       <button class="btn-preview" style="flex:2;min-width:200px" onclick="mostrarPrevia('audio')">👁️ Ver Resolución</button>
       <button class="btn-proceso" style="flex:1;min-width:170px" onclick="guardarEnProceso('audio')">💾 Guardar en proceso</button>
@@ -679,11 +681,30 @@ hr{border:none;border-top:1.5px solid #e2e8f0;margin:16px 0 14px}
 
 <script>
 // ——— Número a letras ———
-const _u=["","Un","Dos","Tres","Cuatro","Cinco","Seis","Siete","Ocho","Nueve","Diez","Once","Doce","Trece","Catorce","Quince","Dieciseis","Diecisiete","Dieciocho","Diecinueve","Veinte","Veintiun","Veintidos","Veintitres","Veinticuatro","Veinticinco","Veintiseis","Veintisiete","Veintiocho","Veintinueve"];
+const _u=["","Un","Dos","Tres","Cuatro","Cinco","Seis","Siete","Ocho","Nueve","Diez","Once","Doce","Trece","Catorce","Quince","Dieciséis","Diecisiete","Dieciocho","Diecinueve","Veinte","Veintiún","Veintidós","Veintitrés","Veinticuatro","Veinticinco","Veintiséis","Veintisiete","Veintiocho","Veintinueve"];
 const _d=["","Diez","Veinte","Treinta","Cuarenta","Cincuenta","Sesenta","Setenta","Ochenta","Noventa"];
 const _c=["","Ciento","Doscientos","Trescientos","Cuatrocientos","Quinientos","Seiscientos","Setecientos","Ochocientos","Novecientos"];
 function m100(n){if(n===0)return"";if(n===100)return"Cien";if(n<30)return _u[n];if(n<100){const d=Math.floor(n/10),u=n%10;return u===0?_d[d]:_d[d]+" y "+_u[u].toLowerCase();}const c=Math.floor(n/100),r=n%100;return _c[c]+(r>0?" "+m100(r):"");}
-function numLetras(n){if(n===0)return"Cero";let r="";const M=Math.floor(n/1000000),K=Math.floor((n%1000000)/1000),R=n%1000;if(M>0)r+=(M===1?"Un Millon":m100(M)+" Millones")+" ";if(K>0)r+=(K===1?"Mil":m100(K)+" Mil")+" ";if(R>0)r+=m100(R);return r.trim();}
+function numLetras(n){if(n===0)return"Cero";let r="";const M=Math.floor(n/1000000),K=Math.floor((n%1000000)/1000),R=n%1000;if(M>0)r+=(M===1?"Un Millón":m100(M)+" Millones")+" ";if(K>0)r+=(K===1?"Mil":m100(K)+" Mil")+" ";if(R>0)r+=m100(R);r=r.trim();return (M>0&&K===0&&R===0)?r+" de":r;}
+// ——— Datos que exige el instructivo de Asesoría Letrada ———
+const CONTROLES_RES=[["arca","Constancia de ARCA vigente"],["dgr","Certificado de Cumplimiento Fiscal de Rentas (DGR Tucumán)"],["habilitacion","Habilitación de la firma vigente"],["tope","El monto está dentro del tope que puede firmar esta autoridad"]];
+const FIRMA_ANTEOJOS="Grupo Vistalli S.R.L (Óptica Giorlent)";
+function cuitsGuardados(){try{return JSON.parse(localStorage.getItem("res_cuit_firmas")||"{}")||{};}catch(_){return {};}}
+function cuitDeFirma(f){return cuitsGuardados()[String(f||"").toUpperCase().trim()]||"";}
+function recordarCuit(f,c){if(!f||!c)return;try{const m=cuitsGuardados();m[String(f).toUpperCase().trim()]=c;localStorage.setItem("res_cuit_firmas",JSON.stringify(m));}catch(_){}}
+function htmlInstr(pre){
+  const campo=(id,lab,ph)=>'<div class="field"><label>'+lab+' <span>*</span></label><input type="text" id="'+pre+'-'+id+'" placeholder="'+ph+'"></div>';
+  return '<hr><div class="stitle">Fojas y datos de la firma</div><div class="row">'+campo("fsSolicitud","Fs. solicitud","02")+campo("fsPresupuesto","Fs. presupuesto","05")+'</div>'+
+    '<div class="row">'+campo("fsJuridico","Fs. dictamen jurídico","08")+campo("cuit","CUIT de la firma adjudicada","30-00000000-0")+'</div>'+
+    '<hr><div class="stitle">Controles antes de firmar</div>'+CONTROLES_RES.map(c=>'<label style="display:flex;gap:8px;align-items:center;margin:5px 0;font-size:14px;cursor:pointer"><input type="checkbox" id="'+pre+'-c-'+c[0]+'"> '+c[1]+'</label>').join("")+
+    '<label style="display:flex;gap:8px;align-items:center;margin:9px 0;font-size:14px;font-weight:700;cursor:pointer"><input type="checkbox" id="'+pre+'-directoraAc"> La C.P.N Castillo firma a cargo de la Dirección (sale una sola firma)</label>';
+}
+function leerInstr(pre){const v=id=>{const x=document.getElementById(pre+"-"+id);return x?x.value.trim():"";};const d=document.getElementById(pre+"-directoraAc");return {fsSolicitud:v("fsSolicitud"),fsPresupuesto:v("fsPresupuesto"),fsJuridico:v("fsJuridico"),cuit:v("cuit"),directoraAc:!!(d&&d.checked)};}
+function setInstr(pre,p){["fsSolicitud","fsPresupuesto","fsJuridico","cuit"].forEach(id=>{const x=document.getElementById(pre+"-"+id);if(x)x.value=(p&&p[id])||"";});const d=document.getElementById(pre+"-directoraAc");if(d)d.checked=!!(p&&p.directoraAc);}
+function faltaInstr(d){const f=[];if(!d.fsSolicitud)f.push("foja de la solicitud");if(!d.fsPresupuesto)f.push("foja del presupuesto");if(!d.fsJuridico)f.push("foja del dictamen jurídico");if(!d.cuit)f.push("CUIT de la firma");return f;}
+function faltaControles(pre){return CONTROLES_RES.filter(c=>{const x=document.getElementById(pre+"-c-"+c[0]);return !(x&&x.checked);}).map(c=>c[1]);}
+function iniciarInstr(){["a","b"].forEach(pre=>{const box=document.getElementById(pre+"-instr");if(box&&!box.innerHTML)box.innerHTML=htmlInstr(pre);});const ca=document.getElementById("a-cuit");if(ca&&!ca.value)ca.value=cuitDeFirma(FIRMA_ANTEOJOS);document.addEventListener("change",ev=>{const t=ev.target;if(t&&t.name==="ganadora"&&t.closest&&t.closest("#panel-audio")){const c=document.getElementById("b-cuit");if(c)c.value=cuitDeFirma(t.value)||c.value;}});}
+if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",iniciarInstr);else setTimeout(iniciarInstr,0);
 function parseInsumoAnteojos(str){
   const m=String(str||"").trim().match(/^\s*(\d+)\s*[-\u2013]\s*(.+)$/);
   return m?{cant:parseInt(m[1])||1,texto:m[2].trim()}:{cant:1,texto:String(str||"").trim()};
@@ -872,12 +893,22 @@ function mostrarPrevia(tipo){
       msgEl.className="msg er";msgEl.textContent="Completá todos los campos.";return;}
   }
 
+  Object.assign(payload,leerInstr(pre));
+  const _falta=faltaInstr(payload).concat(faltaControles(pre).map(t=>"verificar: "+t));
+  if(_falta.length){msgEl.className="msg er";msgEl.textContent="Falta: "+_falta.join(" · ")+".";return;}
+  recordarCuit(tipo==="anteojos"?payload.proveedor:payload.firmaGanadora,payload.cuit);
+
   currentTipo=tipo;
   currentPayload=payload;
   renderPrevia(payload);
   e("form-card").style.display="none";
   e("preview-card").style.display="block";
   window.scrollTo(0,0);
+}
+
+function firmasResolucion(p){
+  if(p.directoraAc) return [["Firmado digitalmente:","C.P.N Mariela Agustina Castillo","Directora a/c de la Dirección General","del Programa Integrado de Salud","SI.PRO.SA"]];
+  return [["Firmado digitalmente:","Dra. Noellia Bottone","Directora General","Programa Integrado de Salud","SI.PRO.SA"],["Firmado digitalmente:","C.P.N Mariela Agustina Castillo","Gerente Administrativo Contable","Dirección Gral. Prog. Integrado de Salud","SI.PRO.SA"]];
 }
 
 function renderPrevia(p){
@@ -896,24 +927,24 @@ function renderPrevia(p){
   html+=`<div class="doc-section"><span class="doc-label">VISTO:</span></div>`;
 
   if(p.tipo==="anteojos"){
-    html+=`<div class="doc-indent">El <strong>Expte. Nº <span contenteditable="true" data-f="nroExp">${p.nroExp}</span></strong>, por el que se solicita la compra de <strong><span contenteditable="true" data-f="insumo">${p.insumo}</span></strong> para el paciente; <strong><span contenteditable="true" data-f="paciente">${p.paciente}</span></strong> y</div>`;
+    html+=`<div class="doc-indent">El <strong>Expte. Nº <span contenteditable="true" data-f="nroExp">${p.nroExp}</span></strong>, por el que se solicita la compra de <strong><span contenteditable="true" data-f="insumo">${p.insumo}</span></strong> para el paciente; <strong><span contenteditable="true" data-f="paciente">${p.paciente}</span></strong>, según lo indicado a fs. ${p.fsSolicitud}. Y,</div>`;
   } else {
-    html+=`<div class="doc-indent">El <strong>Expte. Nº <span contenteditable="true" data-f="nroExp">${p.nroExp}</span></strong>, por el que se solicita la compra de <strong>AUDIFONOS</strong> para el paciente; <strong><span contenteditable="true" data-f="paciente">${p.paciente}</span></strong> y</div>`;
+    html+=`<div class="doc-indent">El <strong>Expte. Nº <span contenteditable="true" data-f="nroExp">${p.nroExp}</span></strong>, por el que se solicita la compra de <strong>AUDIFONOS</strong> para el paciente; <strong><span contenteditable="true" data-f="paciente">${p.paciente}</span></strong>, según lo indicado a fs. ${p.fsSolicitud}. Y,</div>`;
   }
 
   html+=`<div class="doc-section" style="margin-top:12px"><span class="doc-label">CONSIDERANDO:</span></div>`;
   html+=`<div class="doc-indent">Que se encuentra agregada la documentación correspondiente, la misma esta cumplimentada y debidamente conformada.</div>`;
 
   if(p.tipo==="anteojos"){
-    html+=`<div class="doc-indent" style="margin-top:8px">Que se adjunta presupuesto de la Firma Comercial <strong><span class="sync-prov">${prov}</span>. -</strong></div>`;
+    html+=`<div class="doc-indent" style="margin-top:8px">Que a fs. ${p.fsPresupuesto} se adjunta presupuesto de la Firma Comercial <strong><span class="sync-prov">${prov}</span> (CUIT Nº ${p.cuit}). -</strong></div>`;
   } else {
-    html+=`<div class="doc-indent" style="margin-top:8px">Que se adjunta presupuestos de la Firmas Comerciales; <strong><span contenteditable="true" data-f="firmasPrev">${p.firmasPrev}</span> <span contenteditable="true" data-f="firmaGanadora">${p.firmaGanadora.toUpperCase()}</span>.-</strong></div>`;
+    html+=`<div class="doc-indent" style="margin-top:8px">Que a fs. ${p.fsPresupuesto} se adjuntan presupuestos de las Firmas Comerciales; <strong><span contenteditable="true" data-f="firmasPrev">${p.firmasPrev}</span> <span contenteditable="true" data-f="firmaGanadora">${p.firmaGanadora.toUpperCase()}</span>.-</strong></div>`;
     html+=`<div class="doc-indent" style="margin-top:8px">Que la propuesta de <strong><span contenteditable="true" data-f="firmaGanadora2">${p.firmaGanadora}</span></strong> resulto la más conveniente para el Estado.</div>`;
   }
 
-  html+=`<div class="doc-indent" style="margin-top:8px">Que se adjunta Dictamen Jurídico con opinión favorable.</div>`;
+  html+=`<div class="doc-indent" style="margin-top:8px">Que a fs. ${p.fsJuridico} obra Dictamen Jurídico con opinión favorable.</div>`;
   html+=`<div class="doc-indent" style="margin-top:8px">Que se aprueba todo lo actuado por encuadrarse a las disposiciones legales vigentes, que rigen sobre materia de contrataciones, conforme a lo normado en la Res. Nº 388/SPS-05.</div>`;
-  html+=`<div style="text-align:center;font-weight:bold;margin:16px 0 8px">POR ELLO:<br>LA GERENCIA ADMINISTRATIVA DEL PROGRAMA INTEGRADO DE SALUD<br>RESUELVE:</div>`;
+  html+=`<div style="text-align:center;font-weight:bold;margin:16px 0 8px">POR ELLO:<br>${p.directoraAc?"LA DIRECCION DEL PROGRAMA INTEGRADO DE SALUD<br>A/C C.P.N Mariela Agustina Castillo":"LA GERENCIA ADMINISTRATIVA DEL PROGRAMA INTEGRADO DE SALUD"}<br>RESUELVE:</div>`;
 
   if(p.tipo==="anteojos"){
     const cantA=parseInt(p.cantidad)||1;
@@ -922,7 +953,7 @@ function renderPrevia(p){
     const puX="$ "+unitA.toLocaleString("es-AR");
     const ptX="$ "+totA.toLocaleString("es-AR")+",00";
     const imX=ptX;
-    html+=`<div class="doc-art"><span class="doc-art-label">ARTICULO 1º:</span> Aprobar la compra de Anteojos, a favor de la firma <strong><span class="sync-prov">${prov}</span></strong> que se detalla a continuación:</div>`;
+    html+=`<div class="doc-art"><span class="doc-art-label">ARTICULO 1º:</span> Aprobar la compra de Anteojos, a favor de la firma <strong><span class="sync-prov">${prov}</span></strong> (CUIT Nº ${p.cuit}) que se detalla a continuación:</div>`;
     html+=`<table class="doc-table"><thead><tr><th>FIRMA</th><th>INSUMO</th><th>CANTIDAD</th><th>PRECIO UNITARIO</th><th>PRECIO TOTAL</th></tr></thead><tbody>
       <tr><td><span contenteditable="true" data-f="proveedor">${prov}</span></td><td><span contenteditable="true" data-f="insumoDesc">${insumoDesc}</span></td><td><span contenteditable="true" data-f="cantidad">${cantA}</span></td><td><span contenteditable="true" data-f="precioUnit">${puX}</span></td><td><span contenteditable="true" data-f="precioTotal">${ptX}</span></td></tr>
       <tr><td colspan="4">TOTAL</td><td>${ptX}</td></tr></tbody></table>`;
@@ -931,7 +962,7 @@ function renderPrevia(p){
   } else {
     const puA="$ "+parseInt(p.precioUnit).toLocaleString("es-AR")+",00";
     const ptA="$ "+parseInt(p.precioTotal).toLocaleString("es-AR")+",00";
-    html+=`<div class="doc-art"><span class="doc-art-label">ARTICULO 1º:</span> Aprobar la compra de Audífonos, a favor de la firma <strong><span contenteditable="true" data-f="firmaGanadora3">${p.firmaGanadora}</span></strong> que se detalla a continuación:</div>`;
+    html+=`<div class="doc-art"><span class="doc-art-label">ARTICULO 1º:</span> Aprobar la compra de Audífonos, a favor de la firma <strong><span contenteditable="true" data-f="firmaGanadora3">${p.firmaGanadora}</span></strong> (CUIT Nº ${p.cuit}) que se detalla a continuación:</div>`;
     html+=`<table class="doc-table"><thead><tr><th>FIRMA</th><th>INSUMO</th><th>CANTIDAD</th><th>PRECIO UNITARIO</th><th>PRECIO TOTAL</th></tr></thead><tbody>
       <tr><td>${p.firmaGanadora}</td><td>Audifonos</td><td><span contenteditable="true" data-f="cantidad">${p.cantidad}</span></td><td><span contenteditable="true" data-f="precioUnit">${puA}</span></td><td><span contenteditable="true" data-f="precioTotal">${ptA}</span></td></tr>
       <tr><td colspan="4">TOTAL</td><td>${ptA}</td></tr></tbody></table>`;
@@ -939,9 +970,10 @@ function renderPrevia(p){
     html+=`<div class="doc-art"><span class="doc-art-label">ARTICULO 3º:</span> Imputar la erogación por un importe total de <strong>${ptA} (${p.importeLetras})</strong>, y posterior emisión de la orden de pago respectiva, a la Jurisdicción 67, Unidad de Organización 965-Recursos disponibles con los que cuenta el servicio-Finalidad/Función 314, Programa 19, Act. /Ob. 01 - Partida 200 – <strong>Subpartida 297</strong>, con cargo al <strong>Presupuesto 2026</strong>.-</div>`;
   }
 
-  html+=`<div class="doc-art"><span class="doc-art-label">ARTICULO 4º:</span> Pase a control de Ley del Honorable Tribunal de Cuentas.</div>`;
-  html+=`<div class="doc-art"><span class="doc-art-label">ARTICULO 5º:</span> Comunicar y archivar. -</div>`;
-  html+=`<div class="doc-firma"><p>Firmado digitalmente:</p><p><strong>C.P.N Mariela Agustina Castillo</strong></p><p>Gerente Administrativo</p><p>Dirección Gral. Prog. Integrado de Salud SI.PRO.SA</p></div>`;
+  html+=`<div class="doc-art"><span class="doc-art-label">ARTICULO 4º:</span> Pase al Honorable Tribunal de Cuentas (Delegación SI.PRO.SA.) para su control pertinente.</div>`;
+  html+=`<div class="doc-art"><span class="doc-art-label">ARTICULO 5º:</span> Emitir la orden de compra respectiva.</div>`;
+  html+=`<div class="doc-art"><span class="doc-art-label">ARTICULO 6º:</span> Comunicar y archivar.</div>`;
+  html+=`<div class="doc-firma" style="display:flex;gap:30px">`+firmasResolucion(p).map(b=>`<div>`+b.map((l,i)=>i===1?`<p><strong>${l}</strong></p>`:`<p>${l}</p>`).join("")+`</div>`).join("")+`</div>`;
 
   e("doc-preview").innerHTML=html;
   const _provSrc=document.querySelector('#doc-preview [data-f="proveedor"]');
@@ -1107,6 +1139,7 @@ function construirHtmlResolucion(p) {
     '</tr></table>' +
     '<div style="border-bottom:2pt solid #5b9bd5; margin:6pt 0 18pt 0;"></div>';
 
+  const pieAnio = '<div class="pie">“2026 Año de la Memoria por: Golpe de Estado Cívico Militar de 1976, Cierre Masivo de los Ingenios en 1966 y Cierre de los Talleres Ferroviarios de Tafí Viejo en 1980”</div>';
   let body = encabezado;
 
   // Fecha - derecha
@@ -1119,27 +1152,29 @@ function construirHtmlResolucion(p) {
   // VISTO
   body += '<p class="seccion">VISTO:</p>';
   if(p.tipo === "anteojos"){
-    body += '<p class="indent">El <b>Expte. Nº' + esc(p.nroExp) + '</b>, por el que se solicita la compra de <b style="white-space:nowrap;">' + esc(insumoVisto) + '</b> para el paciente; <b>' + esc(p.paciente) + '</b> y</p>';
+    body += '<p class="indent">El <b>Expte. Nº' + esc(p.nroExp) + '</b>, por el que se solicita la compra de <b style="white-space:nowrap;">' + esc(insumoVisto) + '</b> para el paciente; <b>' + esc(p.paciente) + '</b>, según lo indicado a fs. ' + esc(p.fsSolicitud) + '. Y,</p>';
   } else {
-    body += '<p class="indent">El <b>Expte. Nº' + esc(p.nroExp) + '</b>, por el que se solicita la compra de <b>AUDIFONOS</b> para el paciente; <b>' + esc(p.paciente) + '</b> y</p>';
+    body += '<p class="indent">El <b>Expte. Nº' + esc(p.nroExp) + '</b>, por el que se solicita la compra de <b>AUDIFONOS</b> para el paciente; <b>' + esc(p.paciente) + '</b>, según lo indicado a fs. ' + esc(p.fsSolicitud) + '. Y,</p>';
   }
 
   // CONSIDERANDO
   body += '<p class="seccion">CONSIDERANDO:</p>';
   body += '<p class="indent">Que se encuentra agregada la documentación correspondiente, la misma esta cumplimentada y debidamente conformada.</p>';
   if(p.tipo === "anteojos"){
-    body += '<p class="indent">Que se adjunta presupuesto de la Firma Comercial <b>' + esc(prov) + '. -</b></p>';
+    body += '<p class="indent">Que a fs. ' + esc(p.fsPresupuesto) + ' se adjunta presupuesto de la Firma Comercial <b>' + esc(prov) + '</b> (CUIT Nº ' + esc(p.cuit) + ').</p>';
     body += '<p class="indent">Que la propuesta resulto la más conveniente para el Estado.</p>';
   } else {
-    body += '<p class="indent">Que se adjunta presupuestos de la Firmas Comerciales; <b>' + esc(p.firmasPrev) + ' ' + esc((p.firmaGanadora||"").toUpperCase()) + '.-</b></p>';
+    body += '<p class="indent">Que a fs. ' + esc(p.fsPresupuesto) + ' se adjuntan presupuestos de las Firmas Comerciales; <b>' + esc(p.firmasPrev) + ' ' + esc((p.firmaGanadora||"").toUpperCase()) + '.-</b></p>';
     body += '<p class="indent">Que la propuesta de <b>' + esc(p.firmaGanadora) + '</b> resulto la más conveniente para el Estado.</p>';
   }
-  body += '<p class="indent">Que se adjunta Dictamen Jurídico con opinión favorable.</p>';
+  body += '<p class="indent">Que a fs. ' + esc(p.fsJuridico) + ' obra Dictamen Jurídico con opinión favorable.</p>';
   body += '<p class="indent" style="line-height:1.6;">Que se aprueba todo lo actuado por encuadrarse a las disposiciones legales vigentes, que rigen sobre materia de contrataciones, conforme a lo normado en la Res. Nº 388/SPS-05.</p>';
 
   // POR ELLO
   body += '<p class="porello ul" style="margin-top:14pt;">POR ELLO:</p>';
-  body += '<p class="porello">LA GERENCIA ADMINISTRATIVA DEL PROGRAMA INTEGRADO DE SALUD</p>';
+  body += p.directoraAc
+    ? '<p class="porello">LA DIRECCION DEL PROGRAMA INTEGRADO DE SALUD</p><p class="porello">A/C C.P.N Mariela Agustina Castillo</p>'
+    : '<p class="porello">LA GERENCIA ADMINISTRATIVA DEL PROGRAMA INTEGRADO DE SALUD</p>';
   body += '<p class="porello ul" style="margin-bottom:14pt;">RESUELVE:</p>';
 
   const tabla = (firma, insumo, cant, unit, total) =>
@@ -1151,32 +1186,30 @@ function construirHtmlResolucion(p) {
     '<p class="art" style="line-height:1.4;"><span class="art-l">ARTICULO 3º:</span> Imputar la erogación por un importe total de <b>' + esc(imp) + '</b> ' + letras + ', y posterior emisión de la orden de pago respectiva, a la Jurisdicción 67, Unidad de Organización 965- Recursos disponibles con los que cuenta el servicio-Finalidad/Función 314, Programa 19, Act. /Ob. 01 - Partida 200 – <b>Subpartida ' + subpartida + '</b>' + recurso + ', con cargo al <b>Presupuesto 2026</b>.-</p>';
 
   if(p.tipo === "anteojos"){
-    body += '<p class="art"><span class="art-l">ARTICULO 1º:</span> Aprobar la compra de Anteojos, a favor de la firma <b>' + esc(prov) + '</b> que se detalla a continuación:</p>';
+    body += '<p class="art"><span class="art-l">ARTICULO 1º:</span> Aprobar la compra de Anteojos, a favor de la firma <b>' + esc(prov) + '</b> (CUIT Nº ' + esc(p.cuit) + ') que se detalla a continuación:</p>';
     body += tabla(prov, "1- " + insumoDesc, p.cantidad||"1", pu, pt);
-    body += '<div class="salto"></div>';
+    body += pieAnio + '<div class="salto"></div>' + encabezado;
     body += '<p class="art" style="margin-top:30pt;"><span class="art-l">ARTICULO 2º</span>: Autorizar la compra al proveedor <b>' + esc(prov) + '</b>, por el importe de <b>' + esc(im_num) + '</b> ' + esc(p.importeLetras) + ', y posterior emisión de la orden de pago respectiva.</p>';
     body += imputacion(im_num, esc(p.importeLetras), "299", "");
   } else {
     const puA = "$ " + fmt(parseInt(p.precioUnit||0)) + ",00";
     const ptA = "$ " + fmt(parseInt(p.precioTotal||0)) + ",00";
-    body += '<p class="art"><span class="art-l">ARTICULO 1º:</span> Aprobar la compra de Audífonos, a favor de la firma <b>' + esc(p.firmaGanadora) + '</b> que se detalla a continuación:</p>';
+    body += '<p class="art"><span class="art-l">ARTICULO 1º:</span> Aprobar la compra de Audífonos, a favor de la firma <b>' + esc(p.firmaGanadora) + '</b> (CUIT Nº ' + esc(p.cuit) + ') que se detalla a continuación:</p>';
     body += tabla(p.firmaGanadora, "Audífonos", p.cantidad, puA, ptA);
+    body += pieAnio + '<div class="salto"></div>' + encabezado;
     body += '<p class="art"><span class="art-l">ARTICULO 2º</span>: Autorizar la compra al proveedor <b>' + esc(p.firmaGanadora) + '</b>, por el importe de <b>' + esc(ptA) + '</b> (' + esc(p.importeLetras) + '), y posterior emisión de la orden de pago respectiva.</p>';
     body += imputacion(ptA, '(' + esc(p.importeLetras) + ')', "297", "");
   }
 
-  body += '<p class="art" style="margin-top:20pt;"><span class="art-l">ARTICULO 4º:</span> Pase a control de Ley del Honorable Tribunal de Cuentas.</p>';
-  body += '<p class="art"><span class="art-l">ARTICULO 5º:</span> Comunicar y archivar. -</p>';
+  body += '<p class="art" style="margin-top:14pt;"><span class="art-l">ARTICULO 4º:</span> Pase al Honorable Tribunal de Cuentas (Delegación SI.PRO.SA.) para su control pertinente.</p>';
+  body += '<p class="art"><span class="art-l">ARTICULO 5º:</span> Emitir la orden de compra respectiva.</p>';
+  body += '<p class="art"><span class="art-l">ARTICULO 6º:</span> Comunicar y archivar.</p>';
 
-  // Firma + leyenda del año (como en el modelo)
-  body += '<div style="margin-top:150pt;">';
-  body += '<p class="firma">Firmado digitalmente:</p>';
-  body += '<p class="firma">C.P.N Mariela Agustina Castillo</p>';
-  body += '<p class="firma">Gerente Administrativo</p>';
-  body += '<p class="firma">Dirección Gral. Prog. Integrado de Salud</p>';
-  body += '<p class="firma">SI.PRO.SA</p>';
-  body += '</div>';
-  body += '<div class="pie">“2026 Año de la Memoria por: Golpe de Estado Cívico Militar de 1976, Cierre Masivo de los Ingenios en 1966 y Cierre de los Talleres Ferroviarios de Tafí Viejo en 1980"</div>';
+  // Firmas de Dirección y Gerencia + leyenda del año
+  body += '<table style="border:none;border-collapse:collapse;width:100%;margin-top:40pt;"><tr>' + firmasResolucion(p).map(function(b){
+    return '<td style="border:none;padding:0 8pt 0 0;width:50%;vertical-align:top;">' + b.map(function(l){ return '<p class="firma">' + esc(l) + '</p>'; }).join("") + '</td>';
+  }).join("") + '</tr></table>';
+  body += pieAnio;
 
   return '<!DOCTYPE html><html><head><meta charset="utf-8"><style>' + css + '</style></head><body>' + body + '</body></html>';
 }
@@ -2191,6 +2224,11 @@ async function reprocesarLote(fileList){
           paciente: reg.paciente || "",
           fecha: reg.fecha || "",
           nroRes: reg.nroRes || "",
+          fsSolicitud: reg.fsSolicitud || "",
+          fsPresupuesto: reg.fsPresupuesto || "",
+          fsJuridico: reg.fsJuridico || "",
+          cuit: reg.cuit || "",
+          directoraAc: !!reg.directoraAc,
           insumo: reg.insumo || "",
           precio: reg.precio || "",
           cantidad: reg.cantidad || "",
@@ -2429,6 +2467,7 @@ async function reprocesarLote(fileList){
     set("a-precio", p.precio);
     set("a-fecha", p.fecha);
     set("a-nroRes", p.nroRes);
+    setInstr("a", p);
     if(typeof window.calcAnteojos === "function") window.calcAnteojos();
     var msg = document.getElementById("a-msg");
     if(msg){ msg.className = "msg ok"; msg.textContent = "Cargado. Completá Fecha y Nº de Resolución y generá."; }
@@ -2437,6 +2476,7 @@ async function reprocesarLote(fileList){
     if(typeof window.prefillAudio === "function") window.prefillAudio(p); // firmas, negativas, ganadora + calcTotal
     set("b-fecha", p.fecha);   // prefillAudio no toca Fecha ni Nº
     set("b-nroRes", p.nroRes);
+    setInstr("b", p);
   }
 
   window.cambiarSub = function(tipo, which){
@@ -2467,6 +2507,7 @@ async function reprocesarLote(fileList){
 
   window.guardarEnProceso = function(tipo){
     var reg = (tipo==="anteojos") ? leerAnteojos() : leerAudio();
+    Object.assign(reg, leerInstr(tipo==="anteojos" ? "a" : "b"));
     var msg = document.getElementById((tipo==="anteojos") ? "a-msg" : "b-msg");
     var btn = document.querySelector('button.btn-proceso[onclick="guardarEnProceso(\'' + tipo + '\')"]');
     var txtBtn = "💾 Guardar en proceso";
@@ -2595,6 +2636,8 @@ async function reprocesarLote(fileList){
     var html = '<div class="row">'+campo("eb-fecha","Fecha",p.fecha,' placeholder="1 de Julio de 2026"')+campo("eb-nroRes","Nº Resolución",p.nroRes,' placeholder="2987"')+'</div>';
     html += campo("eb-nroExp","Nº Expediente",p.nroExp,' maxlength="20" onkeydown="expKeydown(this,event)"');
     html += campo("eb-paciente","Paciente — Apellido, Nombre",p.paciente);
+    html += '<div class="row">'+campo("eb-fsSolicitud","Fs. solicitud",p.fsSolicitud)+campo("eb-fsPresupuesto","Fs. presupuesto",p.fsPresupuesto)+'</div>';
+    html += '<div class="row">'+campo("eb-fsJuridico","Fs. dictamen jurídico",p.fsJuridico)+campo("eb-cuit","CUIT de la firma adjudicada",p.cuit)+'</div>';
     if(ebTipo === "anteojos"){
       html += campo("eb-insumo","Insumo (ej: 2-ANTEOJOS)",p.insumo,' oninput="ebRecalc()"');
       html += campo("eb-precio","Precio unitario",p.precio,' oninput="ebRecalc()"');
@@ -2641,7 +2684,8 @@ async function reprocesarLote(fileList){
     if(!ebId) return;
     var m = document.getElementById("eb-msg");
     var err = function(t){ m.className = "msg er"; m.textContent = t; };
-    var campos = { fecha: ebVal("eb-fecha"), nroRes: ebVal("eb-nroRes"), nroExp: ebVal("eb-nroExp"), paciente: ebVal("eb-paciente") };
+    var campos = { fecha: ebVal("eb-fecha"), nroRes: ebVal("eb-nroRes"), nroExp: ebVal("eb-nroExp"), paciente: ebVal("eb-paciente"),
+      fsSolicitud: ebVal("eb-fsSolicitud"), fsPresupuesto: ebVal("eb-fsPresupuesto"), fsJuridico: ebVal("eb-fsJuridico"), cuit: ebVal("eb-cuit") };
     if(!campos.nroExp && !campos.paciente) return err("Tiene que quedar al menos el Nº de Expediente o el Paciente.");
     if(ebTipo === "anteojos"){
       campos.insumo = ebVal("eb-insumo");
@@ -2686,7 +2730,11 @@ async function reprocesarLote(fileList){
     if(!nroRes) return { error: "sin Nº de Resolución", sinNumero: true };
     if(!fecha) return { error: "sin Fecha" };
     if(!nroExp || !paciente) return { error: "falta expediente o paciente" };
-    var pl = { tipo: p.tipo, fecha: fecha, nroRes: nroRes, nroExp: nroExp, paciente: paciente };
+    var pl = { tipo: p.tipo, fecha: fecha, nroRes: nroRes, nroExp: nroExp, paciente: paciente,
+      fsSolicitud: String(p.fsSolicitud||"").trim(), fsPresupuesto: String(p.fsPresupuesto||"").trim(), fsJuridico: String(p.fsJuridico||"").trim(),
+      cuit: String(p.cuit||"").trim() || cuitDeFirma(p.tipo === "anteojos" ? FIRMA_ANTEOJOS : p.ganadora), directoraAc: !!p.directoraAc };
+    var faltan = faltaInstr(pl);
+    if(faltan.length) return { error: "falta: " + faltan.join(", ") };
     if(p.tipo === "anteojos"){
       var pi = parseInsumoAnteojos(p.insumo||"");
       var unitA = parseInt(String(p.precio||"").replace(/[^0-9]/g,""))||0;
@@ -2797,6 +2845,7 @@ async function reprocesarLote(fileList){
       setMsg("er","No hay ninguna lista para generar: "+(sinNumero?sinNumero+" sin Nº de Resolución. ":"")+(conProblema.length?"Con datos incompletos: "+conProblema.slice(0,5).join("; ")+(conProblema.length>5?"…":""):"")+" Subí el Excel con los Nº o completalas con Editar.");
       return;
     }
+    if(!confirm("Antes de firmar, confirmá que verificaste en cada firma:\n\n• "+CONTROLES_RES.map(function(c){ return c[1]; }).join("\n• "))) return;
     var aviso = "Se van a generar "+listos.length+" PDF y descargar en un ZIP.";
     if(sinNumero) aviso += "\n\n"+sinNumero+" sin Nº de Resolución quedan afuera.";
     if(conProblema.length) aviso += "\n"+conProblema.length+" con datos incompletos quedan afuera.";
