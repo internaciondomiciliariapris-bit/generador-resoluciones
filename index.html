@@ -691,7 +691,11 @@ const CONTROLES_RES=[["arca","Constancia de ARCA vigente"],["dgr","Certificado d
 const FIRMA_ANTEOJOS="Grupo Vistalli S.R.L (Óptica Giorlent)";
 function cuitsGuardados(){try{return JSON.parse(localStorage.getItem("res_cuit_firmas")||"{}")||{};}catch(_){return {};}}
 function cuitDeFirma(f){return cuitsGuardados()[String(f||"").toUpperCase().trim()]||"";}
-function recordarCuit(f,c){if(!f||!c)return;try{const m=cuitsGuardados();m[String(f).toUpperCase().trim()]=c;localStorage.setItem("res_cuit_firmas",JSON.stringify(m));}catch(_){}}
+function recordarCuit(f,c){if(!c)return;try{localStorage.setItem("res_cuit_ultimo",String(c).trim());if(!f)return;const m=cuitsGuardados();m[String(f).toUpperCase().trim()]=c;localStorage.setItem("res_cuit_firmas",JSON.stringify(m));}catch(_){}}
+// CUIT del prestador habitual (anteojos y audífonos): se precarga solo si el campo está vacío.
+const CUIT_PRESTADOR_HABITUAL="30-71790960-3";
+function cuitPorDefecto(f){let u="";try{u=localStorage.getItem("res_cuit_ultimo")||"";}catch(_){}return cuitDeFirma(f)||u||CUIT_PRESTADOR_HABITUAL;}
+function rellenarCuit(pre,f){const x=document.getElementById(pre+"-cuit");if(x&&!x.value.trim())x.value=cuitPorDefecto(f);}
 function htmlInstr(pre){
   const campo=(id,lab,ph)=>'<div class="field"><label>'+lab+' <span>*</span></label><input type="text" id="'+pre+'-'+id+'" placeholder="'+ph+'"></div>';
   return '<hr><div class="stitle">Fojas y datos de la firma</div><div class="row">'+campo("fsSolicitud","Fs. solicitud","02")+campo("fsPresupuesto","Fs. presupuesto","05")+'</div>'+
@@ -700,10 +704,10 @@ function htmlInstr(pre){
     '<label style="display:flex;gap:8px;align-items:center;margin:9px 0;font-size:14px;font-weight:700;cursor:pointer"><input type="checkbox" id="'+pre+'-directoraAc"> La C.P.N Castillo firma a cargo de la Dirección (sale una sola firma)</label>';
 }
 function leerInstr(pre){const v=id=>{const x=document.getElementById(pre+"-"+id);return x?x.value.trim():"";};const d=document.getElementById(pre+"-directoraAc");return {fsSolicitud:v("fsSolicitud"),fsPresupuesto:v("fsPresupuesto"),fsJuridico:v("fsJuridico"),cuit:v("cuit"),directoraAc:!!(d&&d.checked)};}
-function setInstr(pre,p){["fsSolicitud","fsPresupuesto","fsJuridico","cuit"].forEach(id=>{const x=document.getElementById(pre+"-"+id);if(x)x.value=(p&&p[id])||"";});const d=document.getElementById(pre+"-directoraAc");if(d)d.checked=!!(p&&p.directoraAc);}
+function setInstr(pre,p){["fsSolicitud","fsPresupuesto","fsJuridico","cuit"].forEach(id=>{const x=document.getElementById(pre+"-"+id);if(x)x.value=(p&&p[id])||"";});const d=document.getElementById(pre+"-directoraAc");if(d)d.checked=!!(p&&p.directoraAc);rellenarCuit(pre,pre==="a"?FIRMA_ANTEOJOS:(p&&(p.ganadora||p.firmaGanadora)));}
 function faltaInstr(d){const f=[];if(!d.fsSolicitud)f.push("foja de la solicitud");if(!d.fsPresupuesto)f.push("foja del presupuesto");if(!d.fsJuridico)f.push("foja del dictamen jurídico");if(!d.cuit)f.push("CUIT de la firma");return f;}
 function faltaControles(pre){return CONTROLES_RES.filter(c=>{const x=document.getElementById(pre+"-c-"+c[0]);return !(x&&x.checked);}).map(c=>c[1]);}
-function iniciarInstr(){["a","b"].forEach(pre=>{const box=document.getElementById(pre+"-instr");if(box&&!box.innerHTML)box.innerHTML=htmlInstr(pre);});const ca=document.getElementById("a-cuit");if(ca&&!ca.value)ca.value=cuitDeFirma(FIRMA_ANTEOJOS);document.addEventListener("change",ev=>{const t=ev.target;if(t&&t.name==="ganadora"&&t.closest&&t.closest("#panel-audio")){const c=document.getElementById("b-cuit");if(c)c.value=cuitDeFirma(t.value)||c.value;}});}
+function iniciarInstr(){["a","b"].forEach(pre=>{const box=document.getElementById(pre+"-instr");if(box&&!box.innerHTML)box.innerHTML=htmlInstr(pre);});rellenarCuit("a",FIRMA_ANTEOJOS);rellenarCuit("b","");document.addEventListener("change",ev=>{const t=ev.target;if(!t)return;if(t.id==="a-cuit"||t.id==="b-cuit"){if(t.value.trim())recordarCuit("",t.value.trim());return;}if(t.name==="ganadora"&&t.closest&&t.closest("#panel-audio")){const c=document.getElementById("b-cuit");if(c)c.value=cuitDeFirma(t.value)||c.value||cuitPorDefecto(t.value);}});}
 if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",iniciarInstr);else setTimeout(iniciarInstr,0);
 function parseInsumoAnteojos(str){
   const m=String(str||"").trim().match(/^\s*(\d+)\s*[-\u2013]\s*(.+)$/);
