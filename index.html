@@ -693,7 +693,19 @@ const _c=["","Ciento","Doscientos","Trescientos","Cuatrocientos","Quinientos","S
 function m100(n){if(n===0)return"";if(n===100)return"Cien";if(n<30)return _u[n];if(n<100){const d=Math.floor(n/10),u=n%10;return u===0?_d[d]:_d[d]+" y "+_u[u].toLowerCase();}const c=Math.floor(n/100),r=n%100;return _c[c]+(r>0?" "+m100(r):"");}
 function numLetras(n){if(n===0)return"Cero";let r="";const M=Math.floor(n/1000000),K=Math.floor((n%1000000)/1000),R=n%1000;if(M>0)r+=(M===1?"Un Millón":m100(M)+" Millones")+" ";if(K>0)r+=(K===1?"Mil":m100(K)+" Mil")+" ";if(R>0)r+=m100(R);r=r.trim();return (M>0&&K===0&&R===0)?r+" de":r;}
 // ——— Datos que exige el instructivo de Asesoría Letrada ———
-const CONTROLES_RES=[["arca","Constancia de ARCA vigente"],["dgr","Certificado de Cumplimiento Fiscal de Rentas (DGR Tucumán)"],["habilitacion","Habilitación de la firma vigente"],["tope","El monto está dentro del tope que puede firmar esta autoridad"]];
+const CONTROLES_RES=[["arca","Constancia de ARCA vigente"],["dgr","Certificado de Cumplimiento Fiscal de Rentas (DGR Tucumán)"],["habilitacion","Habilitación de la firma vigente"]];
+/* Tope de firma por monto (escala vigente desde 1/2/2026):
+   1 presupuesto hasta $ 1.400.794,94 · 3 presupuestos hasta $ 9.338.617,26  → firma la C.P.N Castillo.
+   Cotejo de precios con 5 presupuestos hasta $ 140.079.258,84 y cotejo hasta $ 233.465.433,00 → firma digital de la Dra. Bottone. */
+const TOPES_FIRMA={unPresupuesto:1400794.94,tresPresupuestos:9338617.26,cincoPresupuestos:140079258.84,cotejo:233465433.00};
+function totalResolucion(p){const n=s=>parseInt(String(s||"").replace(/[^0-9]/g,""))||0;return p?(n(p.precioTotal)||n(p.precio)):0;}
+function tramoFirma(total){const T=TOPES_FIRMA;
+  if(total<=T.unPresupuesto)return {presupuestos:1,firma:"castillo",txt:"1 presupuesto — firma la C.P.N Castillo"};
+  if(total<=T.tresPresupuestos)return {presupuestos:3,firma:"castillo",txt:"3 presupuestos — firma la C.P.N Castillo"};
+  if(total<=T.cincoPresupuestos)return {presupuestos:5,firma:"bottone",txt:"Cotejo de precios, 5 presupuestos — firma la Dra. Bottone"};
+  if(total<=T.cotejo)return {presupuestos:5,firma:"bottone",txt:"Cotejo de precios — firma la Dra. Bottone"};
+  return {presupuestos:5,firma:"",txt:"supera el tope de $ 233.465.433,00"};}
+function firmaDirectora(p){return !(p&&p.directoraAc)&&tramoFirma(totalResolucion(p)).firma==="bottone";}
 const FIRMA_ANTEOJOS="Grupo Vistalli S.R.L (Óptica Giorlent)";
 function cuitsGuardados(){try{return JSON.parse(localStorage.getItem("res_cuit_firmas")||"{}")||{};}catch(_){return {};}}
 function cuitDeFirma(f){return cuitsGuardados()[String(f||"").toUpperCase().trim()]||"";}
@@ -933,6 +945,10 @@ function mostrarPrevia(tipo){
   Object.assign(payload,leerInstr(pre));
   const _falta=faltaInstr(payload).concat(faltaControles(pre).map(t=>"verificar: "+t));
   if(_falta.length){msgEl.className="msg er";msgEl.textContent="Falta: "+_falta.join(" · ")+".";return;}
+  const _tot=totalResolucion(payload),_tr=tramoFirma(_tot);
+  if(!_tr.firma){msgEl.className="msg er";msgEl.textContent="El total ($ "+_tot.toLocaleString("es-AR")+") supera el tope de $ 233.465.433,00: ninguna de las dos autoridades lo puede firmar por este trámite.";return;}
+  const _nPres=tipo==="anteojos"?1:[...document.querySelectorAll('#panel-audio .empresa-row')].filter(r=>r.querySelector('.emp-cb')?.checked).length;
+  if(_nPres<_tr.presupuestos&&!confirm("Por el monto ($ "+_tot.toLocaleString("es-AR")+") corresponde: "+_tr.txt+".\nEl expediente tiene "+_nPres+" presupuesto(s) y se piden "+_tr.presupuestos+".\n\n¿Generar igual?"))return;
   recordarCuit(tipo==="anteojos"?payload.proveedor:payload.firmaGanadora,payload.cuit);
   recordarDni(payload.paciente,payload.dni);
 
@@ -945,6 +961,7 @@ function mostrarPrevia(tipo){
 }
 
 function firmasResolucion(p){
+  if(!p.directoraAc&&firmaDirectora(p)) return [["Firmado digitalmente:","Dra. Noellia Bottone","Directora General","Programa Integrado de Salud","SI.PRO.SA"]];
   if(p.directoraAc) return [["Firmado digitalmente:","C.P.N Mariela Agustina Castillo","Directora a/c de la Dirección General","del Programa Integrado de Salud","SI.PRO.SA"]];
   return [["Firmado digitalmente:","C.P.N Mariela Agustina Castillo","Gerente Administrativo","Dirección Gral. Prog. Integrado de Salud","SI.PRO.SA"]];
 }
@@ -982,7 +999,7 @@ function renderPrevia(p){
 
   html+=`<div class="doc-indent" style="margin-top:8px">Que a fs. ${p.fsJuridico} obra Dictamen Jurídico con opinión favorable.</div>`;
   html+=`<div class="doc-indent" style="margin-top:8px">Que se aprueba todo lo actuado por encuadrarse a las disposiciones legales vigentes, que rigen sobre materia de contrataciones, conforme a lo normado en la Res. Nº 388/SPS-05.</div>`;
-  html+=`<div style="text-align:center;font-weight:bold;margin:16px 0 8px">POR ELLO:<br>${p.directoraAc?"LA DIRECCION DEL PROGRAMA INTEGRADO DE SALUD<br>A/C C.P.N Mariela Agustina Castillo":"LA GERENCIA ADMINISTRATIVA DEL PROGRAMA INTEGRADO DE SALUD"}<br>RESUELVE:</div>`;
+  html+=`<div style="text-align:center;font-weight:bold;margin:16px 0 8px">POR ELLO:<br>${p.directoraAc?"LA DIRECCION DEL PROGRAMA INTEGRADO DE SALUD<br>A/C C.P.N Mariela Agustina Castillo":firmaDirectora(p)?"LA DIRECCION DEL PROGRAMA INTEGRADO DE SALUD":"LA GERENCIA ADMINISTRATIVA DEL PROGRAMA INTEGRADO DE SALUD"}<br>RESUELVE:</div>`;
 
   if(p.tipo==="anteojos"){
     const cantA=parseInt(p.cantidad)||1;
@@ -1096,6 +1113,7 @@ function mensajeFalla(ex){
 
 async function descargarWord(){
   const payload=getEditedPayload();
+  payload.firmaDirectora=firmaDirectora(payload);
   const msgEl=e("dl-msg");
   msgEl.className="msg";
   const btn=document.querySelector('.btn-word');
@@ -1213,6 +1231,7 @@ function construirHtmlResolucion(p) {
   body += '<p class="porello ul" style="margin-top:14pt;">POR ELLO:</p>';
   body += p.directoraAc
     ? '<p class="porello">LA DIRECCION DEL PROGRAMA INTEGRADO DE SALUD</p><p class="porello">A/C C.P.N Mariela Agustina Castillo</p>'
+    : firmaDirectora(p) ? '<p class="porello">LA DIRECCION DEL PROGRAMA INTEGRADO DE SALUD</p>'
     : '<p class="porello">LA GERENCIA ADMINISTRATIVA DEL PROGRAMA INTEGRADO DE SALUD</p>';
   body += '<p class="porello ul" style="margin-bottom:14pt;">RESUELVE:</p>';
 
