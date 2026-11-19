@@ -396,6 +396,7 @@ hr{border:none;border-top:1.5px solid #e2e8f0;margin:16px 0 14px}
         <button class="btn-preview" id="btn-excel-proc-anteojos" style="width:auto;flex:0 0 auto;min-width:240px" onclick="descargarBorradoresExcel('anteojos')">⬇️ Descargar Excel (para asignar Nº)</button>
         <input type="file" id="proc-file-anteojos" accept=".xlsx,.xls" style="display:none" onchange="subirNumerosExcel('anteojos', this.files)">
         <button class="btn-proceso" id="btn-subir-proc-anteojos" style="width:auto;flex:0 0 auto;min-width:240px" onclick="document.getElementById('proc-file-anteojos').click()">⬆️ Subir Excel con los Nº</button>
+        <button class="btn-preview" id="btn-compl-proc-anteojos" style="width:auto;flex:0 0 auto;min-width:240px;background:#b45309" onclick="abrirCompletarDatos('anteojos')">📝 Completar fojas y DNI</button>
         <button class="btn-zip" id="btn-zip-proc-anteojos" onclick="descargarTodasPDFZip('anteojos')">📦 Descargar todas en PDF (ZIP)</button>
         <button class="btn-vaciar" id="btn-vaciar-proc-anteojos" onclick="eliminarTodosBorradores('anteojos')">🗑️ Eliminar todas</button>
       </div>
@@ -497,6 +498,7 @@ hr{border:none;border-top:1.5px solid #e2e8f0;margin:16px 0 14px}
         <button class="btn-preview" id="btn-excel-proc-audio" style="width:auto;flex:0 0 auto;min-width:240px" onclick="descargarBorradoresExcel('audio')">⬇️ Descargar Excel (para asignar Nº)</button>
         <input type="file" id="proc-file-audio" accept=".xlsx,.xls" style="display:none" onchange="subirNumerosExcel('audio', this.files)">
         <button class="btn-proceso" id="btn-subir-proc-audio" style="width:auto;flex:0 0 auto;min-width:240px" onclick="document.getElementById('proc-file-audio').click()">⬆️ Subir Excel con los Nº</button>
+        <button class="btn-preview" id="btn-compl-proc-audio" style="width:auto;flex:0 0 auto;min-width:240px;background:#b45309" onclick="abrirCompletarDatos('audio')">📝 Completar fojas y DNI</button>
         <button class="btn-zip" id="btn-zip-proc-audio" onclick="descargarTodasPDFZip('audio')">📦 Descargar todas en PDF (ZIP)</button>
         <button class="btn-vaciar" id="btn-vaciar-proc-audio" onclick="eliminarTodosBorradores('audio')">🗑️ Eliminar todas</button>
       </div>
@@ -2460,6 +2462,8 @@ async function reprocesarLote(fileList){
         var falta = [];
         if(!String(p.fecha||"").trim()) falta.push("Fecha");
         if(!String(p.nroRes||"").trim()) falta.push("Nº Resolución");
+        var fi = faltaDatosBorrador(p);
+        if(fi.length) falta.push(fi.length>2 ? "fojas/DNI" : fi.join(" y "));
         var faltaTxt = falta.length ? '<span style="color:#b45309">Falta '+falta.join(" y ")+'</span>' : '<span style="color:#166534;font-weight:600">Listo para generar</span>';
         return '<div style="display:flex;align-items:center;gap:10px;padding:10px 12px;border-top:1px solid #eef2f7">'+
                  '<div style="flex:1;min-width:0">'+
@@ -2780,6 +2784,108 @@ async function reprocesarLote(fileList){
     });
   };
 
+
+  /* ================= COMPLETAR FOJAS / DNI / CUIT de varias «En proceso» antes del ZIP ================= */
+  function datosInstrDe(p){
+    return { fsSolicitud: String(p.fsSolicitud||"").trim(), fsPresupuesto: String(p.fsPresupuesto||"").trim(), fsJuridico: String(p.fsJuridico||"").trim(),
+      cuit: String(p.cuit||"").trim() || cuitDeFirma(p.tipo === "anteojos" ? FIRMA_ANTEOJOS : p.ganadora),
+      dni: fmtDni(p.dni) || dniDePaciente(p.paciente) };
+  }
+  function faltaDatosBorrador(p){
+    var f = faltaInstr(datosInstrDe(p));
+    return f.map(function(x){ return x.replace("foja de la solicitud","Fs. solicitud").replace("foja del presupuesto","Fs. presupuesto").replace("foja del dictamen jurídico","Fs. jurídico").replace("CUIT de la firma","CUIT").replace("DNI del paciente","DNI"); });
+  }
+  window.faltaDatosBorrador = faltaDatosBorrador;
+
+  var cdTipo = null, cdIds = [], cdZip = false;
+  var CD_COLS = [["fsSolicitud","Fs. solicitud","02"],["fsPresupuesto","Fs. presupuesto","05"],["fsJuridico","Fs. jurídico","08"],["dni","DNI paciente","12.345.678"],["cuit","CUIT firma","30-00000000-0"]];
+  function cdOverlay(){
+    var ov = document.getElementById("cd-overlay");
+    if(ov) return ov;
+    ov = document.createElement("div");
+    ov.id = "cd-overlay"; ov.className = "eb-overlay";
+    ov.innerHTML = '<div class="eb-card" role="dialog" aria-modal="true" style="max-width:1100px">'+
+      '<div class="eb-head"><span id="cd-titulo">Completar fojas y DNI</span><button type="button" title="Cerrar" onclick="cerrarCompletarDatos()">×</button></div>'+
+      '<div class="eb-body" id="cd-body" style="overflow-x:auto"></div>'+
+      '<div class="msg" id="cd-msg" style="margin:0 18px 12px"></div>'+
+      '<div class="eb-foot"><button type="button" class="eb-cancel" onclick="cerrarCompletarDatos()">Cancelar</button>'+
+      '<button type="button" class="eb-save" id="cd-save" onclick="guardarCompletarDatos()">💾 Guardar</button></div>'+
+      '</div>';
+    ov.addEventListener("click", function(ev){ if(ev.target === ov) window.cerrarCompletarDatos(); });
+    document.addEventListener("keydown", function(ev){ if(ev.key === "Escape" && ov.classList.contains("open")) window.cerrarCompletarDatos(); });
+    document.body.appendChild(ov);
+    return ov;
+  }
+  window.abrirCompletarDatos = function(tipo, paraZip, soloIds){
+    var lista = filasDe(tipo).filter(function(p){ return soloIds ? soloIds.indexOf(p._id) >= 0 : faltaDatosBorrador(p).length > 0; });
+    var suf = (tipo === "anteojos") ? "anteojos" : "audio";
+    if(!lista.length){
+      var pm = document.getElementById("proc-msg-"+suf);
+      if(pm){ pm.className = "msg ok"; pm.textContent = "✅ Todas las resoluciones en proceso tienen fojas, DNI y CUIT cargados."; }
+      return;
+    }
+    cdTipo = tipo; cdZip = !!paraZip; cdIds = lista.map(function(p){ return p._id; });
+    var ov = cdOverlay();
+    var th = 'padding:6px 6px;font-size:12px;color:#475569;text-align:left;border-bottom:2px solid #e2e8f0;white-space:nowrap';
+    var html = '<div style="font-size:13px;color:#475569;margin:0 0 10px">'+(cdZip ? '<b style="color:#b45309">Antes de generar el ZIP</b> completá lo que falta. ' : '')+
+      'Cargá las fojas de cada expediente (las celdas en amarillo son las que faltan). El botón <b>⇩</b> copia el valor de la primera fila a todas.</div>';
+    html += '<table style="width:100%;border-collapse:collapse"><thead><tr><th style="'+th+'">Expediente / Paciente</th>';
+    CD_COLS.forEach(function(c){ html += '<th style="'+th+'">'+c[1]+' <button type="button" title="Copiar el valor de la primera fila a todas" onclick="cdCopiarCol(\''+c[0]+'\')" style="width:auto;padding:1px 6px;font-size:11px;border:1px solid #cbd5e1;border-radius:5px;background:#f8fafc;cursor:pointer">⇩</button></th>'; });
+    html += '</tr></thead><tbody>';
+    lista.forEach(function(p, i){
+      var d = datosInstrDe(p);
+      if(!d.cuit) d.cuit = cuitPorDefecto(p.tipo === "anteojos" ? FIRMA_ANTEOJOS : p.ganadora);
+      html += '<tr style="border-top:1px solid #eef2f7"><td style="padding:6px;font-size:12.5px;min-width:170px"><b>'+esc(p.nroExp||"(sin expediente)")+'</b><br><span style="color:#64748b">'+esc(p.paciente)+'</span></td>';
+      CD_COLS.forEach(function(c){
+        var v = d[c[0]] || "";
+        html += '<td style="padding:4px"><input type="text" id="cd-'+c[0]+'-'+i+'" value="'+escA(v)+'" placeholder="'+c[2]+'" oninput="this.style.background=this.value.trim()?\'#fff\':\'#fef9c3\'" style="width:100%;min-width:'+(c[0]==="cuit"?"125px":(c[0]==="dni"?"105px":"62px"))+';padding:6px 7px;border:1px solid #cbd5e1;border-radius:6px;font-size:13px;background:'+(v?"#fff":"#fef9c3")+'"></td>';
+      });
+      html += '</tr>';
+    });
+    html += '</tbody></table>';
+    document.getElementById("cd-body").innerHTML = html;
+    document.getElementById("cd-titulo").textContent = "Completar fojas y DNI — "+(tipo === "anteojos" ? "Anteojos" : "Audífonos")+" ("+lista.length+")";
+    var m = document.getElementById("cd-msg"); m.className = "msg"; m.textContent = "";
+    var sv = document.getElementById("cd-save"); sv.disabled = false; sv.textContent = cdZip ? "💾 Guardar y generar ZIP" : "💾 Guardar";
+    ov.classList.add("open");
+    var primero = ov.querySelector('#cd-body input[style*="#fef9c3"]'); if(primero) setTimeout(function(){ primero.focus(); }, 50);
+  };
+  window.cdCopiarCol = function(col){
+    var src = document.getElementById("cd-"+col+"-0"); if(!src) return;
+    var v = src.value.trim(); if(!v) return;
+    for(var i=1;i<cdIds.length;i++){ var x = document.getElementById("cd-"+col+"-"+i); if(x){ x.value = v; x.style.background = "#fff"; } }
+  };
+  window.cerrarCompletarDatos = function(){
+    var ov = document.getElementById("cd-overlay"); if(ov) ov.classList.remove("open");
+    cdTipo = null; cdIds = []; cdZip = false;
+  };
+  window.guardarCompletarDatos = async function(){
+    if(!cdTipo) return;
+    var tipo = cdTipo, zip = cdZip, ids = cdIds.slice();
+    var m = document.getElementById("cd-msg"), sv = document.getElementById("cd-save");
+    var cambios = ids.map(function(id, i){
+      var c = {};
+      CD_COLS.forEach(function(col){ var x = document.getElementById("cd-"+col[0]+"-"+i); c[col[0]] = x ? x.value.trim() : ""; });
+      c.dni = fmtDni(c.dni);
+      return { id: id, campos: c };
+    });
+    var incompletas = cambios.filter(function(x){ return faltaInstr(x.campos).length > 0; }).length;
+    sv.disabled = true; sv.textContent = "Guardando...";
+    var res = await Promise.all(cambios.map(function(x){
+      var p = buscar(x.id) || {};
+      if(x.campos.dni) recordarDni(p.paciente, x.campos.dni);
+      if(x.campos.cuit) recordarCuit(p.tipo === "anteojos" ? FIRMA_ANTEOJOS : p.ganadora, x.campos.cuit);
+      return Store.editar(x.id, x.campos);
+    }));
+    var fallaron = res.filter(function(r){ return !r || !r.ok; }).length;
+    if(fallaron){ sv.disabled = false; sv.textContent = zip ? "💾 Guardar y generar ZIP" : "💾 Guardar"; m.className = "msg er"; m.textContent = "No se pudieron guardar "+fallaron+". Revisá conexión / reglas de Firestore (genres_borradores)."; return; }
+    window.cerrarCompletarDatos();
+    var suf = (tipo === "anteojos") ? "anteojos" : "audio";
+    var pm = document.getElementById("proc-msg-"+suf);
+    if(pm){ pm.className = "msg "+(incompletas?"er":"ok"); pm.textContent = "✅ Datos guardados en "+cambios.length+" resolución(es)."+(incompletas?" "+incompletas+" todavía tienen datos vacíos y no entran al ZIP.":""); }
+    if(zip && cambios.length > incompletas){ await esperar(600); window.descargarTodasPDFZip(tipo, true); }
+  };
+
   /* ================= DESCARGA MASIVA: todas las «En proceso» con Nº → PDF → ZIP ================= */
   // Arma el mismo payload que mostrarPrevia() arma desde el formulario, pero a partir del borrador guardado.
   function payloadDesdeBorrador(p, fechaTodas){
@@ -2884,7 +2990,7 @@ async function reprocesarLote(fileList){
   var zipEnCurso = false;
   function avisoSalida(ev){ ev.preventDefault(); ev.returnValue = ""; return ""; }
 
-  window.descargarTodasPDFZip = async function(tipo){
+  window.descargarTodasPDFZip = async function(tipo, yaCompletado){
     if(zipEnCurso) return;
     var suf = (tipo === "anteojos") ? "anteojos" : "audio";
     var msgEl = document.getElementById("proc-msg-"+suf);
@@ -2894,6 +3000,14 @@ async function reprocesarLote(fileList){
 
     var lista = filasDe(tipo);
     if(!lista.length){ setMsg("er","No hay resoluciones en proceso."); return; }
+    if(!yaCompletado){
+      var faltanDatos = lista.filter(function(p){ return String(p.nroRes||"").trim() && faltaDatosBorrador(p).length; }).map(function(p){ return p._id; });
+      if(faltanDatos.length){
+        setMsg("info", faltanDatos.length+" resolución(es) con Nº tienen fojas, DNI o CUIT sin cargar. Completalas en la ventana y se genera el ZIP.");
+        window.abrirCompletarDatos(tipo, true, faltanDatos);
+        return;
+      }
+    }
     var listos = [], sinNumero = 0, conProblema = [];
     lista.forEach(function(p){
       var r = payloadDesdeBorrador(p, fechaTodas);
