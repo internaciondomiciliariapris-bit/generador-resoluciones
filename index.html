@@ -725,7 +725,7 @@ function dniDeTexto(texto,paciente,esHojaDni){
   const t=String(texto||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toUpperCase();if(!t)return "";
   const re=/(?:D\.?\s?N\.?\s?I\.?|DOCUMENTO(?:\s+NACIONAL)?(?:\s+DE\s+IDENTIDAD)?|DOCUMENT|N[°ºO]?\s*DE\s*DOC(?:UMENTO)?)[^0-9A-Z]{0,4}(?:N[°ºO.]*\s*)?:?\s*(\d{1,2}[.\s]?\d{3}[.\s]?\d{3})\b|\b(\d{1,2}\.\d{3}\.\d{3})\b/g;
   const ap=claveDni(paciente).split(" ").filter(w=>w.length>=3);const cnt={},cerca={};let m;
-  while((m=re.exec(t))){const d=(m[1]||m[2]).replace(/[^0-9]/g,"");if(d.length<7||d.length>8)continue;
+  while((m=re.exec(t))){const d=(m[1]||m[2]).replace(/[^0-9]/g,"").replace(/^0+/,"");if(d.length<7||d.length>8)continue;
     if(!m[1]&&!esHojaDni&&!/DNI|D\.N\.I|DOC/.test(t.slice(Math.max(0,m.index-40),m.index)))continue;
     cnt[d]=(cnt[d]||0)+1;
     // Cercanía al paciente: cuántas palabras de su nombre hay en los 90 caracteres ANTERIORES al número
@@ -743,7 +743,9 @@ function cuitPorDefecto(f){let u="";try{u=localStorage.getItem("res_cuit_ultimo"
 function rellenarCuit(pre,f){const x=document.getElementById(pre+"-cuit");if(x&&!x.value.trim())x.value=cuitPorDefecto(f);}
 function htmlInstr(pre){
   const campo=(id,lab,ph)=>'<div class="field"><label>'+lab+' <span>*</span></label><input type="text" id="'+pre+'-'+id+'" placeholder="'+ph+'"></div>';
-  return '<hr><div class="stitle">Fojas y datos de la firma</div><div class="row">'+campo("fsSolicitud","Fs. solicitud","02")+campo("fsPresupuesto","Fs. presupuesto","05")+'</div>'+
+  return '<hr><div class="stitle">Fojas y datos de la firma</div>'+
+    '<button type="button" onclick="fojasDesdeForm(\''+pre+'\')" style="width:auto;margin:0 0 10px;background:#fff7ed;color:#9a3412;border:1.5px solid #fdba74;border-radius:8px;padding:8px 14px;font-size:13px;font-weight:700;cursor:pointer">📄 Elegir hojas del expediente (PDF de SIGEDIG)</button>'+
+    '<div class="row">'+campo("fsSolicitud","Fs. solicitud","02")+campo("fsPresupuesto","Fs. presupuesto","05")+'</div>'+
     '<div class="row">'+campo("fsJuridico","Fs. dictamen jurídico","08")+campo("cuit","CUIT de la firma adjudicada","30-00000000-0")+'</div>'+
     '<hr><div class="stitle">Controles antes de firmar</div>'+CONTROLES_RES.map(c=>'<label style="display:flex;gap:8px;align-items:center;margin:5px 0;font-size:14px;cursor:pointer"><input type="checkbox" id="'+pre+'-c-'+c[0]+'"> '+c[1]+'</label>').join("")+
     '<label style="display:flex;gap:8px;align-items:center;margin:9px 0;font-size:14px;font-weight:700;cursor:pointer"><input type="checkbox" id="'+pre+'-directoraAc"> La C.P.N Castillo firma a cargo de la Dirección (sale una sola firma)</label>';
@@ -2835,7 +2837,7 @@ async function reprocesarLote(fileList){
     lista.forEach(function(p, i){
       var d = datosInstrDe(p);
       if(!d.cuit) d.cuit = cuitPorDefecto(p.tipo === "anteojos" ? FIRMA_ANTEOJOS : p.ganadora);
-      html += '<tr style="border-top:1px solid #eef2f7"><td style="padding:6px;font-size:12.5px;min-width:170px"><b>'+esc(p.nroExp||"(sin expediente)")+'</b><br><span style="color:#64748b">'+esc(p.paciente)+'</span></td>';
+      html += '<tr style="border-top:1px solid #eef2f7"><td style="padding:6px;font-size:12.5px;min-width:170px"><b>'+esc(p.nroExp||"(sin expediente)")+'</b><br><span style="color:#64748b">'+esc(p.paciente)+'</span><br><button type="button" onclick="cdFojasExp('+i+')" style="width:auto;margin-top:4px;background:#fff7ed;color:#9a3412;border:1px solid #fdba74;border-radius:6px;padding:3px 8px;font-size:11.5px;font-weight:700;cursor:pointer">📄 Elegir hojas del PDF</button></td>';
       CD_COLS.forEach(function(c){
         var v = d[c[0]] || "";
         html += '<td style="padding:4px"><input type="text" id="cd-'+c[0]+'-'+i+'" value="'+escA(v)+'" placeholder="'+c[2]+'" oninput="this.style.background=this.value.trim()?\'#fff\':\'#fef9c3\'" style="width:100%;min-width:'+(c[0]==="cuit"?"125px":(c[0]==="dni"?"105px":"62px"))+';padding:6px 7px;border:1px solid #cbd5e1;border-radius:6px;font-size:13px;background:'+(v?"#fff":"#fef9c3")+'"></td>';
@@ -2849,6 +2851,13 @@ async function reprocesarLote(fileList){
     var sv = document.getElementById("cd-save"); sv.disabled = false; sv.textContent = cdZip ? "💾 Guardar y generar ZIP" : "💾 Guardar";
     ov.classList.add("open");
     var primero = ov.querySelector('#cd-body input[style*="#fef9c3"]'); if(primero) setTimeout(function(){ primero.focus(); }, 50);
+  };
+  window.cdFojasExp = function(i){
+    var p = buscar(cdIds[i]); if(!p) return;
+    window.FojasExp.elegir({ nroExp: p.nroExp, paciente: p.paciente, tipo: p.tipo }, function(r){
+      var poner = function(col, v){ var x = document.getElementById("cd-"+col+"-"+i); if(x && v){ x.value = v; x.style.background = "#fff"; } };
+      poner("fsSolicitud", r.fsSolicitud); poner("fsPresupuesto", r.fsPresupuesto); poner("fsJuridico", r.fsJuridico); poner("dni", r.dni);
+    });
   };
   window.cdCopiarCol = function(col){
     var src = document.getElementById("cd-"+col+"-0"); if(!src) return;
@@ -4704,6 +4713,11 @@ if(typeof module !== "undefined" && module.exports) module.exports = EntConsulta
 .ex-p.receta{border-color:#16a34a}.ex-p.receta .ex-b,.ex-p.receta .ex-por{background:#dcfce7;color:#166534}
 .ex-p.dudosa::after{content:"¿revisar?";position:absolute;right:6px;top:34px;background:#f59e0b;color:#fff;font-size:10px;font-weight:800;border-radius:5px;padding:1px 5px}
 .ex-res{margin-right:auto;font-size:13px;font-weight:700;color:#334155}
+#fx-ov{position:fixed;inset:0;z-index:10010;background:rgba(15,23,42,.6);display:flex;align-items:flex-start;justify-content:center;padding:3vh 12px 12px;overflow:auto}
+.ex-t.fx-sol{background:#fef3c7;color:#92400e}.ex-t.fx-pre{background:#ede9fe;color:#5b21b6}.ex-t.fx-jur{background:#ccfbf1;color:#115e59}
+.ex-p.sol{border-color:#d97706}.ex-p.sol .ex-b,.ex-p.sol .ex-por{background:#fef3c7;color:#92400e}
+.ex-p.pre{border-color:#7c3aed}.ex-p.pre .ex-b,.ex-p.pre .ex-por{background:#ede9fe;color:#5b21b6}
+.ex-p.jur{border-color:#0d9488}.ex-p.jur .ex-b,.ex-p.jur .ex-por{background:#ccfbf1;color:#115e59}
 #ex-zoom{position:fixed;inset:0;z-index:10020;background:rgba(15,23,42,.85);display:flex;align-items:center;justify-content:center;cursor:zoom-out}
 #ex-zoom img{max-width:94vw;max-height:92vh;background:#fff;box-shadow:0 10px 40px rgba(0,0,0,.5)}
 .ex-zx{position:fixed;top:14px;right:18px;color:#fff;font-weight:800;font-size:14px}
@@ -4894,6 +4908,15 @@ tr.fila:hover .mj-lapiz{opacity:1}
     <div id="ex-est" class="ex-est"></div>
     <div id="ex-grid" class="ex-grid"></div>
     <div class="ma-foot"><span id="ex-res" class="ex-res"></span><button type="button" class="mj-btn mj-gris" onclick="ExtraerExp.cerrar()">Cancelar</button><button type="button" class="mj-btn mj-verde" id="ex-ok" onclick="ExtraerExp.usar()">✅ Usar estas hojas</button></div>
+  </div>
+</div>
+<div id="fx-ov" style="display:none" role="dialog" aria-label="Elegir hojas del expediente">
+  <div class="ex-box">
+    <div class="ma-head"><span style="font-size:20px">📄</span><b id="fx-tit">Elegir hojas del expediente</b><button type="button" onclick="FojasExp.cerrar()" title="Cancelar">✕</button></div>
+    <div class="ex-ayuda">Ya marqué las hojas que encontré. <b>Revisalas</b>: tocá una hoja para cambiarla → <span class="ex-t fx-sol">📝 Solicitud</span> → <span class="ex-t fx-pre">💲 Presupuesto</span> → <span class="ex-t fx-jur">⚖️ Dictamen</span> → <span class="ex-t dni">🪪 DNI</span> → sin marcar. El número de hoja es la foja. Con 🔍 la ves grande. El PDF no se guarda: se lee en tu compu.</div>
+    <div id="fx-est" class="ex-est"></div>
+    <div id="fx-grid" class="ex-grid"></div>
+    <div class="ma-foot"><span id="fx-res" class="ex-res"></span><button type="button" class="mj-btn mj-gris" onclick="FojasExp.cerrar()">Cancelar</button><button type="button" class="mj-btn mj-verde" id="fx-ok" onclick="FojasExp.usar()">✅ Usar estas hojas</button></div>
   </div>
 </div>
 <div id="ex-zoom" style="display:none" onclick="this.style.display='none'"><img id="ex-zimg" alt="Hoja ampliada"><div class="ex-zx">✕ Cerrar</div></div>
@@ -5605,6 +5628,194 @@ var ExtraerExp = (function(){
   document.addEventListener("keydown", function(e){ if(e.key === "Escape" && st){ if($("ex-zoom").style.display !== "none") $("ex-zoom").style.display = "none"; else cerrar(); } });
   return { abrir: abrir, usar: usar, cerrar: cerrar, clasificar: clasificar };
 })();
+/* ============================================================================
+   FojasExp — del PDF completo del expediente (SIGEDIG) toma las fojas para la resolución.
+   Muestra todas las hojas; Jorge marca Solicitud / Presupuesto(s) / Dictamen jurídico / DNI.
+   Foja = número de hoja del PDF (SIGEDIG no imprime la foja; la carátula es fs. 1).
+   Premarca (ajustado con expedientes reales de anteojos y audífonos):
+     Solicitud = hoja 2 · Presupuesto = "PRESUPUESTO N°" / "NO VALIDO COMO FACTURA" (todas, ej. IAR + Giorlent)
+     Dictamen = primera hoja con "REFERENCIA" + Gerente (Asesoría Letrada).
+   DNI: se lee del texto del expediente (ANSES, informe social, etc.) eligiendo el del paciente;
+   si no aparece, se lee con OCR la hoja marcada como DNI. Nada se sube ni se guarda.
+   ============================================================================ */
+var FojasExp = (function(){
+  "use strict";
+  var URL_PDFJS = "https://cdn.jsdelivr.net/npm/pdfjs-dist@4.7.76/build/pdf.min.mjs",
+      URL_WORKER = "https://cdn.jsdelivr.net/npm/pdfjs-dist@4.7.76/build/pdf.worker.min.mjs",
+      URL_TESS = "https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js";
+  var ETQ = { "": "— no va —", sol: "📝 Solicitud", pre: "💲 Presupuesto", jur: "⚖️ Dictamen", dni: "🪪 DNI" };
+  var ORDEN = ["", "sol", "pre", "jur", "dni"];
+  var st = null, _pdfjs = null, _tess = null;
+  function $(id){ return document.getElementById(id); }
+  function esc(t){ return String(t == null ? "" : t).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;"); }
+  function sinT(s){ return String(s || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toUpperCase().replace(/\s+/g, " "); }
+  function pdfjs(){ if(!_pdfjs) _pdfjs = import(/* @vite-ignore */ URL_PDFJS).then(function(m){ m.GlobalWorkerOptions.workerSrc = URL_WORKER; return m; }).catch(function(e){ _pdfjs = null; throw e; }); return _pdfjs; }
+  function tess(){
+    if(!_tess) _tess = new Promise(function(res, rej){
+      if(window.Tesseract) return res();
+      var s = document.createElement("script"); s.src = URL_TESS; s.onload = function(){ res(); }; s.onerror = function(){ rej(new Error("No se pudo cargar el lector de imágenes")); }; document.head.appendChild(s);
+    }).then(function(){ return window.Tesseract.createWorker("spa"); }).catch(function(e){ _tess = null; throw e; });
+    return _tess;
+  }
+  function leer(file){ return new Promise(function(res, rej){ var r = new FileReader(); r.onload = function(){ res(new Uint8Array(r.result)); }; r.onerror = function(){ rej(r.error); }; r.readAsArrayBuffer(file); }); }
+  async function render(n, escala){
+    var page = await st.doc.getPage(n), vp = page.getViewport({ scale: escala });
+    var cv = document.createElement("canvas"); cv.width = Math.ceil(vp.width); cv.height = Math.ceil(vp.height);
+    var ctx = cv.getContext("2d"); ctx.fillStyle = "#fff"; ctx.fillRect(0, 0, cv.width, cv.height);
+    await page.render({ canvasContext: ctx, viewport: vp }).promise;
+    return cv;
+  }
+
+  function clasificar(p){
+    var u = sinT(p.texto);
+    if(p.n === 1) return { tipo: "", por: "Carátula" };
+    if(p.n === 2) return { tipo: "sol", por: "Nota de pedido" };
+    if(/RESOLUCION INTERNA/.test(u)) return { tipo: "", por: "Resolución" };
+    if(/GMAIL/.test(u)) return { tipo: "", por: "Mail de cotización" };
+    if(/ADJUDICACION DE FECHA/.test(u)) return { tipo: "", por: "Cuadro comparativo" };
+    if(/CONSTANCIA DE INSCRIPCION/.test(u)) return { tipo: "", por: "Constancia ARCA" };
+    if(/REFERENCIA/.test(u) && /GERENTE/.test(u) && /DICTAMEN|ASESORIA|EXPTE/.test(u)) return { tipo: "jur", por: "Dictamen jurídico" };
+    if(/PASE A ASESORIA/.test(u)) return { tipo: "", por: "Pase a Asesoría" };
+    if(/ASESOR JURIDICO|ASESOR LETRADO/.test(u)) return { tipo: "", por: "Dictamen (2ª hoja)" };
+    if(/PRESUPUESTO/.test(u) && /NO VALIDO COMO FACTURA|PRECIO UNIT|PRECIO POR UNIDAD/.test(u)) return { tipo: "pre", por: /GIORLENT/.test(u) ? "Óptica Giorlent" : /\bIAR\b/.test(u) ? "IAR Argentina" : "Presupuesto" };
+    if(/ANSES|CERTIFICACION NEGATIVA|PAMI|AFILIAD|INCLUIR SALUD/.test(u)) return { tipo: "", por: "Certificado" };
+    if(/INFORME|SERVICIO SOCIAL|REFERENTE/.test(u)) return { tipo: "", por: "Informe / nota" };
+    if(u.replace(/[^A-Z0-9]/g, "").length < 40) return { tipo: "", por: "Foto o manuscrito" };
+    return { tipo: "", por: "Otra hoja" };
+  }
+
+  function lista(ns){
+    if(ns.length <= 1) return ns.join("");
+    return ns.slice(0, -1).join(", ") + " y " + ns[ns.length - 1];
+  }
+  function marcadas(t){ return st.pags.filter(function(p){ return p.tipo === t; }).map(function(p){ return p.n; }); }
+  function est(txt, mal){ var e = $("fx-est"); e.className = "ex-est" + (mal ? " mal" : ""); e.innerHTML = txt; }
+  function pintar(){
+    $("fx-grid").innerHTML = st.pags.map(function(p, i){
+      return '<div class="ex-p ' + (p.tipo || "") + '" data-fxi="' + i + '" title="Tocá para cambiar">' +
+        (p.thumb ? '<img src="' + p.thumb + '" alt="Hoja ' + p.n + '">' : '<img alt="">') +
+        '<span class="ex-n">Fs. ' + p.n + '</span><button type="button" class="ex-z" data-fxz="' + i + '" title="Ver grande">🔍</button>' +
+        '<span class="ex-b">' + ETQ[p.tipo || ""] + '</span><span class="ex-por">' + esc(p.por || "") + "</span></div>";
+    }).join("");
+    var s = marcadas("sol"), pr = marcadas("pre"), j = marcadas("jur"), d = marcadas("dni");
+    $("fx-res").innerHTML = "📝 Fs. <b>" + (s[0] || "—") + "</b> · 💲 Fs. <b>" + (lista(pr) || "—") + "</b> · ⚖️ Fs. <b>" + (j[0] || "—") + "</b> · 🪪 DNI <b>" + esc(st.dniTexto || (d.length ? "se lee de la hoja " + d[0] : "—")) + "</b>";
+    $("fx-ok").disabled = st.trabajando || !(s.length + pr.length + j.length + d.length) && !st.dniTexto;
+  }
+  document.addEventListener("click", function(e){
+    if(!st || !e.target || !e.target.closest) return;
+    var z = e.target.closest("[data-fxz]");
+    if(z){ e.stopPropagation(); ampliar(+z.getAttribute("data-fxz")); return; }
+    var c = e.target.closest("[data-fxi]"); if(!c || st.trabajando) return;
+    var p = st.pags[+c.getAttribute("data-fxi")];
+    p.tipo = ORDEN[(ORDEN.indexOf(p.tipo || "") + 1) % ORDEN.length];
+    // Solicitud, dictamen y DNI: una sola hoja (la última tocada). Presupuestos: pueden ser varios.
+    if(p.tipo === "sol" || p.tipo === "jur") st.pags.forEach(function(q){ if(q !== p && q.tipo === p.tipo){ q.tipo = ""; } });
+    pintar();
+  });
+  async function ampliar(i){
+    var p = st.pags[i]; $("ex-zimg").src = p.thumb || ""; $("ex-zoom").style.display = "flex";
+    try{ var cv = await render(p.n, 1.4); if($("ex-zoom").style.display !== "none") $("ex-zimg").src = cv.toDataURL("image/jpeg", 0.85); }catch(_){}
+  }
+
+  async function abrir(file, m, listo){
+    cerrar();
+    st = { pags: [], listo: listo, paciente: (m && m.paciente) || "", tipo: (m && m.tipo) || "", trabajando: true, dniTexto: "" };
+    $("fx-tit").textContent = "Elegir hojas del expediente — " + ((m && m.nroExp) || "") + " " + ((m && m.paciente) || "");
+    $("fx-grid").innerHTML = ""; $("fx-ov").style.display = "flex"; est("⏳ Abriendo el expediente…");
+    try{
+      var lib = await pdfjs();
+      st.doc = await lib.getDocument({ data: await leer(file) }).promise;
+      var total = st.doc.numPages;
+      for(var n = 1; n <= total; n++){
+        if(!st) return;
+        est("⏳ Leyendo hoja " + n + " de " + total + "…");
+        var page = await st.doc.getPage(n);
+        var texto = (await page.getTextContent()).items.map(function(it){ return it.str; }).join(" ");
+        var cv = await render(n, 0.32);
+        st.pags.push({ n: n, texto: texto, thumb: cv.toDataURL("image/jpeg", 0.7), tipo: "", por: "" });
+        pintar();
+      }
+      if(!st) return;
+      st.pags.forEach(function(p){ var c = clasificar(p); p.tipo = c.tipo; p.por = c.por; });
+      // Dictamen: solo la primera hoja; anteojos: un solo presupuesto (el de la firma), audífonos: todos
+      var j = marcadas("jur"); st.pags.forEach(function(p){ if(p.tipo === "jur" && p.n !== j[0]){ p.tipo = ""; p.por = "Dictamen (sigue)"; } });
+      if(st.tipo === "anteojos"){ var pr = st.pags.filter(function(p){ return p.tipo === "pre"; }), gio = pr.filter(function(p){ return /GIORLENT/.test(sinT(p.texto)); });
+        if(gio.length && pr.length > 1) pr.forEach(function(p){ if(gio.indexOf(p) < 0) p.tipo = ""; }); }
+      // ¿Es el expediente correcto? La carátula trae el número.
+      var aviso = "";
+      if(m && m.nroExp){
+        var partes = String(m.nroExp).split("/"), car = sinT(st.pags[0] ? st.pags[0].texto : "");
+        var num = String(parseInt(partes[0], 10) || ""), rep = String(parseInt(partes[1], 10) || "");
+        if(num && car && !(new RegExp("\\b0*" + num + "\\b").test(car) && (!rep || new RegExp("\\b0*" + rep + "\\b").test(car))))
+          aviso = "⚠️ Ojo: la carátula de este PDF no coincide con el expediente <b>" + esc(m.nroExp) + "</b>. Revisá que sea el correcto.";
+      }
+      // DNI del paciente desde el texto del expediente (elige el que está junto a su nombre)
+      try{ st.dniTexto = window.DniPacientes.deTexto(st.pags.map(function(p){ return p.texto; }).join("\n"), st.paciente, false) || ""; }catch(_){ st.dniTexto = ""; }
+      st.trabajando = false; pintar();
+      var faltan = [];
+      if(!marcadas("sol").length) faltan.push("la solicitud");
+      if(!marcadas("pre").length) faltan.push("el presupuesto");
+      if(!marcadas("jur").length) faltan.push("el dictamen");
+      if(!st.dniTexto) faltan.push("el DNI (marcá la hoja del DNI y lo leo)");
+      est((aviso ? aviso + "<br>" : "") + (faltan.length ? "⚠️ No encontré " + faltan.join(", ") + ": marcalo tocando las hojas." : "✅ Marqué solicitud, presupuesto y dictamen, y encontré el DNI. Revisá y tocá <b>Usar estas hojas</b>."), !!aviso || faltan.length > 0);
+    }catch(e){
+      if(st){ st.trabajando = false; pintar(); }
+      est("No se pudo leer el PDF: " + esc(e && e.message || e), true);
+    }
+  }
+  async function usar(){
+    if(!st || st.trabajando) return;
+    var r = { fsSolicitud: String(marcadas("sol")[0] || ""), fsPresupuesto: lista(marcadas("pre")), fsJuridico: String(marcadas("jur")[0] || ""), dni: "" };
+    var dniP = st.pags.filter(function(p){ return p.tipo === "dni"; });
+    if(dniP.length){
+      // Si marcó hoja(s) de DNI, manda lo que se lee ahí (con OCR si es foto)
+      st.trabajando = true; pintar();
+      try{
+        var txt = dniP.map(function(p){ return p.texto || ""; }).join("\n");
+        if(sinT(txt).replace(/[^A-Z0-9]/g, "").length < 40){
+          est("⏳ Leyendo el DNI (la primera vez tarda un poco)…");
+          var w = await tess();
+          for(var k = 0; k < dniP.length; k++){ var cv = await render(dniP[k].n, 2); try{ txt += " " + ((await w.recognize(cv)).data.text || ""); }catch(_){ } }
+        }
+        r.dni = window.DniPacientes.deTexto(txt, st.paciente, true) || "";
+      }catch(e){ console.warn("OCR DNI:", e); }
+      if(!st) return;
+      st.trabajando = false;
+      if(!r.dni && st.dniTexto) r.dni = st.dniTexto;
+      if(!r.dni){ pintar(); est("⚠️ No pude leer el número en la hoja del DNI. Usá estas hojas igual y tipealo, o marcá otra hoja.", true); st.sinDni = (st.sinDni || 0) + 1; if(st.sinDni < 2) return; }
+    } else r.dni = st.dniTexto || "";
+    var cb = st.listo, pac = st.paciente;
+    cerrar();
+    if(r.dni){ try{ window.DniPacientes.recordar(pac, r.dni); }catch(_){ } }
+    cb && cb(r);
+  }
+  function cerrar(){
+    if(st && st.doc){ try{ st.doc.destroy(); }catch(_){ } }
+    st = null;
+    var o = $("fx-ov"); if(o) o.style.display = "none";
+    var g = $("fx-grid"); if(g) g.innerHTML = "";
+    var z = $("ex-zoom"); if(z) z.style.display = "none";
+  }
+  // Abre el selector de archivo y después la ventana.
+  function elegir(meta, listo){
+    var inp = document.createElement("input"); inp.type = "file"; inp.accept = "application/pdf,.pdf"; inp.style.display = "none";
+    inp.onchange = function(){ var f = inp.files && inp.files[0]; inp.remove(); if(f) abrir(f, meta, listo); };
+    document.body.appendChild(inp); inp.click();
+  }
+  document.addEventListener("keydown", function(e){ if(e.key === "Escape" && st){ if($("ex-zoom").style.display !== "none") $("ex-zoom").style.display = "none"; else cerrar(); } });
+  return { abrir: abrir, elegir: elegir, usar: usar, cerrar: cerrar, clasificar: clasificar };
+})();
+window.FojasExp = FojasExp;
+// Desde el formulario «Armar resolución» (pre = "a" anteojos, "b" audífonos)
+window.fojasDesdeForm = function(pre){
+  var v = function(id){ var x = document.getElementById(pre + "-" + id); return x ? x.value.trim() : ""; };
+  FojasExp.elegir({ nroExp: v("nroExp"), paciente: v("paciente"), tipo: pre === "a" ? "anteojos" : "audio" }, function(r){
+    ["fsSolicitud", "fsPresupuesto", "fsJuridico", "dni"].forEach(function(k){ var x = document.getElementById(pre + "-" + k); if(x && r[k]) x.value = r[k]; });
+    var msg = document.getElementById(pre + "-msg");
+    if(msg){ msg.className = "msg ok"; msg.textContent = "✅ Fojas cargadas desde el expediente: solicitud fs. " + (r.fsSolicitud || "—") + ", presupuesto fs. " + (r.fsPresupuesto || "—") + ", dictamen fs. " + (r.fsJuridico || "—") + (r.dni ? ", DNI " + r.dni : "") + ". Revisalas."; }
+  });
+};
+
 
 var MesaJ = (function(){
   "use strict";
