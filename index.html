@@ -703,7 +703,24 @@ function fmtDni(v){const d=String(v||"").replace(/[^0-9]/g,"");return d?d.replac
 function claveDni(n){return String(n||"").toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[^A-ZÑ ]/g," ").replace(/\s+/g," ").trim();}
 const DNI_CONOCIDOS={"CARRIZO GRACIELA DEL VALLE":"17.738.623","CABRERA NATALIA VERONICA":"51.208.127","MERCADO JESICA YOLANDA":"32.782.241","MERCADO MIA GUADALUPE":"55.353.855"};
 function dnisGuardados(){try{return JSON.parse(localStorage.getItem("res_dni_pacientes")||"{}")||{};}catch(_){return {};}}
-function dniDePaciente(n){const k=claveDni(n);return k?(dnisGuardados()[k]||DNI_CONOCIDOS[k]||""):"";}
+function dniDePaciente(n){const k=claveDni(n);if(!k)return "";let d=dnisGuardados()[k]||DNI_CONOCIDOS[k]||"";if(!d){try{d=(window.RegistroOCStore&&window.RegistroOCStore.dniDe)?window.RegistroOCStore.dniDe(n):"";}catch(_){d="";}}return d||"";}
+// Lee el DNI del paciente desde el texto de un PDF (expediente, OC, hoja del DNI).
+// Toma los números de 7-8 cifras que aparecen junto a "DNI"/"D.N.I."/"Documento" o con formato 12.345.678.
+// Si hay varios, prefiere el que está cerca del apellido del paciente; si hay dudas, no devuelve nada.
+function dniDeTexto(texto,paciente,esHojaDni){
+  const t=String(texto||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toUpperCase();if(!t)return "";
+  const re=/(?:D\.?\s?N\.?\s?I\.?|DOCUMENTO(?:\s+NACIONAL)?(?:\s+DE\s+IDENTIDAD)?|DOCUMENT|N[°ºO]?\s*DE\s*DOC(?:UMENTO)?)[^0-9A-Z]{0,4}(?:N[°ºO.]*\s*)?:?\s*(\d{1,2}[.\s]?\d{3}[.\s]?\d{3})\b|\b(\d{1,2}\.\d{3}\.\d{3})\b/g;
+  const ap=claveDni(paciente).split(" ").filter(w=>w.length>=3);const cnt={},cerca={};let m;
+  while((m=re.exec(t))){const d=(m[1]||m[2]).replace(/[^0-9]/g,"");if(d.length<7||d.length>8)continue;
+    if(!m[1]&&!esHojaDni&&!/DNI|D\.N\.I|DOC/.test(t.slice(Math.max(0,m.index-40),m.index)))continue;
+    cnt[d]=(cnt[d]||0)+1;
+    // Cercanía al paciente: cuántas palabras de su nombre hay en los 90 caracteres ANTERIORES al número
+    // (y que no haya otro DNI en el medio), así no se confunde con el DNI de la madre o del tutor.
+    if(ap.length){const antes=t.slice(Math.max(0,m.index-90),m.index);const corte=antes.search(/\d{1,2}[.\s]?\d{3}[.\s]?\d{3}(?!.*\d{1,2}[.\s]?\d{3}[.\s]?\d{3})/);const tramo=corte>=0?antes.slice(corte+8):antes;
+      const sc=ap.filter(w=>new RegExp("\\b"+w+"\\b").test(tramo)).length;if(sc>(cerca[d]||0))cerca[d]=sc;}}
+  const elegir=o=>{const k=Object.keys(o).filter(x=>o[x]>0);if(!k.length)return "";k.sort((a,b)=>o[b]-o[a]);return (k.length===1||o[k[0]]>o[k[1]])?k[0]:"";};
+  const d=elegir(cerca)||(Object.keys(cnt).length===1||esHojaDni?elegir(cnt):"");return d?fmtDni(d):"";}
+window.DniPacientes={deTexto:dniDeTexto,buscar:dniDePaciente,recordar:recordarDni,fmt:fmtDni,clave:claveDni};
 function recordarDni(n,d){const k=claveDni(n);if(!k||!d)return;try{const m=dnisGuardados();m[k]=fmtDni(d);localStorage.setItem("res_dni_pacientes",JSON.stringify(m));}catch(_){}}
 function rellenarDni(pre,forzar){const x=document.getElementById(pre+"-dni"),pa=document.getElementById(pre+"-paciente");if(!x||!pa)return;const d=dniDePaciente(pa.value);if(d&&(forzar||!x.value.trim()))x.value=d;}
 // CUIT del prestador habitual (anteojos y audífonos): se precarga solo si el campo está vacío.
@@ -3411,6 +3428,7 @@ if(typeof module !== "undefined" && module.exports) module.exports = EntConsulta
       try{ texto = await textoPdf(await leerBytes(f)); }catch(e){ console.warn("Sin texto (se lee por nombre):", f.name, e); }
       var r = C.combinar(f.name, texto);
       r.nombre = f.name;
+      try{ if(texto && r.paciente) r.dni = window.DniPacientes.deTexto(texto, r.paciente, false); }catch(_){ }
       items.push(r);
     }
     return items;
@@ -3431,6 +3449,18 @@ if(typeof module !== "undefined" && module.exports) module.exports = EntConsulta
           try{ if(typeof renderListado === "function") renderListado(); }catch(_){ }
         }, function(err){ console.warn("Registro OC onSnapshot:", err); estado = "sin-acceso"; UI.render(); });
       });
+    },
+    // DNI del paciente guardado en la base (registro de órdenes, Mesa de Entradas o resoluciones en proceso).
+    dniDe: function(nombre){
+      var k = window.DniPacientes ? window.DniPacientes.clave(nombre) : ""; if(!k) return "";
+      var fuentes = [todos, tramite.mesa || [], tramite.borr || []];
+      for(var a = 0; a < fuentes.length; a++){
+        for(var b = 0; b < fuentes[a].length; b++){
+          var r = fuentes[a][b];
+          if(r && r.dni && r.paciente && (window.DniPacientes.clave(r.paciente) === k || C.mismaPersona(r.paciente, nombre))) return window.DniPacientes.fmt(r.dni);
+        }
+      }
+      return "";
     },
     /* Busca a qué registro ya guardado corresponde lo leído. Reglas: la misma OC es siempre el
        mismo registro; un registro que ya tiene OTRA OC nunca recibe una segunda; mismo expediente
@@ -3477,6 +3507,7 @@ if(typeof module !== "undefined" && module.exports) module.exports = EntConsulta
           tipo: d.tipo, nroExp: String(p.nroExp).trim(), num: d.num, cod: d.cod, letra: d.letra, anio: d.anio,
           paciente: d.paciente, pacienteNorm: C.normNombre(d.paciente), nroRes: p.nroRes || "", fechaRes: p.fecha || "", actualizadoMs: Date.now()
         };
+        if(p.dni) datos.dni = String(p.dni).trim();
         if(cant) datos.cantidad = cant;
         datos.tieneExp = true; // el generador ya conoce el expediente
         datos.etapa = "resolucion"; datos.etapaFecha = hoyTxt(); datos.descartado = false;
@@ -3524,6 +3555,8 @@ if(typeof module !== "undefined" && module.exports) module.exports = EntConsulta
       if(d.proveedor) datos.proveedor = d.proveedor;
       if(d.extra && !(rec && rec.extra)) datos.extra = d.extra;
       if(d.cantidad && !(rec && rec.cantidad)) datos.cantidad = d.cantidad;
+      var dniLeido = d.dni || (g.items.filter(function(i){ return i.dni; })[0] || {}).dni || "";
+      if(dniLeido && !(rec && rec.dni)){ datos.dni = dniLeido; try{ window.DniPacientes.recordar(datos.paciente, dniLeido); }catch(_){ } }
       if(!rec){ datos.creadoMs = Date.now(); datos.creadoTxt = hoyTxt(); datos.origen = "pdf"; }
       // Expediente VIEJO (anterior al sistema de Mesa de Entradas): queda marcado para que mesa no lo ingrese como nuevo.
       if(ingSis){
@@ -5418,10 +5451,14 @@ var ExtraerExp = (function(){
     var dniP = st.pags.filter(function(p){ return p.tipo === "dni"; }), recP = st.pags.filter(function(p){ return p.tipo === "receta"; });
     if(!dniP.length && !recP.length) return;
     st.trabajando = true; pintar();
+    var stPac = st.paciente, stTodo = st.pags.map(function(p){ return p.texto || ""; }).join("\n");
     try{
       var dni = await armarPdf(dniP, "DNI"), rec = await armarPdf(recP, "Receta"), cb = st.listo;
       cerrar();
-      cb && cb({ dni: dni, rec: rec, nDni: dniP.length, nRec: recP.length,
+      var dniNro = "";
+      try{ dniNro = window.DniPacientes.deTexto(dniP.map(function(p){ return p.texto || ""; }).join("\n"), stPac, true) ||
+                    window.DniPacientes.deTexto(stTodo, stPac, false); }catch(_){ }
+      cb && cb({ dni: dni, rec: rec, nDni: dniP.length, nRec: recP.length, dniNro: dniNro,
         hojas: dniP.map(function(p){ return { n: p.n, tipo: "dni", thumb: p.thumb }; }).concat(recP.map(function(p){ return { n: p.n, tipo: "receta", thumb: p.thumb }; })) });
     }catch(e){ if(st){ st.trabajando = false; pintar(); } est("No se pudo armar el PDF: " + esc(e && e.message || e), true); }
   }
@@ -6153,6 +6190,10 @@ var MesaJ = (function(){
       $("mj-oc-junto").checked = false; ocJunto(true);
       ["mj-oc-f-dni", "mj-oc-f-rec"].forEach(function(id){ $(id).value = ""; });
       ocExt = res; marcarExt(); ocCache = null;
+      if(res.dniNro && ocPara && ocPara.m){
+        try{ window.DniPacientes.recordar(ocPara.m.paciente, res.dniNro); }catch(_){ }
+        if(db && ocPara.m._id && !ocPara.m.dni) db.collection(COL).doc(ocPara.m._id).set({ dni: res.dniNro }, { merge: true }).catch(function(e){ console.warn("DNI (mesa):", e); });
+      }
       ocMsg(true, (!res.dni ? "⚠️ No elegiste hoja de DNI. " : "") + (!res.rec ? "⚠️ No elegiste hoja de receta. " : "") + (($("mj-oc-f-oc").files || []).length ? "✅ Todo listo: tocá 📦 Enviar a mesa (o 👁️ Vista previa para controlar)." : "Ahora falta el paso 1: subí la orden de compra."));
     });
   }
