@@ -368,8 +368,11 @@ hr{border:none;border-top:1.5px solid #e2e8f0;margin:16px 0 14px}
       <input type="text" id="a-nroExp" placeholder="2463/410/M/2026" maxlength="20" onkeydown="expKeydown(this,event)">
       <div class="hint">Escribí el número — Tab agrega la barra /</div></div>
     <div class="field"><label>Paciente — Apellido, Nombre <span>*</span></label>
-      <input type="text" id="a-paciente" placeholder="GARCIA, JUAN CARLOS">
+      <input type="text" id="a-paciente" placeholder="GARCIA, JUAN CARLOS" onchange="rellenarDni('a',true)">
       <div class="hint">En MAYÚSCULAS</div></div>
+    <div class="field"><label>DNI del paciente <span>*</span></label>
+      <input type="text" id="a-dni" placeholder="12.345.678" inputmode="numeric" onchange="this.value=fmtDni(this.value)">
+      <div class="hint">Sale en el VISTO junto al nombre del paciente</div></div>
     <div class="field"><label>Insumo <span>*</span></label>
       <input type="text" id="a-insumo" placeholder="1-ANTEOJOS" oninput="calcAnteojos()">
       <div class="hint">Ej: 1-ANTEOJOS / 2-ANTEOJOS — el número es la cantidad</div></div>
@@ -429,8 +432,11 @@ hr{border:none;border-top:1.5px solid #e2e8f0;margin:16px 0 14px}
       <input type="text" id="b-nroExp" placeholder="1936/412/I/2026" maxlength="20" onkeydown="expKeydown(this,event)">
       <div class="hint">Escribí el número — Tab agrega la barra /</div></div>
     <div class="field"><label>Paciente — Apellido, Nombre <span>*</span></label>
-      <input type="text" id="b-paciente" placeholder="IBAÑEZ, FABIANA LUCILA">
+      <input type="text" id="b-paciente" placeholder="IBAÑEZ, FABIANA LUCILA" onchange="rellenarDni('b',true)">
       <div class="hint">En MAYÚSCULAS</div></div>
+    <div class="field"><label>DNI del paciente <span>*</span></label>
+      <input type="text" id="b-dni" placeholder="12.345.678" inputmode="numeric" onchange="this.value=fmtDni(this.value)">
+      <div class="hint">Sale en el VISTO junto al nombre del paciente</div></div>
     <hr>
     <div class="stitle">Firmas comerciales</div>
     <div class="empresas-grid">
@@ -692,6 +698,14 @@ const FIRMA_ANTEOJOS="Grupo Vistalli S.R.L (Óptica Giorlent)";
 function cuitsGuardados(){try{return JSON.parse(localStorage.getItem("res_cuit_firmas")||"{}")||{};}catch(_){return {};}}
 function cuitDeFirma(f){return cuitsGuardados()[String(f||"").toUpperCase().trim()]||"";}
 function recordarCuit(f,c){if(!c)return;try{localStorage.setItem("res_cuit_ultimo",String(c).trim());if(!f)return;const m=cuitsGuardados();m[String(f).toUpperCase().trim()]=c;localStorage.setItem("res_cuit_firmas",JSON.stringify(m));}catch(_){}}
+// DNI del paciente: se recuerda por nombre (sin comas/acentos) para no volver a tipearlo.
+function fmtDni(v){const d=String(v||"").replace(/[^0-9]/g,"");return d?d.replace(/\B(?=(\d{3})+(?!\d))/g,"."):String(v||"").trim();}
+function claveDni(n){return String(n||"").toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[^A-ZÑ ]/g," ").replace(/\s+/g," ").trim();}
+const DNI_CONOCIDOS={"CARRIZO GRACIELA DEL VALLE":"17.738.623","CABRERA NATALIA VERONICA":"51.208.127","MERCADO JESICA YOLANDA":"32.782.241","MERCADO MIA GUADALUPE":"55.353.855"};
+function dnisGuardados(){try{return JSON.parse(localStorage.getItem("res_dni_pacientes")||"{}")||{};}catch(_){return {};}}
+function dniDePaciente(n){const k=claveDni(n);return k?(dnisGuardados()[k]||DNI_CONOCIDOS[k]||""):"";}
+function recordarDni(n,d){const k=claveDni(n);if(!k||!d)return;try{const m=dnisGuardados();m[k]=fmtDni(d);localStorage.setItem("res_dni_pacientes",JSON.stringify(m));}catch(_){}}
+function rellenarDni(pre,forzar){const x=document.getElementById(pre+"-dni"),pa=document.getElementById(pre+"-paciente");if(!x||!pa)return;const d=dniDePaciente(pa.value);if(d&&(forzar||!x.value.trim()))x.value=d;}
 // CUIT del prestador habitual (anteojos y audífonos): se precarga solo si el campo está vacío.
 const CUIT_PRESTADOR_HABITUAL="30-71790960-3";
 function cuitPorDefecto(f){let u="";try{u=localStorage.getItem("res_cuit_ultimo")||"";}catch(_){}return cuitDeFirma(f)||u||CUIT_PRESTADOR_HABITUAL;}
@@ -703,11 +717,11 @@ function htmlInstr(pre){
     '<hr><div class="stitle">Controles antes de firmar</div>'+CONTROLES_RES.map(c=>'<label style="display:flex;gap:8px;align-items:center;margin:5px 0;font-size:14px;cursor:pointer"><input type="checkbox" id="'+pre+'-c-'+c[0]+'"> '+c[1]+'</label>').join("")+
     '<label style="display:flex;gap:8px;align-items:center;margin:9px 0;font-size:14px;font-weight:700;cursor:pointer"><input type="checkbox" id="'+pre+'-directoraAc"> La C.P.N Castillo firma a cargo de la Dirección (sale una sola firma)</label>';
 }
-function leerInstr(pre){const v=id=>{const x=document.getElementById(pre+"-"+id);return x?x.value.trim():"";};const d=document.getElementById(pre+"-directoraAc");return {fsSolicitud:v("fsSolicitud"),fsPresupuesto:v("fsPresupuesto"),fsJuridico:v("fsJuridico"),cuit:v("cuit"),directoraAc:!!(d&&d.checked)};}
+function leerInstr(pre){const v=id=>{const x=document.getElementById(pre+"-"+id);return x?x.value.trim():"";};const d=document.getElementById(pre+"-directoraAc");return {fsSolicitud:v("fsSolicitud"),fsPresupuesto:v("fsPresupuesto"),fsJuridico:v("fsJuridico"),cuit:v("cuit"),dni:fmtDni(v("dni")),directoraAc:!!(d&&d.checked)};}
 function directoraAcActual(){try{return localStorage.getItem("res_directoraAc")==="1";}catch(_){return false;}}
 function fijarDirectoraAc(v){try{localStorage.setItem("res_directoraAc",v?"1":"0");}catch(_){}["a","b"].forEach(pre=>{const d=document.getElementById(pre+"-directoraAc");if(d)d.checked=!!v;});}
-function setInstr(pre,p){["fsSolicitud","fsPresupuesto","fsJuridico","cuit"].forEach(id=>{const x=document.getElementById(pre+"-"+id);if(x)x.value=(p&&p[id])||"";});const d=document.getElementById(pre+"-directoraAc");if(d)d.checked=directoraAcActual();rellenarCuit(pre,pre==="a"?FIRMA_ANTEOJOS:(p&&(p.ganadora||p.firmaGanadora)));}
-function faltaInstr(d){const f=[];if(!d.fsSolicitud)f.push("foja de la solicitud");if(!d.fsPresupuesto)f.push("foja del presupuesto");if(!d.fsJuridico)f.push("foja del dictamen jurídico");if(!d.cuit)f.push("CUIT de la firma");return f;}
+function setInstr(pre,p){["fsSolicitud","fsPresupuesto","fsJuridico","cuit","dni"].forEach(id=>{const x=document.getElementById(pre+"-"+id);if(x)x.value=(p&&p[id])||"";});const d=document.getElementById(pre+"-directoraAc");if(d)d.checked=directoraAcActual();rellenarCuit(pre,pre==="a"?FIRMA_ANTEOJOS:(p&&(p.ganadora||p.firmaGanadora)));rellenarDni(pre);}
+function faltaInstr(d){const f=[];if(!d.fsSolicitud)f.push("foja de la solicitud");if(!d.fsPresupuesto)f.push("foja del presupuesto");if(!d.fsJuridico)f.push("foja del dictamen jurídico");if(!d.cuit)f.push("CUIT de la firma");if(!d.dni)f.push("DNI del paciente");return f;}
 function faltaControles(pre){return CONTROLES_RES.filter(c=>{const x=document.getElementById(pre+"-c-"+c[0]);return !(x&&x.checked);}).map(c=>c[1]);}
 function iniciarInstr(){["a","b"].forEach(pre=>{const box=document.getElementById(pre+"-instr");if(box&&!box.innerHTML)box.innerHTML=htmlInstr(pre);});rellenarCuit("a",FIRMA_ANTEOJOS);rellenarCuit("b","");fijarDirectoraAc(directoraAcActual());document.addEventListener("change",ev=>{const t=ev.target;if(!t)return;if(t.id==="a-directoraAc"||t.id==="b-directoraAc"){fijarDirectoraAc(t.checked);return;}if(t.id==="a-cuit"||t.id==="b-cuit"){if(t.value.trim())recordarCuit("",t.value.trim());return;}if(t.name==="ganadora"&&t.closest&&t.closest("#panel-audio")){const c=document.getElementById("b-cuit");if(c)c.value=cuitDeFirma(t.value)||c.value||cuitPorDefecto(t.value);}});}
 if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",iniciarInstr);else setTimeout(iniciarInstr,0);
@@ -903,6 +917,7 @@ function mostrarPrevia(tipo){
   const _falta=faltaInstr(payload).concat(faltaControles(pre).map(t=>"verificar: "+t));
   if(_falta.length){msgEl.className="msg er";msgEl.textContent="Falta: "+_falta.join(" · ")+".";return;}
   recordarCuit(tipo==="anteojos"?payload.proveedor:payload.firmaGanadora,payload.cuit);
+  recordarDni(payload.paciente,payload.dni);
 
   currentTipo=tipo;
   currentPayload=payload;
@@ -933,9 +948,9 @@ function renderPrevia(p){
   html+=`<div class="doc-section"><span class="doc-label">VISTO:</span></div>`;
 
   if(p.tipo==="anteojos"){
-    html+=`<div class="doc-indent">El <strong>Expte. Nº <span contenteditable="true" data-f="nroExp">${p.nroExp}</span></strong>, por el que se solicita la compra de <strong><span contenteditable="true" data-f="insumo">${p.insumo}</span></strong> para el paciente; <strong><span contenteditable="true" data-f="paciente">${p.paciente}</span></strong>, según lo indicado a fs. ${p.fsSolicitud}. Y,</div>`;
+    html+=`<div class="doc-indent">El <strong>Expte. Nº <span contenteditable="true" data-f="nroExp">${p.nroExp}</span></strong>, por el que se solicita la compra de <strong><span contenteditable="true" data-f="insumo">${p.insumo}</span></strong> para el paciente; <strong><span contenteditable="true" data-f="paciente">${p.paciente}</span></strong>, DNI Nº <span contenteditable="true" data-f="dni">${p.dni||""}</span>, según lo indicado a fs. ${p.fsSolicitud}. Y,</div>`;
   } else {
-    html+=`<div class="doc-indent">El <strong>Expte. Nº <span contenteditable="true" data-f="nroExp">${p.nroExp}</span></strong>, por el que se solicita la compra de <strong>AUDIFONOS</strong> para el paciente; <strong><span contenteditable="true" data-f="paciente">${p.paciente}</span></strong>, según lo indicado a fs. ${p.fsSolicitud}. Y,</div>`;
+    html+=`<div class="doc-indent">El <strong>Expte. Nº <span contenteditable="true" data-f="nroExp">${p.nroExp}</span></strong>, por el que se solicita la compra de <strong>AUDIFONOS</strong> para el paciente; <strong><span contenteditable="true" data-f="paciente">${p.paciente}</span></strong>, DNI Nº <span contenteditable="true" data-f="dni">${p.dni||""}</span>, según lo indicado a fs. ${p.fsSolicitud}. Y,</div>`;
   }
 
   html+=`<div class="doc-section" style="margin-top:12px"><span class="doc-label">CONSIDERANDO:</span></div>`;
@@ -1004,6 +1019,7 @@ function getEditedPayload(){
     else if(f==='cantidad') p.cantidad=txt;
     else if(f==='proveedor') p.proveedor=txt;
     else if(f==='insumoDesc') p.insumoDesc=txt;
+    else if(f==='dni') p.dni=txt;
   });
   // Extract numeric unit price from formatted string
   const precioSpan=document.querySelector('#doc-preview [data-f="precioUnit"]');
@@ -1158,9 +1174,9 @@ function construirHtmlResolucion(p) {
   // VISTO
   body += '<p class="seccion">VISTO:</p>';
   if(p.tipo === "anteojos"){
-    body += '<p class="indent">El <b>Expte. Nº' + esc(p.nroExp) + '</b>, por el que se solicita la compra de <b style="white-space:nowrap;">' + esc(insumoVisto) + '</b> para el paciente; <b>' + esc(p.paciente) + '</b>, según lo indicado a fs. ' + esc(p.fsSolicitud) + '. Y,</p>';
+    body += '<p class="indent">El <b>Expte. Nº' + esc(p.nroExp) + '</b>, por el que se solicita la compra de <b style="white-space:nowrap;">' + esc(insumoVisto) + '</b> para el paciente; <b>' + esc(p.paciente) + '</b>' + (p.dni ? ', DNI Nº ' + esc(p.dni) : '') + ', según lo indicado a fs. ' + esc(p.fsSolicitud) + '. Y,</p>';
   } else {
-    body += '<p class="indent">El <b>Expte. Nº' + esc(p.nroExp) + '</b>, por el que se solicita la compra de <b>AUDIFONOS</b> para el paciente; <b>' + esc(p.paciente) + '</b>, según lo indicado a fs. ' + esc(p.fsSolicitud) + '. Y,</p>';
+    body += '<p class="indent">El <b>Expte. Nº' + esc(p.nroExp) + '</b>, por el que se solicita la compra de <b>AUDIFONOS</b> para el paciente; <b>' + esc(p.paciente) + '</b>' + (p.dni ? ', DNI Nº ' + esc(p.dni) : '') + ', según lo indicado a fs. ' + esc(p.fsSolicitud) + '. Y,</p>';
   }
 
   // CONSIDERANDO
@@ -2075,6 +2091,7 @@ async function reprocesarLote(fileList){
     var i;
     setVal("b-nroExp", p.nroExp);
     setVal("b-paciente", p.paciente);
+    setVal("b-dni", p.dni || (typeof dniDePaciente === "function" ? dniDePaciente(p.paciente) : ""));
     setVal("b-cantidad", p.cantidad);
     setVal("b-precioUnit", p.precioUnit);
 
@@ -2234,6 +2251,7 @@ async function reprocesarLote(fileList){
           fsPresupuesto: reg.fsPresupuesto || "",
           fsJuridico: reg.fsJuridico || "",
           cuit: reg.cuit || "",
+          dni: reg.dni || "",
           directoraAc: !!reg.directoraAc,
           insumo: reg.insumo || "",
           precio: reg.precio || "",
@@ -2641,7 +2659,7 @@ async function reprocesarLote(fileList){
     var ov = ebOverlay();
     var html = '<div class="row">'+campo("eb-fecha","Fecha",p.fecha,' placeholder="1 de Julio de 2026"')+campo("eb-nroRes","Nº Resolución",p.nroRes,' placeholder="2987"')+'</div>';
     html += campo("eb-nroExp","Nº Expediente",p.nroExp,' maxlength="20" onkeydown="expKeydown(this,event)"');
-    html += campo("eb-paciente","Paciente — Apellido, Nombre",p.paciente);
+    html += '<div class="row">'+campo("eb-paciente","Paciente — Apellido, Nombre",p.paciente)+campo("eb-dni","DNI del paciente",p.dni||dniDePaciente(p.paciente))+'</div>';
     html += '<div class="row">'+campo("eb-fsSolicitud","Fs. solicitud",p.fsSolicitud)+campo("eb-fsPresupuesto","Fs. presupuesto",p.fsPresupuesto)+'</div>';
     html += '<div class="row">'+campo("eb-fsJuridico","Fs. dictamen jurídico",p.fsJuridico)+campo("eb-cuit","CUIT de la firma adjudicada",p.cuit)+'</div>';
     if(ebTipo === "anteojos"){
@@ -2691,7 +2709,7 @@ async function reprocesarLote(fileList){
     var m = document.getElementById("eb-msg");
     var err = function(t){ m.className = "msg er"; m.textContent = t; };
     var campos = { fecha: ebVal("eb-fecha"), nroRes: ebVal("eb-nroRes"), nroExp: ebVal("eb-nroExp"), paciente: ebVal("eb-paciente"),
-      fsSolicitud: ebVal("eb-fsSolicitud"), fsPresupuesto: ebVal("eb-fsPresupuesto"), fsJuridico: ebVal("eb-fsJuridico"), cuit: ebVal("eb-cuit") };
+      fsSolicitud: ebVal("eb-fsSolicitud"), fsPresupuesto: ebVal("eb-fsPresupuesto"), fsJuridico: ebVal("eb-fsJuridico"), cuit: ebVal("eb-cuit"), dni: fmtDni(ebVal("eb-dni")) };
     if(!campos.nroExp && !campos.paciente) return err("Tiene que quedar al menos el Nº de Expediente o el Paciente.");
     if(ebTipo === "anteojos"){
       campos.insumo = ebVal("eb-insumo");
@@ -2738,7 +2756,7 @@ async function reprocesarLote(fileList){
     if(!nroExp || !paciente) return { error: "falta expediente o paciente" };
     var pl = { tipo: p.tipo, fecha: fecha, nroRes: nroRes, nroExp: nroExp, paciente: paciente,
       fsSolicitud: String(p.fsSolicitud||"").trim(), fsPresupuesto: String(p.fsPresupuesto||"").trim(), fsJuridico: String(p.fsJuridico||"").trim(),
-      cuit: String(p.cuit||"").trim() || cuitDeFirma(p.tipo === "anteojos" ? FIRMA_ANTEOJOS : p.ganadora), directoraAc: directoraAcActual() };
+      cuit: String(p.cuit||"").trim() || cuitDeFirma(p.tipo === "anteojos" ? FIRMA_ANTEOJOS : p.ganadora), directoraAc: directoraAcActual(), dni: fmtDni(p.dni) || dniDePaciente(paciente) };
     var faltan = faltaInstr(pl);
     if(faltan.length) return { error: "falta: " + faltan.join(", ") };
     if(p.tipo === "anteojos"){
