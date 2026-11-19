@@ -704,10 +704,12 @@ function htmlInstr(pre){
     '<label style="display:flex;gap:8px;align-items:center;margin:9px 0;font-size:14px;font-weight:700;cursor:pointer"><input type="checkbox" id="'+pre+'-directoraAc"> La C.P.N Castillo firma a cargo de la Dirección (sale una sola firma)</label>';
 }
 function leerInstr(pre){const v=id=>{const x=document.getElementById(pre+"-"+id);return x?x.value.trim():"";};const d=document.getElementById(pre+"-directoraAc");return {fsSolicitud:v("fsSolicitud"),fsPresupuesto:v("fsPresupuesto"),fsJuridico:v("fsJuridico"),cuit:v("cuit"),directoraAc:!!(d&&d.checked)};}
-function setInstr(pre,p){["fsSolicitud","fsPresupuesto","fsJuridico","cuit"].forEach(id=>{const x=document.getElementById(pre+"-"+id);if(x)x.value=(p&&p[id])||"";});const d=document.getElementById(pre+"-directoraAc");if(d)d.checked=!!(p&&p.directoraAc);rellenarCuit(pre,pre==="a"?FIRMA_ANTEOJOS:(p&&(p.ganadora||p.firmaGanadora)));}
+function directoraAcActual(){try{return localStorage.getItem("res_directoraAc")==="1";}catch(_){return false;}}
+function fijarDirectoraAc(v){try{localStorage.setItem("res_directoraAc",v?"1":"0");}catch(_){}["a","b"].forEach(pre=>{const d=document.getElementById(pre+"-directoraAc");if(d)d.checked=!!v;});}
+function setInstr(pre,p){["fsSolicitud","fsPresupuesto","fsJuridico","cuit"].forEach(id=>{const x=document.getElementById(pre+"-"+id);if(x)x.value=(p&&p[id])||"";});const d=document.getElementById(pre+"-directoraAc");if(d)d.checked=directoraAcActual();rellenarCuit(pre,pre==="a"?FIRMA_ANTEOJOS:(p&&(p.ganadora||p.firmaGanadora)));}
 function faltaInstr(d){const f=[];if(!d.fsSolicitud)f.push("foja de la solicitud");if(!d.fsPresupuesto)f.push("foja del presupuesto");if(!d.fsJuridico)f.push("foja del dictamen jurídico");if(!d.cuit)f.push("CUIT de la firma");return f;}
 function faltaControles(pre){return CONTROLES_RES.filter(c=>{const x=document.getElementById(pre+"-c-"+c[0]);return !(x&&x.checked);}).map(c=>c[1]);}
-function iniciarInstr(){["a","b"].forEach(pre=>{const box=document.getElementById(pre+"-instr");if(box&&!box.innerHTML)box.innerHTML=htmlInstr(pre);});rellenarCuit("a",FIRMA_ANTEOJOS);rellenarCuit("b","");document.addEventListener("change",ev=>{const t=ev.target;if(!t)return;if(t.id==="a-cuit"||t.id==="b-cuit"){if(t.value.trim())recordarCuit("",t.value.trim());return;}if(t.name==="ganadora"&&t.closest&&t.closest("#panel-audio")){const c=document.getElementById("b-cuit");if(c)c.value=cuitDeFirma(t.value)||c.value||cuitPorDefecto(t.value);}});}
+function iniciarInstr(){["a","b"].forEach(pre=>{const box=document.getElementById(pre+"-instr");if(box&&!box.innerHTML)box.innerHTML=htmlInstr(pre);});rellenarCuit("a",FIRMA_ANTEOJOS);rellenarCuit("b","");fijarDirectoraAc(directoraAcActual());document.addEventListener("change",ev=>{const t=ev.target;if(!t)return;if(t.id==="a-directoraAc"||t.id==="b-directoraAc"){fijarDirectoraAc(t.checked);return;}if(t.id==="a-cuit"||t.id==="b-cuit"){if(t.value.trim())recordarCuit("",t.value.trim());return;}if(t.name==="ganadora"&&t.closest&&t.closest("#panel-audio")){const c=document.getElementById("b-cuit");if(c)c.value=cuitDeFirma(t.value)||c.value||cuitPorDefecto(t.value);}});}
 if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",iniciarInstr);else setTimeout(iniciarInstr,0);
 function parseInsumoAnteojos(str){
   const m=String(str||"").trim().match(/^\s*(\d+)\s*[-\u2013]\s*(.+)$/);
@@ -1192,7 +1194,7 @@ function construirHtmlResolucion(p) {
   if(p.tipo === "anteojos"){
     body += '<p class="art"><span class="art-l">ARTICULO 1º:</span> Aprobar la compra de Anteojos, a favor de la firma <b>' + esc(prov) + '</b> (CUIT Nº ' + esc(p.cuit) + ') que se detalla a continuación:</p>';
     body += tabla(prov, "1- " + insumoDesc, p.cantidad||"1", pu, pt);
-    body += pieAnio + '<div class="salto"></div>' + encabezado;
+    body += '<div class="salto"></div>' + encabezado;
     body += '<p class="art" style="margin-top:30pt;"><span class="art-l">ARTICULO 2º</span>: Autorizar la compra al proveedor <b>' + esc(prov) + '</b>, por el importe de <b>' + esc(im_num) + '</b> ' + esc(p.importeLetras) + ', y posterior emisión de la orden de pago respectiva.</p>';
     body += imputacion(im_num, esc(p.importeLetras), "299", "");
   } else {
@@ -1200,7 +1202,7 @@ function construirHtmlResolucion(p) {
     const ptA = "$ " + fmt(parseInt(p.precioTotal||0)) + ",00";
     body += '<p class="art"><span class="art-l">ARTICULO 1º:</span> Aprobar la compra de Audífonos, a favor de la firma <b>' + esc(p.firmaGanadora) + '</b> (CUIT Nº ' + esc(p.cuit) + ') que se detalla a continuación:</p>';
     body += tabla(p.firmaGanadora, "Audífonos", p.cantidad, puA, ptA);
-    body += pieAnio + '<div class="salto"></div>' + encabezado;
+    body += '<div class="salto"></div>' + encabezado;
     body += '<p class="art"><span class="art-l">ARTICULO 2º</span>: Autorizar la compra al proveedor <b>' + esc(p.firmaGanadora) + '</b>, por el importe de <b>' + esc(ptA) + '</b> (' + esc(p.importeLetras) + '), y posterior emisión de la orden de pago respectiva.</p>';
     body += imputacion(ptA, '(' + esc(p.importeLetras) + ')', "297", "");
   }
@@ -2736,7 +2738,7 @@ async function reprocesarLote(fileList){
     if(!nroExp || !paciente) return { error: "falta expediente o paciente" };
     var pl = { tipo: p.tipo, fecha: fecha, nroRes: nroRes, nroExp: nroExp, paciente: paciente,
       fsSolicitud: String(p.fsSolicitud||"").trim(), fsPresupuesto: String(p.fsPresupuesto||"").trim(), fsJuridico: String(p.fsJuridico||"").trim(),
-      cuit: String(p.cuit||"").trim() || cuitDeFirma(p.tipo === "anteojos" ? FIRMA_ANTEOJOS : p.ganadora), directoraAc: !!p.directoraAc };
+      cuit: String(p.cuit||"").trim() || cuitDeFirma(p.tipo === "anteojos" ? FIRMA_ANTEOJOS : p.ganadora), directoraAc: directoraAcActual() };
     var faltan = faltaInstr(pl);
     if(faltan.length) return { error: "falta: " + faltan.join(", ") };
     if(p.tipo === "anteojos"){
