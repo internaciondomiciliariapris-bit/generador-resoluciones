@@ -1002,6 +1002,7 @@ function renderPrevia(p){
   }
 
   html+=`<div class="doc-indent" style="margin-top:8px">Que a fs. ${p.fsJuridico} obra Dictamen Jurídico con opinión favorable.</div>`;
+  html+=`<div class="doc-indent" style="margin-top:8px">Que la Firma Comercial adjudicada acredita su situación fiscal regular, conforme a la documentación fiscal vigente incorporada en autos.</div>`;
   html+=`<div class="doc-indent" style="margin-top:8px">Que se aprueba todo lo actuado por encuadrarse a las disposiciones legales vigentes, que rigen sobre materia de contrataciones, conforme a lo normado en la Res. Nº 388/SPS-05.</div>`;
   html+=`<div style="text-align:center;font-weight:bold;margin:16px 0 8px">POR ELLO:<br>${p.directoraAc?"LA DIRECCION DEL PROGRAMA INTEGRADO DE SALUD<br>A/C C.P.N Mariela Agustina Castillo":firmaDirectora(p)?"LA DIRECCION DEL PROGRAMA INTEGRADO DE SALUD":"LA GERENCIA ADMINISTRATIVA DEL PROGRAMA INTEGRADO DE SALUD"}<br>RESUELVE:</div>`;
 
@@ -1229,6 +1230,7 @@ function construirHtmlResolucion(p) {
     body += '<p class="indent">Que la propuesta de <b>' + esc(p.firmaGanadora) + '</b> resulto la más conveniente para el Estado.</p>';
   }
   body += '<p class="indent">Que a fs. ' + esc(p.fsJuridico) + ' obra Dictamen Jurídico con opinión favorable.</p>';
+  body += '<p class="indent">Que la Firma Comercial adjudicada acredita su situación fiscal regular, conforme a la documentación fiscal vigente incorporada en autos.</p>';
   body += '<p class="indent" style="line-height:1.6;">Que se aprueba todo lo actuado por encuadrarse a las disposiciones legales vigentes, que rigen sobre materia de contrataciones, conforme a lo normado en la Res. Nº 388/SPS-05.</p>';
 
   // POR ELLO
