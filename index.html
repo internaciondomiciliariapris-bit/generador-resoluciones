@@ -3927,6 +3927,25 @@ if(typeof module !== "undefined" && module.exports) module.exports = EntConsulta
       if(!tieneOc && rec.etapa) return db.collection(COL).doc(rec._id).set({ descartado: true, actualizadoMs: Date.now() }, { merge: true });
       return db.collection(COL).doc(rec._id).delete();
     },
+    /* ---------- OC entregada EN MANO (papel) a Mesa de Entradas ----------
+       Para las OC que Jorge lleva físicamente a mesa sin mandarlas por el sistema: el expediente
+       pasa de "OC en trámite" a "Por entregar" con su N° de OC, fecha y hora. Si el expediente tiene
+       ingreso de Mesa de Entradas, ese ingreso también queda como "OC lista en mesa". */
+    marcarEnMesaPapel: async function(rec, nro){
+      var ok = await authReady; if(!ok || !db) throw new Error("Sin acceso a la base");
+      var d = new Date(), dd = function(x){ return String(x).padStart(2, "0"); };
+      var txt = dd(d.getDate()) + "/" + dd(d.getMonth() + 1) + "/" + d.getFullYear() + " " + dd(d.getHours()) + ":" + dd(d.getMinutes());
+      var o = UI.mesaDe(rec);
+      if(o && !o.d.anulado && o.d.estado !== "entregado"){
+        var dm = { estado: "en_mesa", enMesaMs: d.getTime(), enMesaTxt: txt, ocNro: nro, vistoJorge: true,
+          historial: firebase.firestore.FieldValue.arrayUnion(txt + " · OC N° " + nro + " entregada en mano (papel) a Mesa de Entradas (Jorge)") };
+        if(!o.d.trabajoMs){ dm.trabajoMs = d.getTime(); dm.trabajoTxt = txt; }
+        await db.collection("genres_mesa").doc(o.id).set(dm, { merge: true });
+      }
+      var datos = { ocs: [nro], oc: nro, ocOrigen: "papel", ocMesaTxt: txt, ocMesaMs: d.getTime(), tieneExp: true, actualizadoMs: Date.now() };
+      if(o && !o.d.anulado) datos.ocMesaId = o.id;
+      await db.collection(COL).doc(rec._id).set(datos, { merge: true });
+    },
     // Entrega de la OC al paciente: fecha y hora del momento en que se tilda.
     marcarEntrega: function(rec, entregar){
       var d = new Date(), dd = function(n){ return String(n).padStart(2, "0"); };
@@ -4250,7 +4269,7 @@ if(typeof module !== "undefined" && module.exports) module.exports = EntConsulta
       var ocGrande = ocs.length
         ? '<div class="rg-oc"><span>Orden de compra N°</span><b>' + ocs.map(esc).join(" / ") + "</b></div>"
         : '<div class="rg-oc vacia"><span>Orden de compra</span><b>' + (anuR ? "❌ anulado" : enTramite ? "🟡 en trámite" : "sin cargar") + "</b></div>";
-      var datos = [r.fechaOC ? "Fecha OC " + esc(r.fechaOC) : "", r.ocOrigen === "mesa" ? "📦 Enviada a Mesa de Entradas" + (r.ocMesaTxt ? " el " + esc(r.ocMesaTxt) + " hs" : "") : "", (r.anuladas && r.anuladas.length) ? '<span style="color:#b91c1c">OC anulada: ' + r.anuladas.map(esc).join(", ") + "</span>" : ""].filter(Boolean).join('<span class="rg-sep">·</span>');
+      var datos = [r.fechaOC ? "Fecha OC " + esc(r.fechaOC) : "", r.ocOrigen === "mesa" ? "📦 Enviada a Mesa de Entradas" + (r.ocMesaTxt ? " el " + esc(r.ocMesaTxt) + " hs" : "") : r.ocOrigen === "papel" ? "📦 Entregada en mano (papel) a Mesa de Entradas" + (r.ocMesaTxt ? " el " + esc(r.ocMesaTxt) + " hs" : "") : "", (r.anuladas && r.anuladas.length) ? '<span style="color:#b91c1c">OC anulada: ' + r.anuladas.map(esc).join(", ") + "</span>" : ""].filter(Boolean).join('<span class="rg-sep">·</span>');
       var alertas = (r.alertas || []).map(function(a){ return '<div class="rg-warn">⚠️ ' + esc(a) + "</div>"; }).join("");
       var entrega;
       if(r.entregado){
@@ -4270,7 +4289,8 @@ if(typeof module !== "undefined" && module.exports) module.exports = EntConsulta
                : r.previoMesa ? "Expediente anterior al sistema de Mesa de Entradas"
                : r.etapa === "mesa" ? "Ingresado por Mesa de Entradas" + (r.etapaFecha ? " el " + esc(r.etapaFecha) : "")
                : "Expediente cargado";
-        entrega = '<div class="rg-tramite">🟡 <b>Orden de compra en trámite</b> — ' + et + ".<br>Todavía no se puede entregar: cuando la OC se envíe a Mesa de Entradas (o se cargue su PDF) pasa sola a “Por entregar”.</div>";
+        entrega = '<div class="rg-tramite">🟡 <b>Orden de compra en trámite</b> — ' + et + ".<br>Todavía no se puede entregar: cuando la OC se envíe a Mesa de Entradas (o se cargue su PDF) pasa sola a “Por entregar”." +
+          '<div style="margin-top:8px"><button type="button" onclick="EntUI.enMesaPapel(\'' + r._id + '\', this)" style="background:#1a56a0;color:#fff;border:0;border-radius:8px;padding:7px 12px;font-weight:700;cursor:pointer">📦 Entregué la OC en mano a Mesa de Entradas</button></div></div>';
       }
       return '<div class="rg-card' + (r.entregado ? " ok" : (enTramite ? " tr" : "")) + '">' +
         '<div class="rg-ico">' + icono + "</div>" +
@@ -4359,6 +4379,25 @@ if(typeof module !== "undefined" && module.exports) module.exports = EntConsulta
       chk.disabled = true;
       Store.marcarEntrega(r, chk.checked).catch(function(e){ chk.checked = !chk.checked; alert("No se pudo guardar la entrega: " + (e && e.message || e)); })
         .then(function(){ chk.disabled = false; });
+    },
+    // OC llevada en papel a Mesa de Entradas: pide el N° de OC y la pasa a "Por entregar".
+    enMesaPapel: function(id, btn){
+      var r = UI.rec(id); if(!r) return;
+      var exp = r.nroExp || C.expedienteTexto(r) || "";
+      var v = prompt("📦 OC entregada en mano a Mesa de Entradas\n\nPaciente: " + (r.paciente || "") + "\nExpediente: " + exp + "\n\nEscribí el N° de la orden de compra que entregaste:", "");
+      if(v === null) return;
+      var nro = C.soloNum(String(v).replace(/^\s*O\.?\s*C\.?\s*(N\s*[°º]?\.?)?\s*/i, "").replace(/[^\d]/g, ""));
+      if(!nro){ alert("Falta el N° de la orden de compra. No se registró nada."); return; }
+      var ocsDe = function(x){ return (x.ocs && x.ocs.length) ? x.ocs : (x.oc ? [x.oc] : []); };
+      var otro = cache.filter(function(x){ return x._id !== r._id && ocsDe(x).some(function(y){ return C.soloNum(y) === nro; }); })[0];
+      if(otro){ alert("⚠️ La OC N° " + nro + " ya figura en otro expediente: " + (otro.nroExp || C.expedienteTexto(otro)) + " — " + (otro.paciente || "") + ".\n\nCada OC es única para su expediente. No se registró nada."); return; }
+      if(Store.anuladas()[nro] && !confirm("⚠️ La OC N° " + nro + " figura como ANULADA. ¿Registrarla igual?")) return;
+      if(!confirm("¿Confirmás que entregaste en mano a Mesa de Entradas la OC N° " + nro + "?\n\n" + (r.paciente || "") + " — Expte " + exp + "\n\nQueda registrado con fecha y hora y pasa a “Por entregar”.")) return;
+      if(btn){ btn.disabled = true; btn.textContent = "Guardando…"; }
+      Store.marcarEnMesaPapel(r, nro).catch(function(e){
+        alert("No se pudo registrar: " + (e && e.message || e));
+        if(btn){ btn.disabled = false; btn.textContent = "📦 Entregué la OC en mano a Mesa de Entradas"; }
+      });
     },
     rec: function(id){ return cache.filter(function(r){ return r._id === id; })[0]; },
     tirilla: function(id){ var r = UI.rec(id); if(r && typeof MesaJ !== "undefined") MesaJ.tirillaReg(r); },
