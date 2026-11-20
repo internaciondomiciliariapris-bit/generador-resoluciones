@@ -741,6 +741,16 @@ function rellenarDni(pre,forzar){const x=document.getElementById(pre+"-dni"),pa=
 const CUIT_PRESTADOR_HABITUAL="30-71790960-3";
 function cuitPorDefecto(f){let u="";try{u=localStorage.getItem("res_cuit_ultimo")||"";}catch(_){}return cuitDeFirma(f)||u||CUIT_PRESTADOR_HABITUAL;}
 function rellenarCuit(pre,f){const x=document.getElementById(pre+"-cuit");if(x&&!x.value.trim())x.value=cuitPorDefecto(f);}
+// Audífonos: considerando del pedido de presupuestos (redactado con Jorge, 2026-11-20).
+// cot = firmas que cotizaron (incluida la ganadora) · neg = firmas que mandaron negativa.
+function listaFirmasTxt(ns){ns=ns.map(n=>String(n||"").trim().toUpperCase()).filter(Boolean);return ns.length<=1?ns.join(""):ns.slice(0,-1).join(", ")+" y "+ns[ns.length-1];}
+function fraseSolicitudPresupuestos(cot,neg){
+  cot=(cot||[]).filter(Boolean);neg=(neg||[]).filter(Boolean);
+  let t="Que se solicitó presupuesto a distintas Firmas Comerciales, según correo electrónico obrante en autos, y que a la fecha de adjudicación del Cuadro Comparativo de Precios ";
+  t+=cot.length===1?"solo presentó cotización la Firma Comercial "+listaFirmasTxt(cot):"presentaron cotización únicamente las Firmas Comerciales "+listaFirmasTxt(cot);
+  if(neg.length)t+=neg.length===1?", mientras que la Firma Comercial "+listaFirmasTxt(neg)+" informó que no cotiza":", mientras que las Firmas Comerciales "+listaFirmasTxt(neg)+" informaron que no cotizan";
+  return t+".";
+}
 function htmlInstr(pre){
   const campo=(id,lab,ph)=>'<div class="field"><label>'+lab+' <span>*</span></label><input type="text" id="'+pre+'-'+id+'" placeholder="'+ph+'"></div>';
   return '<hr><div class="stitle">Fojas y datos de la firma</div>'+
@@ -939,6 +949,7 @@ function mostrarPrevia(tipo){
     const previas=filasChk.filter(r=>r.querySelector('.emp-cb').value!==ganadora).map(r=>{const nom=r.querySelector('.emp-cb').value;return r.dataset.negativa==="1"?nom+" (NO COTIZÓ)":nom;});
     payload.firmasPrev=previas.join("; ")+(previas.length>0?";":"");
     payload.firmaGanadora=ganadora;
+    payload.fraseSolicitud=fraseSolicitudPresupuestos(filasChk.filter(r=>r.dataset.negativa!=="1").map(r=>r.querySelector('.emp-cb').value),filasChk.filter(r=>r.dataset.negativa==="1").map(r=>r.querySelector('.emp-cb').value));
     payload.cantidad=e("b-cantidad").value.trim();
     payload.precioUnit=e("b-precioUnit").value.replace(/[^0-9]/g,"");
     payload.precioTotal=(parseInt(payload.cantidad||0)*parseInt(payload.precioUnit||0)).toString();
@@ -998,6 +1009,7 @@ function renderPrevia(p){
   if(p.tipo==="anteojos"){
     html+=`<div class="doc-indent" style="margin-top:8px">Que a fs. ${p.fsPresupuesto} se adjunta presupuesto de la Firma Comercial <strong><span class="sync-prov">${prov}</span> (CUIT Nº ${p.cuit}). -</strong></div>`;
   } else {
+    if(p.fraseSolicitud) html+=`<div class="doc-indent" style="margin-top:8px"><span contenteditable="true" data-f="fraseSolicitud">${p.fraseSolicitud}</span></div>`;
     html+=`<div class="doc-indent" style="margin-top:8px">Que a fs. ${p.fsPresupuesto} se adjuntan presupuestos de las Firmas Comerciales; <strong><span contenteditable="true" data-f="firmasPrev">${p.firmasPrev}</span> <span contenteditable="true" data-f="firmaGanadora">${p.firmaGanadora.toUpperCase()}</span>.-</strong></div>`;
     html+=`<div class="doc-indent" style="margin-top:8px">Que a fs. ${p.fsCuadro||"____"} obra Cuadro Comparativo de Precios, del que surge que la propuesta de <strong><span contenteditable="true" data-f="firmaGanadora2">${p.firmaGanadora}</span></strong> resulto la más conveniente para el Estado.</div>`;
   }
@@ -1055,6 +1067,7 @@ function getEditedPayload(){
     else if(f==='insumo') p.insumo=txt;
     else if(f==='importeLetras') p.importeLetras=txt;
     else if(f==='firmasPrev') p.firmasPrev=txt;
+    else if(f==='fraseSolicitud') p.fraseSolicitud=txt;
     else if(f==='firmaGanadora'||f==='firmaGanadora2'||f==='firmaGanadora3') p.firmaGanadora=txt;
     else if(f==='cantidad') p.cantidad=txt;
     else if(f==='proveedor') p.proveedor=txt;
@@ -1227,6 +1240,7 @@ function construirHtmlResolucion(p) {
     body += '<p class="indent">Que a fs. ' + esc(p.fsPresupuesto) + ' se adjunta presupuesto de la Firma Comercial <b>' + esc(prov) + '</b> (CUIT Nº ' + esc(p.cuit) + ').</p>';
     body += '<p class="indent">Que la propuesta resulto la más conveniente para el Estado.</p>';
   } else {
+    if(p.fraseSolicitud) body += '<p class="indent">' + esc(p.fraseSolicitud) + '</p>';
     body += '<p class="indent">Que a fs. ' + esc(p.fsPresupuesto) + ' se adjuntan presupuestos de las Firmas Comerciales; <b>' + esc(p.firmasPrev) + ' ' + esc((p.firmaGanadora||"").toUpperCase()) + '.-</b></p>';
     body += '<p class="indent">Que a fs. ' + esc(p.fsCuadro || "____") + ' obra Cuadro Comparativo de Precios, del que surge que la propuesta de <b>' + esc(p.firmaGanadora) + '</b> resulto la más conveniente para el Estado.</p>';
   }
@@ -2957,6 +2971,9 @@ async function reprocesarLote(fileList){
       });
       pl.firmasPrev = previas.join("; ")+(previas.length>0?";":"");
       pl.firmaGanadora = gan;
+      var cotOk = cot.filter(function(n){ return !negs.some(function(x){ return mismaFirma(x, n); }); });
+      if(!cotOk.some(function(n){ return mismaFirma(n, gan); })) cotOk.push(gan);
+      pl.fraseSolicitud = fraseSolicitudPresupuestos(cotOk, negs.filter(function(n, i){ return negs.findIndex(function(x){ return mismaFirma(x, n); }) === i; }));
       pl.cantidad = String(cant);
       pl.precioUnit = String(unit);
       pl.precioTotal = String(cant*unit);
