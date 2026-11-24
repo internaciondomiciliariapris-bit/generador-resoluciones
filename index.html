@@ -1181,10 +1181,16 @@ function resolucionDesbordaHoja1(html) {
   document.body.appendChild(fr);
   try {
     const d = fr.contentDocument;
-    d.open(); d.write(html); d.close();
+    // Se mide con las MISMAS fuentes que usa el conversor de PDF (Trebuchet MS y Arial; no tiene
+    // Century Gothic ni Calibri). Si se midiera con Century Gothic (más ancha) daría un falso "no entra".
+    const htmlMedir = html
+      .replace(/'Century Gothic',CenturyGothic,/g, "")
+      .replace(/font-family:Calibri,Carlito,Arial,sans-serif/g, "font-family:Arial,'Liberation Sans',sans-serif")
+      .replace("'Trebuchet MS',Calibri,sans-serif", "'Trebuchet MS','Liberation Sans',Arial,sans-serif");
+    d.open(); d.write(htmlMedir); d.close();
     const marca = d.getElementById("fin-hoja1");
     const mm = d.createElement("div");
-    mm.style.cssText = "position:absolute;height:247mm;width:1px;"; // 257mm útiles - 10mm de margen de seguridad
+    mm.style.cssText = "position:absolute;height:252mm;width:1px;"; // 257mm útiles - 5mm de margen de seguridad
     d.body.appendChild(mm);
     const limite = mm.getBoundingClientRect().height;
     return !!marca && (marca.getBoundingClientRect().top - d.body.getBoundingClientRect().top) > limite;
@@ -1296,19 +1302,19 @@ function construirHtmlResolucionBase(p, saltoAntesArt1) {
     '<p class="art" style="line-height:1.4;"><span class="art-l">ARTICULO 3º:</span> Imputar la erogación por un importe total de <b>' + esc(imp) + '</b> ' + letras + ', y posterior emisión de la orden de pago respectiva, a la Jurisdicción 67, Unidad de Organización 965- Recursos disponibles con los que cuenta el servicio-Finalidad/Función 314, Programa 19, Act. /Ob. 01 - Partida 200 – <b>Subpartida ' + subpartida + '</b>' + recurso + ', con cargo al <b>Presupuesto 2026</b>.-</p>';
 
   if(p.tipo === "anteojos"){
-    if(saltoAntesArt1) body += '<div class="salto"></div>' + encabezado;
+    if(saltoAntesArt1) body += '<div class="salto">' + encabezado + '</div>';
     body += '<p class="art"><span class="art-l">ARTICULO 1º:</span> Aprobar la compra de Anteojos, a favor de la firma <b>' + esc(prov) + '</b> (CUIT Nº ' + esc(p.cuit) + ') que se detalla a continuación:</p>';
     body += tabla(prov, "1- " + insumoDesc, p.cantidad||"1", pu, pt);
-    body += saltoAntesArt1 ? '' : '<div id="fin-hoja1"></div><div class="salto"></div>' + encabezado;
+    body += saltoAntesArt1 ? '' : '<div id="fin-hoja1"></div><div class="salto">' + encabezado + '</div>';
     body += '<p class="art" style="margin-top:30pt;"><span class="art-l">ARTICULO 2º</span>: Autorizar la compra al proveedor <b>' + esc(prov) + '</b>, por el importe de <b>' + esc(im_num) + '</b> ' + esc(p.importeLetras) + ', y posterior emisión de la orden de pago respectiva.</p>';
     body += imputacion(im_num, esc(p.importeLetras), "299", "");
   } else {
     const puA = "$ " + fmt(parseInt(p.precioUnit||0)) + ",00";
     const ptA = "$ " + fmt(parseInt(p.precioTotal||0)) + ",00";
-    if(saltoAntesArt1) body += '<div class="salto"></div>' + encabezado;
+    if(saltoAntesArt1) body += '<div class="salto">' + encabezado + '</div>';
     body += '<p class="art"><span class="art-l">ARTICULO 1º:</span> Aprobar la compra de Audífonos, a favor de la firma <b>' + esc(p.firmaGanadora) + '</b> (CUIT Nº ' + esc(p.cuit) + ') que se detalla a continuación:</p>';
     body += tabla(p.firmaGanadora, "Audífonos", p.cantidad, puA, ptA);
-    body += saltoAntesArt1 ? '' : '<div id="fin-hoja1"></div><div class="salto"></div>' + encabezado;
+    body += saltoAntesArt1 ? '' : '<div id="fin-hoja1"></div><div class="salto">' + encabezado + '</div>';
     body += '<p class="art"><span class="art-l">ARTICULO 2º</span>: Autorizar la compra al proveedor <b>' + esc(p.firmaGanadora) + '</b>, por el importe de <b>' + esc(ptA) + '</b> (' + esc(p.importeLetras) + '), y posterior emisión de la orden de pago respectiva.</p>';
     body += imputacion(ptA, '(' + esc(p.importeLetras) + ')', "297", "");
   }
