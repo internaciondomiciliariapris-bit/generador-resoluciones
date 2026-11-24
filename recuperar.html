@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Recuperar resoluciones de audífonos (Nº 6308 a 6312)</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore-compat.js"></script>
+<style>
+  body{font-family:Segoe UI,Arial,sans-serif;background:#eef2f7;margin:0;padding:30px;color:#1f2937}
+  .card{max-width:760px;margin:0 auto;background:#fff;border-radius:14px;box-shadow:0 4px 18px rgba(0,0,0,.08);overflow:hidden}
+  .head{background:#1e56a0;color:#fff;padding:18px 22px;font-size:18px;font-weight:700}
+  .body{padding:20px 22px}
+  table{border-collapse:collapse;width:100%;font-size:13px;margin:10px 0 16px}
+  th,td{border:1px solid #d1d5db;padding:6px 8px;text-align:left}
+  th{background:#f3f4f6}
+  button{background:#0f766e;color:#fff;border:0;border-radius:10px;padding:12px 20px;font-size:15px;font-weight:700;cursor:pointer}
+  button:disabled{opacity:.6;cursor:default}
+  .msg{margin-top:14px;padding:12px;border-radius:10px;font-size:14px;display:none}
+  .ok{display:block;background:#dcfce7;color:#166534}
+  .er{display:block;background:#fee2e2;color:#991b1b}
+  a{color:#1e56a0;font-weight:700}
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="head">🎧 Recuperar resoluciones de audífonos eliminadas</div>
+  <div class="body">
+    <p>Vuelve a cargar en <b>Audífonos → En proceso</b> estas 5 resoluciones, con los mismos datos de los PDF ya emitidos (fecha, Nº, fojas, DNI, firma, cantidad y precio).</p>
+    <table id="tabla"><tr><th>Nº Res.</th><th>Fecha</th><th>Expediente</th><th>Paciente</th><th>DNI</th></tr></table>
+    <button id="btn" onclick="recuperar()">♻️ Recuperar las 5 resoluciones</button>
+    <div id="msg" class="msg"></div>
+  </div>
+</div>
+<script>
+var FIRMA = "Óptica Giorlent (Grupo Vistalli S.R.L)";
+var COMUN = { tipo:"audio", cuit:"30-71790960-3", cantidad:"2", precioUnit:"720000",
+  cotizantes:[FIRMA], negativas:[], ganadora:FIRMA, directoraAc:false, insumo:"", precio:"" };
+var RES = [
+  { nroRes:"6308", fecha:"19 de Noviembre de 2026", nroExp:"2711/611/SS/2026", paciente:"MEDINA PEDRO PABLO",     dni:"30.000.042", fsSolicitud:"2/6",        fsPresupuesto:"28", fsCuadro:"29", fsJuridico:"32/33" },
+  { nroRes:"6309", fecha:"20 de Noviembre de 2026", nroExp:"2611/611/SS/2026", paciente:"MENDILARZU, ABIGAIL",    dni:"53.807.894", fsSolicitud:"2/6",        fsPresupuesto:"38", fsCuadro:"39", fsJuridico:"42/43" },
+  { nroRes:"6310", fecha:"20 de Noviembre de 2026", nroExp:"3947/412/T/2026",  paciente:"TULA, MANUEL RAIMUNDO",  dni:"17.170.408", fsSolicitud:"2/9",        fsPresupuesto:"24", fsCuadro:"25", fsJuridico:"28/29" },
+  { nroRes:"6311", fecha:"19 de Noviembre de 2026", nroExp:"4003/412/T/2026",  paciente:"TERRAZA PEDRO MARCELO",  dni:"14.359.895", fsSolicitud:"2/10",       fsPresupuesto:"25", fsCuadro:"26", fsJuridico:"29/30" },
+  { nroRes:"6312", fecha:"20 de Noviembre de 2026", nroExp:"5462/414/S/2026",  paciente:"GARCIA, ANGELA GRACIELA",dni:"24.147.403", fsSolicitud:"2/3 y 5/6",  fsPresupuesto:"27", fsCuadro:"28", fsJuridico:"31/32" }
+];
+var t = document.getElementById("tabla");
+RES.forEach(function(r){
+  var tr = document.createElement("tr");
+  [r.nroRes, r.fecha, r.nroExp, r.paciente, r.dni].forEach(function(v){ var td=document.createElement("td"); td.textContent=v; tr.appendChild(td); });
+  t.appendChild(tr);
+});
+
+// Mismo Firebase y mismo id de documento que usa el generador (genres_borradores, "aud_" + expediente)
+var firebaseConfig = {
+  apiKey: "AIzaSyCDFcb5B7swNnetMOxXhVNQWaDxa1LVRF4",
+  authDomain: "visitas-siprosa.firebaseapp.com",
+  projectId: "visitas-siprosa",
+  storageBucket: "visitas-siprosa.firebasestorage.app",
+  messagingSenderId: "957519453967",
+  appId: "1:957519453967:web:e6c2bfac7a4da10fed287a",
+  measurementId: "G-GHDRCXE81C"
+};
+function _safe(s){ return String(s==null?"":s).trim().replace(/[\/#\?\[\]\*\.\u0000-\u001f]+/g,"_"); }
+
+function recuperar(){
+  var btn = document.getElementById("btn"), msg = document.getElementById("msg");
+  btn.disabled = true; btn.textContent = "Recuperando...";
+  msg.className = "msg";
+  try{
+    if(!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+    var db = firebase.firestore();
+    firebase.auth().signInAnonymously().then(function(){
+      var lote = db.batch();
+      RES.forEach(function(r){
+        var datos = Object.assign({}, COMUN, r, { actualizado: firebase.firestore.FieldValue.serverTimestamp() });
+        lote.set(db.collection("genres_borradores").doc("aud_" + _safe(r.nroExp)), datos, { merge:true });
+      });
+      return lote.commit();
+    }).then(function(){
+      msg.className = "msg ok";
+      msg.innerHTML = "✅ Listo: las 5 resoluciones volvieron a <b>Audífonos → En proceso</b>, con fecha y Nº ya cargados.<br><br>" +
+        "Ahora andá al generador, pestaña Audífonos → En proceso, y tocá <b>📦 Descargar todas en PDF (ZIP)</b>.<br><br>" +
+        "<a href=\"/\">← Ir al generador</a>";
+      btn.textContent = "✅ Recuperadas";
+    }).catch(function(err){
+      msg.className = "msg er";
+      msg.textContent = "No se pudo guardar: " + (err && err.message || err) + ". Revisá la conexión e intentá de nuevo.";
+      btn.disabled = false; btn.textContent = "♻️ Recuperar las 5 resoluciones";
+    });
+  }catch(err){
+    msg.className = "msg er"; msg.textContent = "Error: " + (err && err.message || err);
+    btn.disabled = false; btn.textContent = "♻️ Recuperar las 5 resoluciones";
+  }
+}
+</script>
+</body>
+</html>
