@@ -1190,7 +1190,7 @@ function resolucionDesbordaHoja1(html) {
     d.open(); d.write(htmlMedir); d.close();
     const marca = d.getElementById("fin-hoja1");
     const mm = d.createElement("div");
-    mm.style.cssText = "position:absolute;height:252mm;width:1px;"; // 257mm útiles - 5mm de margen de seguridad
+    mm.style.cssText = "position:absolute;height:254mm;width:1px;"; // 257mm útiles - 3mm de margen de seguridad
     d.body.appendChild(mm);
     const limite = mm.getBoundingClientRect().height;
     return !!marca && (marca.getBoundingClientRect().top - d.body.getBoundingClientRect().top) > limite;
@@ -1222,14 +1222,14 @@ function construirHtmlResolucionBase(p, saltoAntesArt1) {
   const css = `
     @page { size: A4; margin: 20mm 25mm 20mm 25mm; }
     body { margin:0; padding:0; font-family:'Century Gothic',CenturyGothic,'Trebuchet MS',Calibri,sans-serif; font-size:11pt; color:#000; }
-    p { margin:0 0 8pt 0; line-height:1.3; }
+    p { margin:0 0 6pt 0; line-height:1.3; }
     .right  { text-align:right; }
     .center { text-align:center; }
     .just   { text-align:justify; }
     .bold   { font-weight:bold; }
     .ul     { text-decoration:underline; }
     .titulo { text-align:center; font-weight:bold; font-size:13pt; margin:0; line-height:1.25; }
-    .seccion{ font-weight:bold; text-decoration:underline; margin:10pt 0 2pt 0; }
+    .seccion{ font-weight:bold; text-decoration:underline; margin:8pt 0 2pt 0; }
     .indent { text-indent:40mm; text-align:justify; }
     .porello{ text-align:center; font-weight:bold; font-size:14pt; margin:0; line-height:1.3; }
     .art    { text-align:justify; margin:0 0 10pt 0; }
@@ -1283,7 +1283,7 @@ function construirHtmlResolucionBase(p, saltoAntesArt1) {
   }
   body += '<p class="indent">Que a fs. ' + esc(p.fsJuridico) + ' obra Dictamen Jurídico con opinión favorable.</p>';
   body += '<p class="indent">Que la Firma Comercial adjudicada acredita su situación fiscal regular, conforme a la documentación fiscal vigente incorporada en autos.</p>';
-  body += '<p class="indent" style="line-height:1.6;">Que se aprueba todo lo actuado por encuadrarse a las disposiciones legales vigentes, que rigen sobre materia de contrataciones, conforme a lo normado en la Res. Nº 388/SPS-05.</p>';
+  body += '<p class="indent">Que se aprueba todo lo actuado por encuadrarse a las disposiciones legales vigentes, que rigen sobre materia de contrataciones, conforme a lo normado en la Res. Nº 388/SPS-05.</p>';
 
   // POR ELLO
   body += '<p class="porello ul" style="margin-top:8pt;">POR ELLO:</p>';
