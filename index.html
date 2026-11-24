@@ -372,7 +372,7 @@ hr{border:none;border-top:1.5px solid #e2e8f0;margin:16px 0 14px}
       <div class="hint">En MAYÚSCULAS</div></div>
     <div class="field"><label>DNI del paciente <span>*</span></label>
       <input type="text" id="a-dni" placeholder="12.345.678" inputmode="numeric" onchange="this.value=fmtDni(this.value)">
-      <div class="hint">Sale en el VISTO junto al nombre del paciente</div></div>
+      <div class="hint">Sale en el VISTO junto al nombre del paciente · En personas en contexto de encierro no se pide ni se imprime</div></div>
     <div class="field"><label>Insumo <span>*</span></label>
       <input type="text" id="a-insumo" placeholder="1-ANTEOJOS" oninput="calcAnteojos()">
       <div class="hint">Ej: 1-ANTEOJOS / 2-ANTEOJOS — el número es la cantidad</div></div>
@@ -437,7 +437,7 @@ hr{border:none;border-top:1.5px solid #e2e8f0;margin:16px 0 14px}
       <div class="hint">En MAYÚSCULAS</div></div>
     <div class="field"><label>DNI del paciente <span>*</span></label>
       <input type="text" id="b-dni" placeholder="12.345.678" inputmode="numeric" onchange="this.value=fmtDni(this.value)">
-      <div class="hint">Sale en el VISTO junto al nombre del paciente</div></div>
+      <div class="hint">Sale en el VISTO junto al nombre del paciente · En personas en contexto de encierro no se pide ni se imprime</div></div>
     <hr>
     <div class="stitle">Firmas comerciales</div>
     <div class="empresas-grid">
@@ -717,7 +717,7 @@ function fmtDni(v){const d=String(v||"").replace(/[^0-9]/g,"");return d?d.replac
 function claveDni(n){return String(n||"").toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[^A-ZÑ ]/g," ").replace(/\s+/g," ").trim();}
 const DNI_CONOCIDOS={"CARRIZO GRACIELA DEL VALLE":"17.738.623","CABRERA NATALIA VERONICA":"51.208.127","MERCADO JESICA YOLANDA":"32.782.241","MERCADO MIA GUADALUPE":"55.353.855"};
 function dnisGuardados(){try{return JSON.parse(localStorage.getItem("res_dni_pacientes")||"{}")||{};}catch(_){return {};}}
-function dniDePaciente(n){const k=claveDni(n);if(!k)return "";let d=dnisGuardados()[k]||DNI_CONOCIDOS[k]||"";if(!d){try{d=(window.RegistroOCStore&&window.RegistroOCStore.dniDe)?window.RegistroOCStore.dniDe(n):"";}catch(_){d="";}}return d||"";}
+function dniDePaciente(n){if(sinDniPaciente(n))return "";const k=claveDni(n);if(!k)return "";let d=dnisGuardados()[k]||DNI_CONOCIDOS[k]||"";if(!d){try{d=(window.RegistroOCStore&&window.RegistroOCStore.dniDe)?window.RegistroOCStore.dniDe(n):"";}catch(_){d="";}}return d||"";}
 // Lee el DNI del paciente desde el texto de un PDF (expediente, OC, hoja del DNI).
 // Toma los números de 7-8 cifras que aparecen junto a "DNI"/"D.N.I."/"Documento" o con formato 12.345.678.
 // Si hay varios, prefiere el que está cerca del apellido del paciente; si hay dudas, no devuelve nada.
@@ -735,7 +735,7 @@ function dniDeTexto(texto,paciente,esHojaDni){
   const elegir=o=>{const k=Object.keys(o).filter(x=>o[x]>0);if(!k.length)return "";k.sort((a,b)=>o[b]-o[a]);return (k.length===1||o[k[0]]>o[k[1]])?k[0]:"";};
   const d=elegir(cerca)||(Object.keys(cnt).length===1||esHojaDni?elegir(cnt):"");return d?fmtDni(d):"";}
 window.DniPacientes={deTexto:dniDeTexto,buscar:dniDePaciente,recordar:recordarDni,fmt:fmtDni,clave:claveDni};
-function recordarDni(n,d){const k=claveDni(n);if(!k||!d)return;try{const m=dnisGuardados();m[k]=fmtDni(d);localStorage.setItem("res_dni_pacientes",JSON.stringify(m));}catch(_){}}
+function recordarDni(n,d){if(sinDniPaciente(n))return;const k=claveDni(n);if(!k||!d)return;try{const m=dnisGuardados();m[k]=fmtDni(d);localStorage.setItem("res_dni_pacientes",JSON.stringify(m));}catch(_){}}
 function rellenarDni(pre,forzar){const x=document.getElementById(pre+"-dni"),pa=document.getElementById(pre+"-paciente");if(!x||!pa)return;const d=dniDePaciente(pa.value);if(d&&(forzar||!x.value.trim()))x.value=d;}
 // CUIT del prestador habitual (anteojos y audífonos): se precarga solo si el campo está vacío.
 const CUIT_PRESTADOR_HABITUAL="30-71790960-3";
@@ -765,7 +765,9 @@ function leerInstr(pre){const v=id=>{const x=document.getElementById(pre+"-"+id)
 function directoraAcActual(){try{return localStorage.getItem("res_directoraAc")==="1";}catch(_){return false;}}
 function fijarDirectoraAc(v){try{localStorage.setItem("res_directoraAc",v?"1":"0");}catch(_){}["a","b"].forEach(pre=>{const d=document.getElementById(pre+"-directoraAc");if(d)d.checked=!!v;});}
 function setInstr(pre,p){["fsSolicitud","fsPresupuesto","fsJuridico","fsCuadro","cuit","dni"].forEach(id=>{const x=document.getElementById(pre+"-"+id);if(x)x.value=(p&&p[id])||"";});const d=document.getElementById(pre+"-directoraAc");if(d)d.checked=directoraAcActual();rellenarCuit(pre,pre==="a"?FIRMA_ANTEOJOS:(p&&(p.ganadora||p.firmaGanadora)));rellenarDni(pre);}
-function faltaInstr(d){const f=[];if(!d.fsSolicitud)f.push("foja de la solicitud");if(!d.fsPresupuesto)f.push("foja del presupuesto");if(!d.fsJuridico)f.push("foja del dictamen jurídico");if(d.fsCuadro!==undefined&&!d.fsCuadro)f.push("foja del cuadro comparativo");if(!d.cuit)f.push("CUIT de la firma");if(!d.dni)f.push("DNI del paciente");return f;}
+// Personas en contexto de encierro (internos): el DNI NO se pide, NO se imprime y NO se guarda.
+function sinDniPaciente(n){const t=String(n||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toUpperCase();return /CONTEXTO\s+DE\s+ENCIERRO|PRIVAD[OA]S?\s+DE\s+(LA\s+)?LIBERTAD/.test(t);}
+function faltaInstr(d){const f=[];if(!d.fsSolicitud)f.push("foja de la solicitud");if(!d.fsPresupuesto)f.push("foja del presupuesto");if(!d.fsJuridico)f.push("foja del dictamen jurídico");if(d.fsCuadro!==undefined&&!d.fsCuadro)f.push("foja del cuadro comparativo");if(!d.cuit)f.push("CUIT de la firma");if(!d.dni&&!sinDniPaciente(d.paciente))f.push("DNI del paciente");return f;}
 function faltaControles(pre){return CONTROLES_RES.filter(c=>{const x=document.getElementById(pre+"-c-"+c[0]);return !(x&&x.checked);}).map(c=>c[1]);}
 function iniciarInstr(){["a","b"].forEach(pre=>{const box=document.getElementById(pre+"-instr");if(box&&!box.innerHTML)box.innerHTML=htmlInstr(pre);});rellenarCuit("a",FIRMA_ANTEOJOS);rellenarCuit("b","");fijarDirectoraAc(directoraAcActual());document.addEventListener("change",ev=>{const t=ev.target;if(!t)return;if(t.id==="a-directoraAc"||t.id==="b-directoraAc"){fijarDirectoraAc(t.checked);return;}if(t.id==="a-cuit"||t.id==="b-cuit"){if(t.value.trim())recordarCuit("",t.value.trim());return;}if(t.name==="ganadora"&&t.closest&&t.closest("#panel-audio")){const c=document.getElementById("b-cuit");if(c)c.value=cuitDeFirma(t.value)||c.value||cuitPorDefecto(t.value);}});}
 if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",iniciarInstr);else setTimeout(iniciarInstr,0);
@@ -959,6 +961,7 @@ function mostrarPrevia(tipo){
   }
 
   Object.assign(payload,leerInstr(pre));
+  if(sinDniPaciente(payload.paciente))payload.dni="";
   const _falta=faltaInstr(payload).concat(faltaControles(pre).map(t=>"verificar: "+t));
   if(_falta.length){msgEl.className="msg er";msgEl.textContent="Falta: "+_falta.join(" · ")+".";return;}
   const _tot=totalResolucion(payload),_tr=tramoFirma(_tot);
@@ -998,9 +1001,9 @@ function renderPrevia(p){
   html+=`<div class="doc-section"><span class="doc-label">VISTO:</span></div>`;
 
   if(p.tipo==="anteojos"){
-    html+=`<div class="doc-indent">El <strong>Expte. Nº <span contenteditable="true" data-f="nroExp">${p.nroExp}</span></strong>, por el que se solicita la compra de <strong><span contenteditable="true" data-f="insumo">${p.insumo}</span></strong> para el paciente; <strong><span contenteditable="true" data-f="paciente">${p.paciente}</span></strong>, DNI Nº <span contenteditable="true" data-f="dni">${p.dni||""}</span>, según lo indicado a fs. ${p.fsSolicitud}. Y,</div>`;
+    html+=`<div class="doc-indent">El <strong>Expte. Nº <span contenteditable="true" data-f="nroExp">${p.nroExp}</span></strong>, por el que se solicita la compra de <strong><span contenteditable="true" data-f="insumo">${p.insumo}</span></strong> para el paciente; <strong><span contenteditable="true" data-f="paciente">${p.paciente}</span></strong>${sinDniPaciente(p.paciente)?"":`, DNI Nº <span contenteditable="true" data-f="dni">${p.dni||""}</span>`}, según lo indicado a fs. ${p.fsSolicitud}. Y,</div>`;
   } else {
-    html+=`<div class="doc-indent">El <strong>Expte. Nº <span contenteditable="true" data-f="nroExp">${p.nroExp}</span></strong>, por el que se solicita la compra de <strong>AUDIFONOS</strong> para el paciente; <strong><span contenteditable="true" data-f="paciente">${p.paciente}</span></strong>, DNI Nº <span contenteditable="true" data-f="dni">${p.dni||""}</span>, según lo indicado a fs. ${p.fsSolicitud}. Y,</div>`;
+    html+=`<div class="doc-indent">El <strong>Expte. Nº <span contenteditable="true" data-f="nroExp">${p.nroExp}</span></strong>, por el que se solicita la compra de <strong>AUDIFONOS</strong> para el paciente; <strong><span contenteditable="true" data-f="paciente">${p.paciente}</span></strong>${sinDniPaciente(p.paciente)?"":`, DNI Nº <span contenteditable="true" data-f="dni">${p.dni||""}</span>`}, según lo indicado a fs. ${p.fsSolicitud}. Y,</div>`;
   }
 
   html+=`<div class="doc-section" style="margin-top:12px"><span class="doc-label">CONSIDERANDO:</span></div>`;
@@ -1265,9 +1268,9 @@ function construirHtmlResolucionBase(p, saltoAntesArt1) {
   // VISTO
   body += '<p class="seccion">VISTO:</p>';
   if(p.tipo === "anteojos"){
-    body += '<p class="indent">El <b>Expte. Nº' + esc(p.nroExp) + '</b>, por el que se solicita la compra de <b style="white-space:nowrap;">' + esc(insumoVisto) + '</b> para el paciente; <b>' + esc(p.paciente) + '</b>' + (p.dni ? ', DNI Nº ' + esc(p.dni) : '') + ', según lo indicado a fs. ' + esc(p.fsSolicitud) + '. Y,</p>';
+    body += '<p class="indent">El <b>Expte. Nº' + esc(p.nroExp) + '</b>, por el que se solicita la compra de <b style="white-space:nowrap;">' + esc(insumoVisto) + '</b> para el paciente; <b>' + esc(p.paciente) + '</b>' + (p.dni && !sinDniPaciente(p.paciente) ? ', DNI Nº ' + esc(p.dni) : '') + ', según lo indicado a fs. ' + esc(p.fsSolicitud) + '. Y,</p>';
   } else {
-    body += '<p class="indent">El <b>Expte. Nº' + esc(p.nroExp) + '</b>, por el que se solicita la compra de <b>AUDIFONOS</b> para el paciente; <b>' + esc(p.paciente) + '</b>' + (p.dni ? ', DNI Nº ' + esc(p.dni) : '') + ', según lo indicado a fs. ' + esc(p.fsSolicitud) + '. Y,</p>';
+    body += '<p class="indent">El <b>Expte. Nº' + esc(p.nroExp) + '</b>, por el que se solicita la compra de <b>AUDIFONOS</b> para el paciente; <b>' + esc(p.paciente) + '</b>' + (p.dni && !sinDniPaciente(p.paciente) ? ', DNI Nº ' + esc(p.dni) : '') + ', según lo indicado a fs. ' + esc(p.fsSolicitud) + '. Y,</p>';
   }
 
   // CONSIDERANDO
@@ -2857,7 +2860,7 @@ async function reprocesarLote(fileList){
   function datosInstrDe(p){
     return { fsSolicitud: String(p.fsSolicitud||"").trim(), fsPresupuesto: String(p.fsPresupuesto||"").trim(), fsJuridico: String(p.fsJuridico||"").trim(),
       cuit: String(p.cuit||"").trim() || cuitDeFirma(p.tipo === "anteojos" ? FIRMA_ANTEOJOS : p.ganadora),
-      dni: fmtDni(p.dni) || dniDePaciente(p.paciente),
+      dni: sinDniPaciente(p.paciente) ? "" : (fmtDni(p.dni) || dniDePaciente(p.paciente)), paciente: p.paciente,
       fsCuadro: p.tipo === "anteojos" ? undefined : String(p.fsCuadro||"").trim() };
   }
   function faltaDatosBorrador(p){
@@ -2945,6 +2948,8 @@ async function reprocesarLote(fileList){
       var c = {};
       CD_COLS.forEach(function(col){ var x = document.getElementById("cd-"+col[0]+"-"+i); c[col[0]] = x ? x.value.trim() : ""; });
       c.dni = fmtDni(c.dni);
+      var _b = ((window.BorradoresStore && window.BorradoresStore.listar) ? window.BorradoresStore.listar(tipo) : []).filter(function(b){ return b._id === id; })[0];
+      if(_b && sinDniPaciente(_b.paciente)){ c.paciente = _b.paciente; c.dni = ""; }
       return { id: id, campos: c };
     });
     var incompletas = cambios.filter(function(x){ return faltaInstr(x.campos).length > 0; }).length;
@@ -2976,7 +2981,7 @@ async function reprocesarLote(fileList){
     if(!nroExp || !paciente) return { error: "falta expediente o paciente" };
     var pl = { tipo: p.tipo, fecha: fecha, nroRes: nroRes, nroExp: nroExp, paciente: paciente,
       fsSolicitud: String(p.fsSolicitud||"").trim(), fsPresupuesto: String(p.fsPresupuesto||"").trim(), fsJuridico: String(p.fsJuridico||"").trim(),
-      cuit: String(p.cuit||"").trim() || cuitDeFirma(p.tipo === "anteojos" ? FIRMA_ANTEOJOS : p.ganadora), directoraAc: directoraAcActual(), dni: fmtDni(p.dni) || dniDePaciente(paciente) };
+      cuit: String(p.cuit||"").trim() || cuitDeFirma(p.tipo === "anteojos" ? FIRMA_ANTEOJOS : p.ganadora), directoraAc: directoraAcActual(), dni: sinDniPaciente(paciente) ? "" : (fmtDni(p.dni) || dniDePaciente(paciente)) };
     if(p.tipo !== "anteojos") pl.fsCuadro = String(p.fsCuadro||"").trim();
     var faltan = faltaInstr(pl);
     if(faltan.length) return { error: "falta: " + faltan.join(", ") };
@@ -5879,7 +5884,7 @@ var FojasExp = (function(){
       if(!marcadas("pre").length) faltan.push("el presupuesto");
       if(!marcadas("jur").length) faltan.push("el dictamen");
       if(st.tipo !== "anteojos" && !marcadas("cua").length) faltan.push("el cuadro comparativo");
-      if(!st.dniTexto) faltan.push("el DNI (marcá la hoja del DNI y lo leo)");
+      if(!st.dniTexto && !sinDniPaciente(st.paciente)) faltan.push("el DNI (marcá la hoja del DNI y lo leo)");
       est((aviso ? aviso + "<br>" : "") + (faltan.length ? "⚠️ No encontré " + faltan.join(", ") + ": marcalo tocando las hojas." : "✅ Marqué solicitud, presupuesto y dictamen, y encontré el DNI. Revisá y tocá <b>Usar estas hojas</b>."), !!aviso || faltan.length > 0);
     }catch(e){
       if(st){ st.trabajando = false; pintar(); }
