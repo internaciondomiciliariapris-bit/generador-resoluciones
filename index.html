@@ -1046,7 +1046,7 @@ function renderPrevia(p){
     html+=`<div class="doc-art"><span class="doc-art-label">ARTICULO 3º:</span> Imputar la erogación por un importe total de <strong>${ptA} (${p.importeLetras})</strong>, y posterior emisión de la orden de pago respectiva, a la Jurisdicción 67, Unidad de Organización 965-Recursos disponibles con los que cuenta el servicio-Finalidad/Función 314, Programa 19, Act. /Ob. 01 - Partida 200 – <strong>Subpartida 297</strong>, con cargo al <strong>Presupuesto 2026</strong>.-</div>`;
   }
 
-  html+=`<div class="doc-art"><span class="doc-art-label">ARTICULO 4º:</span> Pase al Honorable Tribunal de Cuentas (Delegación SI.PRO.SA.) para su control pertinente.</div>`;
+  html+=`<div class="doc-art"><span class="doc-art-label">ARTICULO 4º:</span> Pase al Honorable Tribunal de Cuentas (Delegación SI.PRO.SA.) para su control de LEY.</div>`;
   html+=`<div class="doc-art"><span class="doc-art-label">ARTICULO 5º:</span> Emitir la orden de compra respectiva.</div>`;
   html+=`<div class="doc-art"><span class="doc-art-label">ARTICULO 6º:</span> Comunicar y archivar.</div>`;
   html+=`<div class="doc-firma" style="display:flex;gap:30px">`+firmasResolucion(p).map(b=>`<div>`+b.map((l,i)=>i===1?`<p><strong>${l}</strong></p>`:`<p>${l}</p>`).join("")+`</div>`).join("")+`</div>`;
@@ -1322,7 +1322,7 @@ function construirHtmlResolucionBase(p, saltoAntesArt1) {
     body += imputacion(ptA, '(' + esc(p.importeLetras) + ')', "297", "");
   }
 
-  body += '<p class="art" style="margin-top:14pt;"><span class="art-l">ARTICULO 4º:</span> Pase al Honorable Tribunal de Cuentas (Delegación SI.PRO.SA.) para su control pertinente.</p>';
+  body += '<p class="art" style="margin-top:14pt;"><span class="art-l">ARTICULO 4º:</span> Pase al Honorable Tribunal de Cuentas (Delegación SI.PRO.SA.) para su control de LEY.</p>';
   body += '<p class="art"><span class="art-l">ARTICULO 5º:</span> Emitir la orden de compra respectiva.</p>';
   body += '<p class="art"><span class="art-l">ARTICULO 6º:</span> Comunicar y archivar.</p>';
 
