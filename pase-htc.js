@@ -96,14 +96,13 @@
 
   var FIRMA = '' +
     '<table style="border:none;border-collapse:collapse;width:100%;margin-top:46pt;"><tr>' +
-      '<td style="border:none;width:50%;padding:0;"></td>' +
-      '<td style="border:none;padding:0;font-family:\'Times New Roman\',Times,serif;font-size:11pt;font-weight:bold;line-height:1.25;">' +
+      '<td style="border:none;width:55%;padding:0;font-family:\'Times New Roman\',Times,serif;font-size:11pt;font-weight:bold;line-height:1.25;">' +
         '<p style="margin:0;">Firmado digitalmente:</p>' +
         '<p style="margin:0;">C.P.N. Mariela Agustina Castillo</p>' +
         '<p style="margin:0;">Gerente Administrativo</p>' +
         '<p style="margin:0;">Dirección Gral. Prog. Integrado de Salud</p>' +
         '<p style="margin:0;">SI.PRO.SA</p>' +
-      '</td></tr></table>';
+      '</td><td style="border:none;padding:0;"></td></tr></table>';
 
   var PIE = '<div style="border-top:2pt solid #5b9bd5;margin-top:22pt;padding-top:8pt;font-family:\'Times New Roman\',Times,serif;font-size:11pt;line-height:1.2;">“2026 Año de la Memoria por: Golpe de Estado Cívico Militar de 1976, Cierre Masivo de los Ingenios en 1966 y Cierre de los Talleres Ferroviarios de Tafí Viejo en 1980”</div>';
 
